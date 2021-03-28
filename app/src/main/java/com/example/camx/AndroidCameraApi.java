@@ -32,10 +32,13 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView;
+import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.textview.MaterialTextView;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -46,13 +49,18 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.BlockingDeque;
+
 
 public class AndroidCameraApi extends AppCompatActivity{
     private static final String TAG = "AndroidCameraApi";
     private MaterialButton takePictureButton;
     private TextureView textureView;
+    private MaterialTextView ultra_wide_lens,wide_lens,macro_tele_lens;
+    private AppCompatImageButton front_switch;
+    private MaterialCardView cardView;
+
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
@@ -60,6 +68,7 @@ public class AndroidCameraApi extends AppCompatActivity{
         ORIENTATIONS.append(Surface.ROTATION_180, 270);
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
+
     private String cameraId;
     protected CameraDevice cameraDevice;
     protected CameraCaptureSession cameraCaptureSessions;
@@ -70,8 +79,16 @@ public class AndroidCameraApi extends AppCompatActivity{
     private static final int REQUEST_CAMERA_PERMISSION = 200;
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
+    private final String [] camID= {"0","1","21","22","20"};
 
-    // TODO : create arrylist for camera ids [0,1,21,22,23]
+    public String getCameraId() {
+        return cameraId;
+    }
+
+    public void setCameraId(String cameraId) {
+        this.cameraId = cameraId;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -84,6 +101,12 @@ public class AndroidCameraApi extends AppCompatActivity{
         textureView = findViewById(R.id.preview);
         textureView.setSurfaceTextureListener(textureListener);
         takePictureButton = findViewById(R.id.capture);
+        ultra_wide_lens = findViewById(R.id.ultra_wide);
+        wide_lens = findViewById(R.id.main_wide);
+        macro_tele_lens = findViewById(R.id.macro_tele);
+        front_switch = findViewById(R.id.front_back_switch);
+        cardView = findViewById(R.id.aux_cam_switch);
+
         assert takePictureButton != null;
         takePictureButton.setOnClickListener(new View.OnClickListener() {
             @RequiresApi(api = Build.VERSION_CODES.Q)
@@ -92,6 +115,71 @@ public class AndroidCameraApi extends AppCompatActivity{
                 takePicture();
             }
         });
+
+        ultra_wide_lens.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                //makes changes in takePicture() and  opencamera()
+                if(!getCameraId().equals(camID[2])) {
+                    closeCamera();
+                    setCameraId(camID[2]);
+                    openCamera();
+                    ultra_wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+                    wide_lens.setBackground(null);
+                    macro_tele_lens.setBackground(null);
+                }
+            }
+        });
+
+        wide_lens.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                if(!getCameraId().equals(camID[0])) {
+                    closeCamera();
+                    setCameraId(camID[0]);
+                    openCamera();
+                    wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+                    ultra_wide_lens.setBackground(null);
+                    macro_tele_lens.setBackground(null);
+                }
+            }
+        });
+
+        macro_tele_lens.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                if(!getCameraId().equals(camID[4])) {
+                    closeCamera();
+                    setCameraId(camID[4]);
+                    openCamera();
+                    macro_tele_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+                    wide_lens.setBackground(null);
+                    ultra_wide_lens.setBackground(null);
+                }
+            }
+        });
+
+        front_switch.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                if(cardView.getVisibility()==View.VISIBLE){
+                    closeCamera();
+                    setCameraId(camID[1]);
+                    openCamera();
+                    cardView.setVisibility(View.INVISIBLE);
+                }
+                else if(cardView.getVisibility()==View.INVISIBLE){
+                    closeCamera();
+                    setCameraId(camID[0]);
+                    wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+                    ultra_wide_lens.setBackground(null);
+                    macro_tele_lens.setBackground(null);
+                    openCamera();
+                    cardView.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
     }
 
     TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
@@ -165,7 +253,7 @@ public class AndroidCameraApi extends AppCompatActivity{
         }
         CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
-            CameraCharacteristics characteristics = manager.getCameraCharacteristics("21");
+            CameraCharacteristics characteristics = manager.getCameraCharacteristics(getCameraId());
             characteristics.getKeysNeedingPermission();
             Log.e(TAG, "takePicture: GETCAMERAID()"+cameraDevice.getId());
             Size[] jpegSizes = null;
@@ -285,7 +373,7 @@ public class AndroidCameraApi extends AppCompatActivity{
         CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         Log.e(TAG, "is camera open");
         try {
-            cameraId = manager.getCameraIdList()[0]; //0 for back 1 for front camera
+//            cameraId = manager.getCameraIdList()[0]; //0 for back 1 for front camera
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
 
             //TEST CODE #1
@@ -299,7 +387,6 @@ public class AndroidCameraApi extends AppCompatActivity{
             for (String cameraId : manager.getCameraIdList()){
                 characteristics = manager.getCameraCharacteristics(cameraId);
                 Log.e("Testing", "Camera #" + cameraId + " ===> " + characteristics.getPhysicalCameraIds());
-
             }
             
             StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
@@ -312,7 +399,7 @@ public class AndroidCameraApi extends AppCompatActivity{
                 return;
             }
             Log.e(TAG, "openCamera: cameraID :> "+cameraId);
-            manager.openCamera(String.valueOf(21), stateCallback, null);
+            manager.openCamera(getCameraId(), stateCallback, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -358,6 +445,12 @@ public class AndroidCameraApi extends AppCompatActivity{
         super.onResume();
         Log.e(TAG, "onResume");
         startBackgroundThread();
+        if(Objects.equals(getCameraId(),null)) {
+            setCameraId(camID[0]);
+            wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+            ultra_wide_lens.setBackground(null);
+            macro_tele_lens.setBackground(null);
+        }
         if (textureView.isAvailable()) {
             openCamera();
         } else {
