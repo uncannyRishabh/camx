@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/appbar"
+        android:layout_width="match_parent"
+        android:layout_height="102dp"
+        app:layout_constraintBottom_toTopOf="@+id/relative_textureView"
+        app:layout_constraintEnd_toEndOf="parent"
+
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <RelativeLayout
+        android:id="@+id/relative_textureView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/cardview_buttons_dock"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/appbar"
+        >
+        <TextureView
+            android:id="@+id/preview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            />
+
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="66dp"
+            android:layout_centerHorizontal="true"
+            android:layout_alignParentBottom="true"
+            >
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/wide_switch"
+                android:layout_width="52dp"
+                android:layout_height="64dp"
+                app:cornerRadius="60dp"
+                android:layout_marginEnd="12dp"
+                android:backgroundTint="#40B2B2B5"
+                android:text="0.6"
+                android:textColor="@color/black"
+                android:textSize="11sp"
+                tools:ignore="SmallSp" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/main_switch"
+                android:layout_width="52dp"
+                android:layout_height="64dp"
+                android:layout_toEndOf="@id/wide_switch"
+                app:cornerRadius="60dp"
+                android:layout_marginEnd="12dp"
+                android:backgroundTint="#40B2B2B5"
+                android:text="1.0"
+                android:textColor="@color/black"
+                android:textSize="11sp"
+                tools:ignore="SmallSp" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/tele_switch"
+                android:layout_width="52dp"
+                android:layout_height="64dp"
+                android:layout_toEndOf="@id/main_switch"
+                app:cornerRadius="60dp"
+                android:backgroundTint="#40B2B2B5"
+                android:text="2.0"
+                android:textColor="@color/black"
+                android:textSize="11sp"
+                tools:ignore="SmallSp" />
+
+
+
+        </RelativeLayout>
+    </RelativeLayout>
+
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardview_buttons_dock"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardBackgroundColor="#292828"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/relative_textureView">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="300dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/capture"
+                android:layout_width="90dp"
+                android:layout_height="100dp"
+                android:layout_centerHorizontal="true"
+                android:layout_centerVertical="true"
+                android:layout_marginBottom="780dp"
+                android:backgroundTint="#C1EFEBEB"
+                android:hapticFeedbackEnabled="true"
+                app:cornerRadius="60dp" />
+        </RelativeLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
