@@ -27,6 +27,7 @@ import android.util.SparseIntArray;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -52,7 +53,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-
 public class AndroidCameraApi extends AppCompatActivity{
     private static final String TAG = "AndroidCameraApi";
     private MaterialButton takePictureButton;
@@ -60,6 +60,8 @@ public class AndroidCameraApi extends AppCompatActivity{
     private MaterialTextView ultra_wide_lens,wide_lens,macro_tele_lens;
     private AppCompatImageButton front_switch;
     private MaterialCardView cardView;
+
+    private TextView logtext;
 
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
     static {
@@ -106,6 +108,11 @@ public class AndroidCameraApi extends AppCompatActivity{
         macro_tele_lens = findViewById(R.id.macro_tele);
         front_switch = findViewById(R.id.front_back_switch);
         cardView = findViewById(R.id.aux_cam_switch);
+
+        logtext = findViewById(R.id.logtxt);
+        //TEST CODE #0
+        check_aux();
+
 
         assert takePictureButton != null;
         takePictureButton.setOnClickListener(new View.OnClickListener() {
@@ -255,10 +262,10 @@ public class AndroidCameraApi extends AppCompatActivity{
         try {
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(getCameraId());
             characteristics.getKeysNeedingPermission();
-            Log.e(TAG, "takePicture: GETCAMERAID()"+cameraDevice.getId());
+//            Log.e(TAG, "takePicture: getcamera Characteristics => "+ characteristics.getPhysicalCameraIds());
             Size[] jpegSizes = null;
             if (characteristics != null) {
-                jpegSizes = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(ImageFormat.JPEG);
+                jpegSizes = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(ImageFormat.RAW_SENSOR);
             }
             int width = 640;
             int height = 480;
@@ -270,15 +277,17 @@ public class AndroidCameraApi extends AppCompatActivity{
             List<Surface> outputSurfaces = new ArrayList<Surface>(2);
             outputSurfaces.add(reader.getSurface());
             outputSurfaces.add(new Surface(textureView.getSurfaceTexture()));
+
             final CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            captureBuilder.set(CaptureRequest.CONTROL_ENABLE_ZSL,true);
+            
             captureBuilder.addTarget(reader.getSurface());
             captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
             // Orientation
             int rotation = getWindowManager().getDefaultDisplay().getRotation();
-            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
+            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));  //replace with SURFACE_ROTATION_0
 
-            getApplicationContext();
-            File file = new File( getApplicationContext().getExternalFilesDir(Environment.DIRECTORY_DCIM)+"/camX.jpg");
+            File file = new File( getApplicationContext().getExternalFilesDir(Environment.DIRECTORY_DCIM)+"/"+System.currentTimeMillis() +"_camX.jpg");
 //            final File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/pic.jpg");
             ImageReader.OnImageAvailableListener readerListener = new ImageReader.OnImageAvailableListener() {
                 @Override
@@ -386,7 +395,7 @@ public class AndroidCameraApi extends AppCompatActivity{
             //TEST CODE #2
             for (String cameraId : manager.getCameraIdList()){
                 characteristics = manager.getCameraCharacteristics(cameraId);
-                Log.e("Testing", "Camera #" + cameraId + " ===> " + characteristics.getPhysicalCameraIds());
+                Log.e("Testing", "Camera #" + cameraId + " ===> " + getCameraId());
             }
             
             StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
@@ -400,7 +409,7 @@ public class AndroidCameraApi extends AppCompatActivity{
             }
             Log.e(TAG, "openCamera: cameraID :> "+cameraId);
             manager.openCamera(getCameraId(), stateCallback, null);
-        } catch (CameraAccessException e) {
+        } catch (CameraAccessException | IllegalArgumentException e) {
             e.printStackTrace();
         }
         Log.e(TAG, "openCamera X");
@@ -427,6 +436,37 @@ public class AndroidCameraApi extends AppCompatActivity{
             imageReader.close();
             imageReader = null;
         }
+    }
+
+    private void check_aux() {
+        String []array = new String[111];
+        StringBuilder msg = new StringBuilder("CAMID : ");
+        Handler handler = new Handler();
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                for(int i = 0; i<111 ; i++){
+                    try {
+                        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+                        CameraCharacteristics characteristics = manager.getCameraCharacteristics(String.valueOf(i));
+                        if (!characteristics.getAvailableCaptureRequestKeys().isEmpty()) {
+                            array[i] = String.valueOf(i);
+                            msg.append(array[i]).append(",");
+                            Log.d(TAG, "check_aux: value of array at " + i + " : " + array[i]);
+//                    Toast.makeText(AndroidCameraApi.this, "EXECUTING"+i, Toast.LENGTH_SHORT).show();
+                            Thread.sleep(100);
+                        }
+                    }
+                    catch (IllegalArgumentException | CameraAccessException | InterruptedException ignored){
+
+                    }
+                }
+                logtext.setText(msg);
+            }
+        });
+
+        Toast.makeText(AndroidCameraApi.this, "COMPLETE EXECUTION cam_aux()", Toast.LENGTH_SHORT).show();
+
     }
 
     @Override

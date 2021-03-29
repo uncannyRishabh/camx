@@ -10,6 +10,7 @@
         android:id="@+id/appbar"
         android:layout_width="match_parent"
         android:layout_height="112dp"
+        android:background="@color/black"
         app:layout_constraintBottom_toTopOf="@+id/relative_textureView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -28,6 +29,15 @@
             android:id="@+id/preview"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            />
+
+        <TextView
+            android:id="@+id/logtxt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="log"
+            android:textSize="12sp"
+            android:gravity="center"
             />
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/aux_cam_switch"
