@@ -5,7 +5,7 @@ Camera2 api with auxillary camera support, written in pure java (currently suppo
 APP PREVIEW : 
 ![app preview](https://user-images.githubusercontent.com/47218749/112975423-3d420180-9171-11eb-95f0-c945971fd3db.gif)
 
-![Try out](https://github.com/uncannyRishabh/camx/blob/master/camx-debug.apk?raw=true)
+![Try out](https://github.com/uncannyRishabh/camx/blob/master/camx-debug.apk?raw=false)
 
 
 [app preview url]: https://user-images.githubusercontent.com/47218749/112975423-3d420180-9171-11eb-95f0-c945971fd3db.gif
