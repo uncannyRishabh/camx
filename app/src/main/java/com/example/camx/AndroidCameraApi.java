@@ -81,7 +81,7 @@ public class AndroidCameraApi extends AppCompatActivity{
     private static final int REQUEST_CAMERA_PERMISSION = 200;
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
-    private final String [] camID= {"0","1","21","22","20"};
+    private final String [] camID= {"0","1","20","21","22","2","3","4"}; //0,1,2,3,4,5,6,7 in realme and stock android
 
     public String getCameraId() {
         return cameraId;
@@ -113,7 +113,6 @@ public class AndroidCameraApi extends AppCompatActivity{
         //TEST CODE #0
         check_aux();
 
-
         assert takePictureButton != null;
         takePictureButton.setOnClickListener(new View.OnClickListener() {
             @RequiresApi(api = Build.VERSION_CODES.Q)
@@ -127,20 +126,34 @@ public class AndroidCameraApi extends AppCompatActivity{
             @Override
             public void onClick(View v) {
                 //makes changes in takePicture() and  opencamera()
-                if(!getCameraId().equals(camID[2])) {
-                    closeCamera();
-                    setCameraId(camID[2]);
-                    openCamera();
-                    ultra_wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
-                    wide_lens.setBackground(null);
-                    macro_tele_lens.setBackground(null);
+                if(check_null_camiID(camID[3])){
+                    if(!getCameraId().equals(camID[3])) {
+                        closeCamera();
+                        setCameraId(camID[3]);
+                        openCamera();
+                        ultra_wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+                        wide_lens.setBackground(null);
+                        macro_tele_lens.setBackground(null);
+                    }
                 }
+                else if (check_null_camiID(camID[5])){
+                    if(!getCameraId().equals(camID[5])) {
+                        closeCamera();
+                        setCameraId(camID[5]);
+                        openCamera();
+                        ultra_wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+                        wide_lens.setBackground(null);
+                        macro_tele_lens.setBackground(null);
+                    }
+                }
+
             }
         });
 
         wide_lens.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
+
                 if(!getCameraId().equals(camID[0])) {
                     closeCamera();
                     setCameraId(camID[0]);
@@ -155,13 +168,25 @@ public class AndroidCameraApi extends AppCompatActivity{
         macro_tele_lens.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
-                if(!getCameraId().equals(camID[4])) {
-                    closeCamera();
-                    setCameraId(camID[4]);
-                    openCamera();
-                    macro_tele_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
-                    wide_lens.setBackground(null);
-                    ultra_wide_lens.setBackground(null);
+                if(check_null_camiID(camID[4])){
+                    if(!getCameraId().equals(camID[4])) {
+                        closeCamera();
+                        setCameraId(camID[4]);
+                        openCamera();
+                        macro_tele_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+                        ultra_wide_lens.setBackground(null);
+                        wide_lens.setBackground(null);
+                    }
+                }
+                else if (check_null_camiID(camID[6])){
+                    if(!getCameraId().equals(camID[6])) {
+                        closeCamera();
+                        setCameraId(camID[6]);
+                        openCamera();
+                        macro_tele_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+                        ultra_wide_lens.setBackground(null);
+                        wide_lens.setBackground(null);
+                    }
                 }
             }
         });
@@ -287,7 +312,7 @@ public class AndroidCameraApi extends AppCompatActivity{
             int rotation = getWindowManager().getDefaultDisplay().getRotation();
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));  //replace with SURFACE_ROTATION_0
 
-            File file = new File( getApplicationContext().getExternalFilesDir(Environment.DIRECTORY_DCIM)+"/"+System.currentTimeMillis() +"_camX.jpg");
+            File file = new File( getApplicationContext().getExternalFilesDir(Environment.DIRECTORY_DCIM)+"/"+System.currentTimeMillis() +"_"+getCameraId()+"_camX.jpg");
 //            final File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/pic.jpg");
             ImageReader.OnImageAvailableListener readerListener = new ImageReader.OnImageAvailableListener() {
                 @Override
@@ -438,6 +463,22 @@ public class AndroidCameraApi extends AppCompatActivity{
         }
     }
 
+    private boolean check_null_camiID(String id){
+        try {
+            CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+            CameraCharacteristics characteristics = manager.getCameraCharacteristics(id);
+            if (!characteristics.getAvailableCaptureRequestKeys().isEmpty()) {
+//                    Toast.makeText(AndroidCameraApi.this, "EXECUTING"+i, Toast.LENGTH_SHORT).show();
+                return true;
+            }
+            else{
+                return false;
+            }
+        }
+        catch (IllegalArgumentException | CameraAccessException ignored){ }
+        return false;
+    }
+
     private void check_aux() {
         String []array = new String[111];
         StringBuilder msg = new StringBuilder("CAMID : ");
@@ -454,10 +495,9 @@ public class AndroidCameraApi extends AppCompatActivity{
                             msg.append(array[i]).append(",");
                             Log.d(TAG, "check_aux: value of array at " + i + " : " + array[i]);
 //                    Toast.makeText(AndroidCameraApi.this, "EXECUTING"+i, Toast.LENGTH_SHORT).show();
-                            Thread.sleep(100);
                         }
                     }
-                    catch (IllegalArgumentException | CameraAccessException | InterruptedException ignored){
+                    catch (IllegalArgumentException | CameraAccessException ignored){
 
                     }
                 }
