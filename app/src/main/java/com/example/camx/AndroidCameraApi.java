@@ -320,8 +320,9 @@ public class AndroidCameraApi extends AppCompatActivity{
             int rotation = getWindowManager().getDefaultDisplay().getRotation();
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));  //replace with SURFACE_ROTATION_0
 
-            File file = new File( getApplicationContext().getExternalFilesDir(Environment.DIRECTORY_DCIM)+"/"+System.currentTimeMillis() +"_"+getCameraId()+"_camX.jpg");
+//            File file = new File( getApplicationContext().getExternalFilesDir(Environment.DIRECTORY_DCIM)+"/"+System.currentTimeMillis() +"_"+getCameraId()+"_camX.jpg");
 //            final File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)+"/pic.jpg");
+            File file = new File(Environment.getExternalStorageDirectory() + "//DCIM//Camera//" + System.currentTimeMillis() +"_"+getCameraId()+"_camX.jpg");
             ImageReader.OnImageAvailableListener readerListener = new ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(ImageReader reader) {
