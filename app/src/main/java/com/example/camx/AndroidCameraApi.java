@@ -1,4 +1,4 @@
-package com.example.camx;
+ package com.example.camx;
 
 import android.Manifest;
 import android.content.Context;
@@ -22,6 +22,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
+import android.util.Range;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.Surface;
@@ -64,6 +65,7 @@ public class AndroidCameraApi extends AppCompatActivity{
     private TextView logtext;
 
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
+
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
         ORIENTATIONS.append(Surface.ROTATION_90, 0);
@@ -82,6 +84,10 @@ public class AndroidCameraApi extends AppCompatActivity{
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
     private final String [] camID= {"0","1","20","21","22","2","3","4"}; //0,1,2,3,4,5,6,7 in realme and stock android
+                                  // 0   1   2    3    4    5   6   7
+
+//    private Range<Integer> FpsRangeHigh = Range.create(31,60); // Force High FPS preview
+    private Range<Integer>[] ranges;
 
     public String getCameraId() {
         return cameraId;
@@ -136,7 +142,7 @@ public class AndroidCameraApi extends AppCompatActivity{
                         macro_tele_lens.setBackground(null);
                     }
                 }
-                else if (check_null_camiID(camID[5])){
+                else if (check_null_camiID(camID[5])){ //green lens on samsung
                     if(!getCameraId().equals(camID[5])) {
                         closeCamera();
                         setCameraId(camID[5]);
@@ -199,6 +205,7 @@ public class AndroidCameraApi extends AppCompatActivity{
                     setCameraId(camID[1]);
                     openCamera();
                     cardView.setVisibility(View.INVISIBLE);
+                    front_switch.animate().rotation(180f);
                 }
                 else if(cardView.getVisibility()==View.INVISIBLE){
                     closeCamera();
@@ -208,6 +215,7 @@ public class AndroidCameraApi extends AppCompatActivity{
                     macro_tele_lens.setBackground(null);
                     openCamera();
                     cardView.setVisibility(View.VISIBLE);
+                    front_switch.animate().rotation(-180f);
                 }
             }
         });
@@ -407,27 +415,17 @@ public class AndroidCameraApi extends AppCompatActivity{
         CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         Log.e(TAG, "is camera open");
         try {
-//            cameraId = manager.getCameraIdList()[0]; //0 for back 1 for front camera
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
 
-            //TEST CODE #1
-            Set<String> ids = characteristics.getPhysicalCameraIds();
-            for (String id: ids
-                 ) {
-                Log.e(TAG, "openCamera: getPhysicalCameraIds"+id);
+            ranges = characteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+            for (Range<Integer> value : ranges){
+                Log.d(TAG, "openCamera: FPS RANGES : "+value);
             }
 
-            //TEST CODE #2
-            for (String cameraId : manager.getCameraIdList()){
-                characteristics = manager.getCameraCharacteristics(cameraId);
-                Log.e("Testing", "Camera #" + cameraId + " ===> " + getCameraId());
-            }
-            
             StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             assert map != null;
             imageDimension = map.getOutputSizes(SurfaceTexture.class)[0];
 
-            // Add permission for camera and let user grant the permission
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(AndroidCameraApi.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CAMERA_PERMISSION);
                 return;
@@ -440,11 +438,14 @@ public class AndroidCameraApi extends AppCompatActivity{
         Log.e(TAG, "openCamera X");
     }
 
+
     protected void updatePreview() {
         if(null == cameraDevice) {
             Log.e(TAG, "updatePreview error, return");
         }
+
         captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA);
+//        captureRequestBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, FpsRangeHigh); Force High FPS preview
         try {
             cameraCaptureSessions.setRepeatingRequest(captureRequestBuilder.build(), null, mBackgroundHandler);
         } catch (CameraAccessException e) {
@@ -480,7 +481,6 @@ public class AndroidCameraApi extends AppCompatActivity{
     }
 
     private void check_aux() {
-        String []array = new String[111];
         StringBuilder msg = new StringBuilder("CAMID : ");
         Handler handler = new Handler();
         handler.post(new Runnable() {
@@ -491,9 +491,15 @@ public class AndroidCameraApi extends AppCompatActivity{
                         CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
                         CameraCharacteristics characteristics = manager.getCameraCharacteristics(String.valueOf(i));
                         if (!characteristics.getAvailableCaptureRequestKeys().isEmpty()) {
-                            array[i] = String.valueOf(i);
-                            msg.append(array[i]).append(",");
-                            Log.d(TAG, "check_aux: value of array at " + i + " : " + array[i]);
+                            msg.append(i).append(",");
+                            Log.d(TAG, "check_aux: value of array at " + i + " : " + i);
+
+                            Set<String> ids = characteristics.getPhysicalCameraIds();
+                            for (String id: ids
+                            ) {
+                                Log.e(TAG, "openCamera: getPhysicalCameraIds "+id);
+                                msg.append(" pid_").append(id).append("_at_").append(i).append(",");
+                            }
 //                    Toast.makeText(AndroidCameraApi.this, "EXECUTING"+i, Toast.LENGTH_SHORT).show();
                         }
                     }
@@ -501,12 +507,11 @@ public class AndroidCameraApi extends AppCompatActivity{
 
                     }
                 }
+
                 logtext.setText(msg);
             }
         });
-
         Toast.makeText(AndroidCameraApi.this, "COMPLETE EXECUTION cam_aux()", Toast.LENGTH_SHORT).show();
-
     }
 
     @Override
