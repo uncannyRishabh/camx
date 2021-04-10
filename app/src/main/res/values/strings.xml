@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">camx</string>
+
+    <string-array name="values">
+        <item>Item 1</item>
+        <item>Item 2</item>
+        <item>Item 3</item>
+        <item>Item 4 is really long</item>
+        <item>Item 5</item>
+        <item>Item 6</item>
+    </string-array>
 </resources>

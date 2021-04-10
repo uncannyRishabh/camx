@@ -30,7 +30,10 @@
             android:id="@+id/preview"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:drawingCacheQuality="auto" />
+            android:drawingCacheQuality="auto"
+            android:backgroundTint="@color/light_black"
+            android:foregroundTint="@color/light_black"
+            />
 
         <TextView
             android:id="@+id/logtxt"
@@ -46,7 +49,7 @@
             android:layout_height="35dp"
             app:cardCornerRadius="16dp"
             android:layout_marginBottom="8dp"
-            android:backgroundTint="#9A000000"
+            android:backgroundTint="@color/light_black"
             android:textSize="11sp"
             app:cardElevation="0dp"
             tools:ignore="SmallSp"
@@ -54,8 +57,9 @@
             android:layout_alignParentBottom="true">
             <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginHorizontal="4dp"
+                android:layout_gravity="center"
                 >
                 <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/ultra_wide"
@@ -105,20 +109,21 @@
     </RelativeLayout>
 
 
-    <com.google.android.material.card.MaterialCardView
+    <RelativeLayout
         android:id="@+id/cardview_buttons_dock"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardBackgroundColor="#020202"
+        android:background="#020202"
+        android:paddingVertical="38dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/relative_textureView">
 
         <RelativeLayout
+            android:id="@+id/relative_layout_1"
             android:layout_width="match_parent"
-            android:layout_height="265dp">
-
+            android:layout_height="wrap_content">
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/imageViewHolder"
                 android:layout_width="wrap_content"
@@ -160,8 +165,9 @@
                 android:background="#020202"
                 android:scaleType="fitXY"
                 android:src="@drawable/_front_camera_switch" />
+
+
         </RelativeLayout>
 
-
-    </com.google.android.material.card.MaterialCardView>
+    </RelativeLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
