@@ -93,6 +93,7 @@
 //    private Range<Integer>[] ranges;
     private final int resultCode = 1;
     private static final List<String> ACCEPTED_FILES_EXTENSIONS = Arrays.asList("JPG", "JPEG", "DNG");
+    private double ratioCoeff = 1;
     private static final FilenameFilter FILENAME_FILTER = (dir, name) -> {
         int index = name.lastIndexOf(46);
         return ACCEPTED_FILES_EXTENSIONS.contains(-1 == index ? "" : name.substring(index + 1).toUpperCase()) && new File(dir, name).length() > 0;
@@ -105,14 +106,6 @@
         ORIENTATIONS.append(Surface.ROTATION_90, 0);
         ORIENTATIONS.append(Surface.ROTATION_180, 270);
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
-    }
-
-    public String getCameraId() {
-        return cameraId;
-    }
-
-    public void setCameraId(String cameraId) {
-        this.cameraId = cameraId;
     }
 
     @Override
@@ -137,8 +130,11 @@
 //        rv = findViewById(R.id.rv);
         logtext = findViewById(R.id.logtxt);
 
+        requestRuntimePermission();
+
         //TEST CODE #0
         check_aux();
+
         display_latest_image_from_gallery();
 
         assert takePictureButton != null;
@@ -305,24 +301,6 @@
 
     }
 
-     private void display_latest_image_from_gallery() {
-        File external_dir = Environment.getExternalStorageDirectory();
-        File f = new File(external_dir + "//DCIM//Camera//");
-        File[] dcimFiles = f.listFiles(FILENAME_FILTER);
-
-        List<File> filesList = new ArrayList<>(Arrays.asList(dcimFiles != null ? dcimFiles : new File[0]));
-        if (!filesList.isEmpty()) {
-            filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
-        } else {
-            Log.e(TAG, "getAllImageFiles(): Could not find any Image Files");
-        }
-
-        File lastImage = filesList.get(0);
-        Uri liu = Uri.fromFile(lastImage);
-        Glide.with(this).load(liu).into(gallery);
-
-    }
-
     TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
@@ -330,7 +308,7 @@
             openCamera();
 
             int device_width = textureView.getWidth();
-            RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(device_width,(int) (device_width*1.3333));
+            RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(device_width,(int) (device_width * getRatioCoeff()));
             textureView.setLayoutParams(layoutParams);
         }
         @Override
@@ -415,16 +393,20 @@
             if (characteristics != null) {
                 jpegSizes = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(imageFormat);
                 Log.e(TAG, "takePicture: Camera Characteristics : "+characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP));
-
             }
 
             int width = 640;
             int height = 480;
             if (jpegSizes != null && 0 < jpegSizes.length) {
-                width = jpegSizes[0].getWidth();
-                height = jpegSizes[0].getHeight();
+                for(Size size : hRes.values()){ //TODO: 48mp(8000*6000) 64mp(6944*9280)
+                    width = 8000;
+                    height = 6000;
+                }
             }
-            ImageReader reader = ImageReader.newInstance(width, height, ImageFormat.JPEG, 2);
+
+            Log.e(TAG, "takePicture: jpeg sizes before taking pic : width : "+width+"height : "+height);
+
+            ImageReader reader = ImageReader.newInstance(width, height, ImageFormat.RAW_SENSOR, 2);
             List<Surface> outputSurfaces = new ArrayList<>(2);
             outputSurfaces.add(reader.getSurface());
             outputSurfaces.add(new Surface(textureView.getSurfaceTexture()));
@@ -436,7 +418,15 @@
             captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
             // Orientation
             int rotation = getWindowManager().getDefaultDisplay().getRotation();
-            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));  //replace with SURFACE_ROTATION_0
+            assert characteristics != null;
+
+            //TODO: FRONT CAMERA INVERSION FIX
+            if(characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_FRONT){
+                captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(Surface.ROTATION_180));
+            }
+            else {
+                captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
+            }
 
             File imgLocation = new File(Environment.getExternalStorageDirectory() + "//DCIM//Camera//" );
             File file =new File(imgLocation.getAbsolutePath(),"camX_"+ System.currentTimeMillis() +"_"+getCameraId()+".jpg");
@@ -449,6 +439,7 @@
                         buffer.get(bytes);
                         try {
                             save(bytes);
+                            image.close();
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -486,53 +477,6 @@
             e.printStackTrace();
         }
     }
-
-     private Map<Integer, Size> getHighestResolution(CameraCharacteristics characteristics) {
-        Size [] resolutions;
-         int highest = 0,iF = 0;
-         Size hSize = null;
-        ArrayList<Integer> store = new ArrayList<>();
-        ArrayList<String> ratio = new ArrayList<>();
-        Map<Integer,Size> imageFormat_resolution_map = new HashMap<>();
-        Map<Integer,Size> mreturn = new HashMap<>();
-        ArrayList<Integer> image_formats = new ArrayList<>();
-        image_formats.add(ImageFormat.RAW_PRIVATE);
-        image_formats.add(ImageFormat.YUV_420_888);
-        image_formats.add(ImageFormat.RAW_SENSOR);
-        image_formats.add(ImageFormat.RAW10);
-        image_formats.add(ImageFormat.RAW12);
-        image_formats.add(ImageFormat.JPEG);
-
-        if(characteristics!=null){
-            for(Integer i:image_formats){
-                resolutions = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(i);
-                if (resolutions!=null){
-                    for (Size resolution : resolutions) {
-                        imageFormat_resolution_map.put(i,resolution);
-                        store.add(resolution.getHeight() * resolution.getWidth());
-                        int gcd = gcd(resolution.getHeight(),resolution.getWidth());
-                        int hratio = resolution.getHeight()/gcd;
-                        int wratio = resolution.getWidth()/gcd;
-                        ratio.add(hratio+":"+wratio);
-                    }
-                }
-
-            }
-            Set<Map.Entry<Integer, Size>> set = imageFormat_resolution_map.entrySet();
-            for (Map.Entry<Integer, Size> entry : set) {
-                Log.e(TAG, "getHighestResolution: resolution :  "+entry.getValue()+"  Imageformat : "+entry.getKey());
-                int c = entry.getValue().getHeight()*entry.getValue().getWidth();
-                if(highest<=c){
-                    highest=c;
-                    iF=entry.getKey();
-                    hSize=entry.getValue();
-                }
-            }
-            mreturn.put(iF,hSize);
-        }
-         Log.e(TAG, "getHighestResolution: mReturn(highest res) : "+mreturn.entrySet() );
-        return  mreturn;
-     }
 
      protected void createCameraPreview() {
         try {
@@ -575,8 +519,8 @@
             StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             assert map != null;
             Log.e(TAG, "openCamera: Stream Config Map" + map.toString());
-            Size opres = map.getOutputSizes(SurfaceTexture.class)[1];
-            Log.e(TAG, "openCamera: Stream Config Map ; OutputSize "+opres);
+//            Size opres = map.getOutputSizes(SurfaceTexture.class)[1];
+//            Log.e(TAG, "openCamera: Stream Config Map ; OutputSize "+opres);
             Log.e(TAG, "openCamera: SENSOR PRE "+characteristics.get(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE));
 
             imageDimension = map.getOutputSizes(SurfaceTexture.class)[0];
@@ -584,6 +528,9 @@
             for(Size item : hMap.values()){
                 imageDimension = item;
             }
+
+
+            requestRuntimePermission();
 
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(AndroidCameraApi.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CAMERA_PERMISSION);
@@ -596,13 +543,29 @@
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+         if (requestCode == REQUEST_CAMERA_PERMISSION) {
+             if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
+                 Toast.makeText(AndroidCameraApi.this, "Sorry!!!, you can't use this app without granting permission", Toast.LENGTH_LONG).show();
+                 finish();
+             }
+         }
+     }
+
+    private void requestRuntimePermission() {
+         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+             ActivityCompat.requestPermissions(AndroidCameraApi.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CAMERA_PERMISSION);
+         }
+     }
+
     protected void updatePreview() {
         if(null == cameraDevice) {
             Log.e(TAG, "updatePreview error, return");
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA);
-        }
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+//            captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA);
+//        }
 //        captureRequestBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, FpsRangeHigh); Force High FPS preview
         try {
             cameraCaptureSessions.setRepeatingRequest(captureRequestBuilder.build(), null, mBackgroundHandler);
@@ -626,12 +589,7 @@
         try {
             CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(id);
-            if (!characteristics.getAvailableCaptureRequestKeys().isEmpty()) {
-                return true;
-            }
-            else{
-                return false;
-            }
+            return !characteristics.getAvailableCaptureRequestKeys().isEmpty();
         }
         catch (IllegalArgumentException | CameraAccessException ignored){ }
         return false;
@@ -669,18 +627,111 @@
         Toast.makeText(AndroidCameraApi.this, "COMPLETE EXECUTION cam_aux()", Toast.LENGTH_SHORT).show();
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (requestCode == REQUEST_CAMERA_PERMISSION) {
-            if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
-                Toast.makeText(AndroidCameraApi.this, "Sorry!!!, you can't use this app without granting permission", Toast.LENGTH_LONG).show();
-                finish();
-            }
-        }
+    private static void closeOutput(OutputStream outputStream) {
+         if (null != outputStream) {
+             try {
+                 outputStream.close();
+             } catch (IOException e) {
+                 e.printStackTrace();
+             }
+         }
+     }
+
+    private Map<Integer, Size> getHighestResolution(CameraCharacteristics characteristics) {
+         Size [] resolutions;
+         int highest = 0,iF = 0;
+         Size hSize = null;
+         ArrayList<Integer> store = new ArrayList<>();
+         ArrayList<String> ratio = new ArrayList<>();
+         Map<Integer,Size> imageFormat_resolution_map = new HashMap<>();
+         Map<Integer,Size> mreturn = new HashMap<>();
+         ArrayList<Integer> image_formats = new ArrayList<>();
+         image_formats.add(ImageFormat.RAW_PRIVATE);
+         image_formats.add(ImageFormat.YUV_420_888);
+         image_formats.add(ImageFormat.RAW_SENSOR);
+         image_formats.add(ImageFormat.RAW10);
+         image_formats.add(ImageFormat.RAW12);
+         image_formats.add(ImageFormat.JPEG);
+
+         if(characteristics!=null){
+             for(Integer i:image_formats){
+                 resolutions = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(i);
+                 if (resolutions!=null){
+                     for (Size resolution : resolutions) {
+                         imageFormat_resolution_map.put(i,resolution);
+                         store.add(resolution.getHeight() * resolution.getWidth());
+                         int gcd = gcd(resolution.getHeight(),resolution.getWidth());
+                         int hratio = resolution.getHeight()/gcd;
+                         int wratio = resolution.getWidth()/gcd;
+                         ratio.add(hratio+":"+wratio);
+                     }
+                 }
+
+             }
+             Set<Map.Entry<Integer, Size>> set = imageFormat_resolution_map.entrySet();
+             for (Map.Entry<Integer, Size> entry : set) {
+                 Log.e(TAG, "getHighestResolution: resolution :  "+entry.getValue()+"  Imageformat : "+entry.getKey());
+                 int c = entry.getValue().getHeight()*entry.getValue().getWidth();
+                 if(highest<=c){
+                     highest=c;
+                     iF=entry.getKey();
+                     hSize=entry.getValue();
+                 }
+             }
+             mreturn.put(iF,hSize);
+             for(Size size : mreturn.values()){
+//                 int gcd = gcd(size.getHeight(),size.getWidth());
+//                 int hratio = size.getHeight()/gcd;
+//                 int wratio = size.getWidth()/gcd;
+                 ratioCoeff =(double) size.getWidth()/size.getHeight();
+//                 Log.e(TAG,"getHighestResolution: aspect Ratio "+aspectRatio+" height: "+size.getHeight()+"width: "+size.getWidth());
+             }
+         }
+         Log.e(TAG, "getHighestResolution: mReturn(highest res) : "+mreturn.entrySet() );
+         return  mreturn;
+     }
+
+     /**
+      *  For checking if Legacy Camera Support is available to the cameraID
+      */
+     private boolean isLegacyLocked() throws CameraAccessException {
+        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        CameraCharacteristics characteristics = manager.getCameraCharacteristics(getCameraId());
+         return characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) ==
+                 CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY;
+     }
+
+    public String getCameraId() {
+         return cameraId;
+     }
+
+    public void setCameraId(String cameraId) {
+         this.cameraId = cameraId;
+     }
+
+    private double getRatioCoeff(){
+        return ratioCoeff;
     }
 
-     static int gcd(int a, int b)
-     {
+    private void display_latest_image_from_gallery() {
+         File external_dir = Environment.getExternalStorageDirectory();
+         File f = new File(external_dir + "//DCIM//Camera//");
+         File[] dcimFiles = f.listFiles(FILENAME_FILTER);
+
+         List<File> filesList = new ArrayList<>(Arrays.asList(dcimFiles != null ? dcimFiles : new File[0]));
+         if (!filesList.isEmpty()) {
+             filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
+         } else {
+             Log.e(TAG, "getAllImageFiles(): Could not find any Image Files");
+         }
+
+         File lastImage = filesList.get(0);
+         Uri liu = Uri.fromFile(lastImage);
+         Glide.with(this).load(liu).into(gallery);
+
+     }
+
+    static int gcd(int a, int b) {
          if (a == 0)
              return b;
          if (b == 0)
