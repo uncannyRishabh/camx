@@ -5,6 +5,7 @@
  import android.content.Intent;
  import android.content.pm.PackageManager;
  import android.graphics.ImageFormat;
+ import android.graphics.Rect;
  import android.graphics.SurfaceTexture;
  import android.hardware.camera2.CameraAccessException;
  import android.hardware.camera2.CameraCaptureSession;
@@ -12,8 +13,10 @@
  import android.hardware.camera2.CameraDevice;
  import android.hardware.camera2.CameraManager;
  import android.hardware.camera2.CameraMetadata;
+ import android.hardware.camera2.CaptureFailure;
  import android.hardware.camera2.CaptureRequest;
  import android.hardware.camera2.TotalCaptureResult;
+ import android.hardware.camera2.params.MeteringRectangle;
  import android.hardware.camera2.params.StreamConfigurationMap;
  import android.media.Image;
  import android.media.ImageReader;
@@ -26,6 +29,7 @@
  import android.util.Log;
  import android.util.Size;
  import android.util.SparseIntArray;
+ import android.view.MotionEvent;
  import android.view.Surface;
  import android.view.TextureView;
  import android.view.View;
@@ -64,6 +68,10 @@
 
  import travel.ithaka.android.horizontalpickerlib.PickerLayoutManager;
 
+/**
+ * Camera X imports
+ */
+
  public class AndroidCameraApi extends AppCompatActivity{
     private static final String TAG = "AndroidCameraApi";
     private MaterialButton takePictureButton;
@@ -87,7 +95,7 @@
     private static final int REQUEST_CAMERA_PERMISSION = 200;
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
-    private final String [] camID= {"0","1","20","21","20","2","6","3"}; //0,1,2,3,4,5,6,7 in realme and stock android
+    private final String [] camID= {"0","1","20","21","22","2","6","3"}; //0,1,2,3,4,5,6,7 in realme and stock android
                                   // 0   1   2    3    4    5   6   7
 //    private Range<Integer> FpsRangeHigh = Range.create(31,60); // Force High FPS preview
 //    private Range<Integer>[] ranges;
@@ -99,8 +107,10 @@
         return ACCEPTED_FILES_EXTENSIONS.contains(-1 == index ? "" : name.substring(index + 1).toUpperCase()) && new File(dir, name).length() > 0;
     };
 
-    private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
 
+     private CameraCharacteristics characteristics;
+     private boolean mManualFocusEngaged = false;
+    private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
         ORIENTATIONS.append(Surface.ROTATION_90, 0);
@@ -141,7 +151,11 @@
         takePictureButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                takePicture();
+                try {
+                    takePicture();
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
                 new Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
@@ -269,6 +283,109 @@
             }
         });
 
+
+        /**
+         * TOUCH TO FOCUS
+         **/
+
+        textureView.setOnTouchListener(new View.OnTouchListener(){
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                final int actionMasked = event.getActionMasked();
+                if (actionMasked != MotionEvent.ACTION_DOWN) {
+                    return false;
+                }
+                if (mManualFocusEngaged) {
+                    Log.d(TAG, "Manual focus already engaged");
+                    return true;
+                }
+                CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+                try {
+                    characteristics = manager.getCameraCharacteristics(getCameraId());
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+                final Rect sensorArraySize = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+
+                //TODO: here I just flip x,y, but this needs to correspond with the sensor orientation (via SENSOR_ORIENTATION)
+                final int y = (int)((event.getX() / (float)v.getWidth())  * (float)sensorArraySize.height());
+                final int x = (int)((event.getY() / (float)v.getHeight()) * (float)sensorArraySize.width());
+                final int halfTouchWidth  = 150; //(int)motionEvent.getTouchMajor(); //TODO: this doesn't represent actual touch size in pixel. Values range in [3, 10]...
+                final int halfTouchHeight = 150; //(int)motionEvent.getTouchMinor();
+                MeteringRectangle focusAreaTouch = new MeteringRectangle(Math.max(x - halfTouchWidth,  0),
+                        Math.max(y - halfTouchHeight, 0),
+                        halfTouchWidth  * 2,
+                        halfTouchHeight * 2,
+                        MeteringRectangle.METERING_WEIGHT_MAX - 1);
+
+                CameraCaptureSession.CaptureCallback captureCallbackHandler = new CameraCaptureSession.CaptureCallback() {
+                    @Override
+                    public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
+                        super.onCaptureCompleted(session, request, result);
+                        mManualFocusEngaged = false;
+
+                        if (request.getTag() == "FOCUS_TAG") {
+                            //the focus trigger is complete -
+                            //resume repeating (preview surface will get frames), clear AF trigger
+                            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, null);
+                            try {
+                                cameraCaptureSessions.setRepeatingRequest(captureRequestBuilder.build(), null, null);
+                            } catch (CameraAccessException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
+                        super.onCaptureFailed(session, request, failure);
+                        Log.e(TAG, "Manual AF failure: " + failure);
+                        mManualFocusEngaged = false;
+                    }
+                };
+
+                //first stop the existing repeating request
+                try {
+                    cameraCaptureSessions.stopRepeating();
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+
+                //cancel any existing AF trigger (repeated touches, etc.)
+                captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+                captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+                try {
+                    cameraCaptureSessions.capture(captureRequestBuilder.build(), captureCallbackHandler, mBackgroundHandler);
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+
+                //Now add a new AF trigger with focus region
+                if (isMeteringAreaAFSupported()) {
+                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, new MeteringRectangle[]{focusAreaTouch});
+                }
+                if(isMeteringAreaAESupported()){
+                    captureRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS, new MeteringRectangle[]{focusAreaTouch});
+                }
+                captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+                captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
+                captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
+                captureRequestBuilder.setTag("FOCUS_TAG"); //we'll capture this later for resuming the preview
+
+                //then we ask for a single request (not repeating!)
+                try {
+                    cameraCaptureSessions.capture(captureRequestBuilder.build(), captureCallbackHandler, mBackgroundHandler);
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+                mManualFocusEngaged = true;
+
+                return true;
+            }
+
+
+        });
+
         PickerLayoutManager pickerLayoutManager = new PickerLayoutManager(this, PickerLayoutManager.HORIZONTAL, false);
         pickerLayoutManager.setChangeAlpha(true);
         pickerLayoutManager.setScaleDownBy(1.0f);
@@ -369,14 +486,15 @@
         }
     }
 
-    protected void takePicture() {
+    protected void takePicture() throws CameraAccessException {
         if(null == cameraDevice) {
             Log.e(TAG, "cameraDevice is null");
             return;
         }
-        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+
+        final CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
-            CameraCharacteristics characteristics = manager.getCameraCharacteristics(getCameraId());
+            characteristics = manager.getCameraCharacteristics(getCameraId());
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 characteristics.getKeysNeedingPermission();
             }
@@ -399,14 +517,13 @@
             int height = 480;
             if (jpegSizes != null && 0 < jpegSizes.length) {
                 for(Size size : hRes.values()){ //TODO: 48mp(8000*6000) 64mp(6944*9280)
-                    width = 8000;
-                    height = 6000;
+                    width = size.getWidth();
+                    height = size.getHeight();
                 }
             }
-
             Log.e(TAG, "takePicture: jpeg sizes before taking pic : width : "+width+"height : "+height);
 
-            ImageReader reader = ImageReader.newInstance(width, height, ImageFormat.RAW_SENSOR, 2);
+            ImageReader reader = ImageReader.newInstance(width, height, ImageFormat.JPEG, 2);
             List<Surface> outputSurfaces = new ArrayList<>(2);
             outputSurfaces.add(reader.getSurface());
             outputSurfaces.add(new Surface(textureView.getSurfaceTexture()));
@@ -529,15 +646,15 @@
                 imageDimension = item;
             }
 
-
             requestRuntimePermission();
 
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(AndroidCameraApi.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CAMERA_PERMISSION);
-                return;
             }
-            Log.e(TAG, "openCamera: cameraID :> "+cameraId);
-            manager.openCamera(getCameraId(), stateCallback, null);
+            else {
+                Log.e(TAG, "openCamera: cameraID :> " + cameraId);
+                manager.openCamera(getCameraId(), stateCallback, null);
+            }
         } catch (CameraAccessException | IllegalArgumentException e) {
             e.printStackTrace();
         }
@@ -647,18 +764,26 @@
          Map<Integer,Size> mreturn = new HashMap<>();
          ArrayList<Integer> image_formats = new ArrayList<>();
          image_formats.add(ImageFormat.RAW_PRIVATE);
+         image_formats.add(ImageFormat.JPEG);
          image_formats.add(ImageFormat.YUV_420_888);
          image_formats.add(ImageFormat.RAW_SENSOR);
          image_formats.add(ImageFormat.RAW10);
          image_formats.add(ImageFormat.RAW12);
-         image_formats.add(ImageFormat.JPEG);
 
          if(characteristics!=null){
              for(Integer i:image_formats){
+                 int previous=0;
                  resolutions = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(i);
+                 int imageFormat = Integer.parseUnsignedInt(Integer.toHexString(i),16);
+                 Log.e(TAG, "getHighestResolution: imageFormat : 0x"+String.format("%x",imageFormat)+"  resolutions :  "
+                         + Arrays.toString(resolutions));
                  if (resolutions!=null){
                      for (Size resolution : resolutions) {
-                         imageFormat_resolution_map.put(i,resolution);
+                         if(previous<(resolution.getHeight()*resolution.getWidth())){
+                             imageFormat_resolution_map.put(i,resolution);
+                             previous = resolution.getHeight()*resolution.getWidth();
+                         }
+
                          store.add(resolution.getHeight() * resolution.getWidth());
                          int gcd = gcd(resolution.getHeight(),resolution.getWidth());
                          int hratio = resolution.getHeight()/gcd;
@@ -666,8 +791,11 @@
                          ratio.add(hratio+":"+wratio);
                      }
                  }
-
              }
+
+//             Log.e(TAG, "getHighestResolution: store "+store );
+//             Log.e(TAG, "getHighestResolution: imageformatresolutionmap "+imageFormat_resolution_map );
+
              Set<Map.Entry<Integer, Size>> set = imageFormat_resolution_map.entrySet();
              for (Map.Entry<Integer, Size> entry : set) {
                  Log.e(TAG, "getHighestResolution: resolution :  "+entry.getValue()+"  Imageformat : "+entry.getKey());
@@ -769,4 +897,13 @@
         stopBackgroundThread();
         super.onPause();
     }
-}
+
+     private boolean isMeteringAreaAESupported() {
+         Integer aeState = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AE);
+         return aeState!=null && aeState >=1;
+     }
+
+     private boolean isMeteringAreaAFSupported() {
+         return characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF) >= 1;
+     }
+ }

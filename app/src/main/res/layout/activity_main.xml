@@ -6,108 +6,118 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <com.google.android.material.appbar.MaterialToolbar
+    <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appbar"
         android:layout_width="match_parent"
-        android:layout_height="112dp"
-        android:background="@color/black"
-        app:layout_constraintBottom_toTopOf="@+id/relative_textureView"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_height="wrap_content"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:backgroundTint="#80000000"
+        android:elevation="10dp"
+        >
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="102dp"
+
+            >
+            <TextView
+                android:id="@+id/logtxt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="log"
+                android:gravity="center"
+                android:textSize="12sp"
+                android:layout_centerHorizontal="true"
+                android:layout_alignParentBottom="true"
+                />
+        </RelativeLayout>
+    </com.google.android.material.appbar.AppBarLayout>
 
     <RelativeLayout
         android:id="@+id/relative_textureView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@id/cardview_buttons_dock"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/appbar"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:background="@color/black"
         >
-
         <TextureView
             android:id="@+id/preview"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:drawingCacheQuality="auto"
             android:backgroundTint="@color/light_black"
             android:foregroundTint="@color/light_black"
             />
 
-        <TextView
-            android:id="@+id/logtxt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="log"
-            android:textSize="12sp"
-            android:gravity="center"
-            />
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/aux_cam_switch"
-            android:layout_width="wrap_content"
-            android:layout_height="35dp"
-            app:cardCornerRadius="16dp"
-            android:layout_marginBottom="8dp"
-            android:backgroundTint="@color/light_black"
-            android:textSize="11sp"
-            app:cardElevation="0dp"
-            tools:ignore="SmallSp"
-            android:layout_centerHorizontal="true"
-            android:layout_alignParentBottom="true">
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="4dp"
-                android:layout_gravity="center"
-                >
-                <com.google.android.material.textview.MaterialTextView
-                    android:id="@+id/ultra_wide"
-                    android:layout_width="30dp"
-                    android:layout_height="29dp"
-                    android:gravity="center"
-                    android:text="0.6"
-                    android:textSize="10sp"
-                    android:textColor="@color/white"
-                    android:layout_centerVertical="true"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="@null"
-                    />
-                <com.google.android.material.textview.MaterialTextView
-                    android:id="@+id/main_wide"
-                    android:layout_width="30dp"
-                    android:layout_height="29dp"
-                    android:gravity="center"
-                    android:text="1.0"
-                    android:textSize="10sp"
-                    android:textColor="@color/white"
-                    android:layout_centerVertical="true"
-                    android:layout_marginStart="12dp"
-                    android:layout_toEndOf="@id/ultra_wide"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="@drawable/colored_textview"
-                    />
-                <com.google.android.material.textview.MaterialTextView
-                    android:id="@+id/macro_tele"
-                    android:layout_width="30dp"
-                    android:layout_height="29dp"
-                    android:gravity="center"
-                    android:text="2.0"
-                    android:textSize="10sp"
-                    android:textColor="@color/white"
-                    android:layout_centerVertical="true"
-                    android:layout_marginStart="12dp"
-                    android:layout_toEndOf="@id/main_wide"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="@null"
-                    />
-            </RelativeLayout>
-        </com.google.android.material.card.MaterialCardView>
+
     </RelativeLayout>
 
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/aux_cam_switch"
+        android:layout_width="wrap_content"
+        android:layout_height="35dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/cardview_buttons_dock"
+        android:layout_centerHorizontal="true"
+        android:backgroundTint="@color/light_black"
+        android:elevation="20dp"
+        android:textSize="11sp"
+        app:cardCornerRadius="16dp"
+        tools:ignore="SmallSp">
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginHorizontal="4dp">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/ultra_wide"
+                android:layout_width="30dp"
+                android:layout_height="29dp"
+                android:layout_centerVertical="true"
+                android:background="@null"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="0.6"
+                android:textColor="@color/white"
+                android:textSize="10sp" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/main_wide"
+                android:layout_width="30dp"
+                android:layout_height="29dp"
+                android:layout_centerVertical="true"
+                android:layout_marginStart="12dp"
+                android:layout_toEndOf="@id/ultra_wide"
+                android:background="@drawable/colored_textview"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="1.0"
+                android:textColor="@color/white"
+                android:textSize="10sp" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/macro_tele"
+                android:layout_width="30dp"
+                android:layout_height="29dp"
+                android:layout_marginStart="14dp"
+                android:layout_toEndOf="@id/main_wide"
+                android:background="@null"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="2.0"
+                android:textColor="@color/white"
+                android:textSize="10sp" />
+        </RelativeLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <RelativeLayout
         android:id="@+id/cardview_buttons_dock"
@@ -118,7 +128,8 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/relative_textureView">
+        >
+
 
         <RelativeLayout
             android:id="@+id/relative_layout_1"
