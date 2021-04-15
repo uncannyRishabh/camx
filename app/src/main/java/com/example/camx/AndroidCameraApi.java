@@ -198,6 +198,7 @@ public class AndroidCameraApi extends AppCompatActivity{
            public void onClick(View v) {
 
                if(!getCameraId().equals(camID[0])) {
+                   zoom_level = 1;
                    closeCamera();
                    setCameraId(camID[0]);
                    openCamera();
@@ -237,6 +238,7 @@ public class AndroidCameraApi extends AppCompatActivity{
        front_switch.setOnClickListener(new View.OnClickListener(){
            @Override
            public void onClick(View v) {
+               zoom_level = 1;
                if(cardView.getVisibility()==View.VISIBLE){
                    closeCamera();
                    setCameraId(camID[1]);
@@ -614,13 +616,14 @@ public class AndroidCameraApi extends AppCompatActivity{
            captureBuilder.addTarget(reader.getSurface());
            captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
            // Orientation
-           int rotation = getWindowManager().getDefaultDisplay().getRotation();
+
+           int rotation = getDisplay().getRotation();
            assert characteristics != null;
 
            /**
             * FRONT CAMERA INVERSION FIX
             */
-           
+
            if(characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_FRONT){
                captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(Surface.ROTATION_180));
            }
@@ -631,7 +634,12 @@ public class AndroidCameraApi extends AppCompatActivity{
            if(zoom_level!=1) {
                captureBuilder.set(CaptureRequest.SCALER_CROP_REGION, zoom);
            }
-           File imgLocation = new File(Environment.getExternalStorageDirectory() + "//DCIM//Camera//" );
+
+           /**
+            * Had to replace getExternalStorageDirectory() with "//storage//emulated//0" since its deprecated 😬😬😬
+            */
+           File imgLocation = new File("//storage//emulated//0//DCIM//Camera//" );
+           Log.d(TAG, "takePicture: FILE LOCATION BEFORE STORING Environment.getExternalStorageDirectory() [ Deprecated ] "+Environment.getExternalStorageDirectory());
            File file =new File(imgLocation.getAbsolutePath(),"camX_"+ System.currentTimeMillis() +"_"+getCameraId()+".jpg");
            ImageReader.OnImageAvailableListener readerListener = new ImageReader.OnImageAvailableListener() {
                @Override
