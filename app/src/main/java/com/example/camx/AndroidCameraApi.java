@@ -26,6 +26,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
@@ -33,16 +34,21 @@ import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.os.HandlerCompat;
+import androidx.core.view.WindowCompat;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
@@ -64,136 +70,198 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import travel.ithaka.android.horizontalpickerlib.PickerLayoutManager;
-
 
 public class AndroidCameraApi extends AppCompatActivity{
-   private static final String TAG = "AndroidCameraApi";
-   private MaterialButton takePictureButton;
-   private TextureView textureView;
-   private MaterialTextView ultra_wide_lens,wide_lens,macro_tele_lens;
-   private AppCompatImageButton front_switch;
-   private MaterialCardView cardView;
-   private TextView logtext;
-   private ImageView gallery;
-//   private HorizontalScrollView horizontalScrollView;
-//   private RecyclerView rv;
-//   private PickerAdapter adapter;
-
-   private String cameraId;
-   protected CameraDevice cameraDevice;
-   protected CameraCaptureSession cameraCaptureSessions;
-//   protected CaptureRequest captureRequest;
-   protected CaptureRequest.Builder captureRequestBuilder;
-   private Size imageDimension;
-   private ImageReader imageReader;
-   private static final int REQUEST_CAMERA_PERMISSION = 200;
-   private Handler mBackgroundHandler;
-   private HandlerThread mBackgroundThread;
-   private final String [] camID= {"0","1","20","21","22","2","6","3"}; //0,1,2,3,4,5,6,7 in realme and stock android
-                                 // 0   1   2    3    4    5   6   7
-//   private Range<Integer> FpsRangeHigh = Range.create(31,60); // Force High FPS preview
-//   private Range<Integer>[] ranges;
-   public float finger_spacing = 0;
-   public float zoom_level = 1;
-   private Rect zoom = new Rect();
-   private final int resultCode = 1;
-   private static final List<String> ACCEPTED_FILES_EXTENSIONS = Arrays.asList("JPG", "JPEG", "DNG");
-   private double ratioCoeff = 1;
-   private static final FilenameFilter FILENAME_FILTER = (dir, name) -> {
+    private static final String TAG = "AndroidCameraApi";
+    private static final int REQUEST_CAMERA_PERMISSION = 200;
+    private static final List<String> ACCEPTED_FILES_EXTENSIONS = Arrays.asList("JPG", "JPEG", "DNG");
+    private static final FilenameFilter FILENAME_FILTER = (dir, name) -> {
        int index = name.lastIndexOf(46);
        return ACCEPTED_FILES_EXTENSIONS.contains(-1 == index ? "" : name.substring(index + 1).toUpperCase()) && new File(dir, name).length() > 0;
-   };
+    };
+    private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
 
-
-    private CameraCharacteristics characteristics;
-    private boolean mManualFocusEngaged = false;
-   private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
-   static {
+    static {
        ORIENTATIONS.append(Surface.ROTATION_0, 90);
        ORIENTATIONS.append(Surface.ROTATION_90, 0);
        ORIENTATIONS.append(Surface.ROTATION_180, 270);
        ORIENTATIONS.append(Surface.ROTATION_270, 180);
    }
 
-   @Override
-   protected void onCreate(Bundle savedInstanceState) {
-       super.onCreate(savedInstanceState);
-       setContentView(R.layout.activity_main);
+    private final String [] camID= {"0","1","20","21","22","2","6","3"}; //0,1,2,3,4,5,6,7 in realme and stock android
+    private final int resultCode = 1;
+                                 // 0   1   2    3    4    5   6   7
+//    private Range<Integer> FpsRangeHigh = Range.create(31,60); // Force High FPS preview
+//    private Range<Integer>[] ranges;
+    public float finger_spacing = 0;
+    public float zoom_level = 1;
+    protected CameraDevice cameraDevice;
+    protected CameraCaptureSession cameraCaptureSessions;
+//    protected CaptureRequest captureRequest;
+    protected CaptureRequest.Builder captureRequestBuilder;
+    private MaterialButton takePictureButton;
+    private TextureView textureView;
+    private MaterialTextView ultra_wide_lens,wide_lens,macro_tele_lens;
+    private AppCompatImageButton front_switch;
+    private MaterialCardView cardView;
+    private TextView logtext;
+    private ImageView gallery;
+//    private HorizontalScrollView horizontalScrollView;
+//    private RecyclerView rv;
+//    private PickerAdapter adapter;
+    private String cameraId;
+    private Size imageDimension;
+    private ImageReader imageReader;
+    private Handler mBackgroundHandler;
+    private HandlerThread mBackgroundThread;
+    private Rect zoom = new Rect();
+    private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
+       @Override
+       public void onOpened(CameraDevice camera) {
+           //This is called when the camera is open
+           Log.e(TAG, "onOpened");
+           cameraDevice = camera;
+           createCameraPreview();
+       }
+       @Override
+       public void onDisconnected(CameraDevice camera) {
+           cameraDevice.close();
+       }
+       @Override
+       public void onError(CameraDevice camera, int error) {
+           if(cameraDevice!=null) {
+               cameraDevice.close();
+           }
+           cameraDevice = null;
+       }
+   };
+    final CameraCaptureSession.CaptureCallback captureCallbackListener = new CameraCaptureSession.CaptureCallback() {
+        @Override
+        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
+            super.onCaptureCompleted(session, request, result);
+            createCameraPreview();
+        }
+     };
+    private boolean firstTouch = false;
+    private long time;
+    private double ratioCoeff = 1;
+    TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
+        @Override
+        public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+            //open your camera here
+            openCamera();
 
-       getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-               |View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-               |View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+            int device_width = textureView.getWidth();
+            RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(device_width,(int) (device_width * getRatioCoeff()));
+            textureView.setLayoutParams(layoutParams);
+        }
+        @Override
+        public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+            // Transform you image captured size according to the surface width and height
 
-       textureView = findViewById(R.id.preview);
-       textureView.setSurfaceTextureListener(textureListener);
-       takePictureButton = findViewById(R.id.capture);
-       ultra_wide_lens = findViewById(R.id.ultra_wide);
-       wide_lens = findViewById(R.id.main_wide);
-       macro_tele_lens = findViewById(R.id.macro_tele);
-       front_switch = findViewById(R.id.front_back_switch);
-       cardView = findViewById(R.id.aux_cam_switch);
-       gallery = findViewById(R.id.image_gallery);
+        }
+        @Override
+        public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+            return false;
+        }
+        @Override
+        public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+        }
+    };
+    private CameraCharacteristics characteristics;
+    private boolean mManualFocusEngaged = false;
+
+    static void closeOutput(OutputStream outputStream) {
+        if (null != outputStream) {
+            try {
+                outputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    static int gcd(int a, int b) {
+        if (a == 0)
+            return b;
+        if (b == 0)
+            return a;
+        if (a == b)
+            return a;
+        if (a > b)
+            return gcd(a-b, b);
+        return gcd(a, b-a);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.R)
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        WindowCompat.setDecorFitsSystemWindows(getWindow(),false);
+        WindowInsetsController controller = getWindow().getInsetsController();
+        if(controller!=null) {
+            controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+            controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        }
+        textureView = findViewById(R.id.preview);
+        textureView.setSurfaceTextureListener(textureListener);
+        takePictureButton = findViewById(R.id.capture);
+        ultra_wide_lens = findViewById(R.id.ultra_wide);
+        wide_lens = findViewById(R.id.main_wide);
+        macro_tele_lens = findViewById(R.id.macro_tele);
+        front_switch = findViewById(R.id.front_back_switch);
+        cardView = findViewById(R.id.aux_cam_switch);
+        gallery = findViewById(R.id.image_gallery);
 //        horizontalScrollView = findViewById(R.id.horizontal_scrollView);
 //        rv = findViewById(R.id.rv);
-       logtext = findViewById(R.id.logtxt);
+        logtext = findViewById(R.id.logtxt);
 
-       zoom = new Rect(0,0,textureView.getWidth(),textureView.getHeight());
+        zoom = new Rect(0,0,textureView.getWidth(),textureView.getHeight());
 
-       requestRuntimePermission();
+        requestRuntimePermission();
+        check_aux();
+        display_latest_image_from_gallery();
 
-       //TEST CODE #0
-       check_aux();
+        assert takePictureButton != null;
+        takePictureButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                takePicture();
+                new Handler(Looper.getMainLooper()).postDelayed(() -> display_latest_image_from_gallery(),1500);
+            }
+        });
 
-       display_latest_image_from_gallery();
-
-       assert takePictureButton != null;
-       takePictureButton.setOnClickListener(new View.OnClickListener() {
-           @Override
-           public void onClick(View v) {
-               try {
-                   takePicture();
-               } catch (CameraAccessException e) {
-                   e.printStackTrace();
-               }
-               new Handler().postDelayed(new Runnable() {
-                   @Override
-                   public void run() {
-                       display_latest_image_from_gallery();
-                   }
-               },1500);
-           }
-       });
-
-       ultra_wide_lens.setOnClickListener(new View.OnClickListener(){
-           @Override
-           public void onClick(View v) {
+        ultra_wide_lens.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
                //makes changes in takePicture() and  opencamera()
-               if(check_null_camiID(camID[3])){
-                   if(!getCameraId().equals(camID[3])) {
-                       closeCamera();
-                       setCameraId(camID[3]);
-                       openCamera();
-                       ultra_wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
-                       wide_lens.setBackground(null);
-                       macro_tele_lens.setBackground(null);
+                if(check_null_camiID(camID[3])){
+                    if(!getCameraId().equals(camID[3])) {
+                        closeCamera();
+                        setCameraId(camID[3]);
+                        openCamera();
+                        ultra_wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+                        wide_lens.setBackground(null);
+                        macro_tele_lens.setBackground(null);
                    }
                }
-               else if (check_null_camiID(camID[5])){ //green lens on samsung
-                   if(!getCameraId().equals(camID[5])) {
-                       closeCamera();
-                       setCameraId(camID[5]);
-                       openCamera();
-                       ultra_wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
-                       wide_lens.setBackground(null);
-                       macro_tele_lens.setBackground(null);
-                   }
+                else if (check_null_camiID(camID[5])){ //green lens on samsung
+                    if(!getCameraId().equals(camID[5])) {
+                        closeCamera();
+                        setCameraId(camID[5]);
+                        openCamera();
+                        ultra_wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+                        wide_lens.setBackground(null);
+                        macro_tele_lens.setBackground(null);
+                    }
                }
 
            }
        });
 
-       wide_lens.setOnClickListener(new View.OnClickListener(){
+        wide_lens.setOnClickListener(new View.OnClickListener(){
            @Override
            public void onClick(View v) {
 
@@ -209,7 +277,7 @@ public class AndroidCameraApi extends AppCompatActivity{
            }
        });
 
-       macro_tele_lens.setOnClickListener(new View.OnClickListener(){
+        macro_tele_lens.setOnClickListener(new View.OnClickListener(){
            @Override
            public void onClick(View v) {
                if(check_null_camiID(camID[4])){
@@ -235,7 +303,7 @@ public class AndroidCameraApi extends AppCompatActivity{
            }
        });
 
-       front_switch.setOnClickListener(new View.OnClickListener(){
+        front_switch.setOnClickListener(new View.OnClickListener(){
            @Override
            public void onClick(View v) {
                zoom_level = 1;
@@ -259,7 +327,7 @@ public class AndroidCameraApi extends AppCompatActivity{
            }
        });
 
-       gallery.setOnClickListener(new View.OnClickListener() {
+        gallery.setOnClickListener(new View.OnClickListener() {
            @Override
            public void onClick(View v) {
                //METHOD 1
@@ -280,53 +348,68 @@ public class AndroidCameraApi extends AppCompatActivity{
 //                {
 //                    startActivity(intent);
 //                }
-
                startActivityForResult(intent, resultCode);
            }
        });
 
-       textureView.setOnTouchListener(new View.OnTouchListener(){
-           @Override
-           public boolean onTouch(View v, MotionEvent event) {
-               /**
-                * TOUCH TO FOCUS
-                */
-//               final int actionMasked = event.getActionMasked();
-//               if (actionMasked != MotionEvent.ACTION_DOWN) {
-//                   return false;
-//               }
-               if (mManualFocusEngaged) {
-                   Log.d(TAG, "Manual focus already engaged");
-                   return true;
-               }
-               if (event.getAction() == MotionEvent.ACTION_UP) {
-                   touchToFocus(v,event);
-               }
-//
-               /**
-                * PINCH TO ZOOM
-                */
-               pinchtoZoom(event);
-
-               return true;
+        textureView.setOnTouchListener(new View.OnTouchListener(){
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                time = System.currentTimeMillis();
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    if(firstTouch && (System.currentTimeMillis() - time) <= 300) {
+                        /**
+                         * DOUBLE TAP TO ZOOM
+                         */
+                        Log.e("** DOUBLE TAP**"," second tap ");
+                        try {
+                            doubleTaptoZoom();
+                        } catch (CameraAccessException e) {
+                            e.printStackTrace();
+                        }
+                        firstTouch = false;
+                    } else {
+                        /**
+                         * TOUCH TO FOCUS
+                         */
+                        firstTouch = true;
+                        Handler handler = HandlerCompat.createAsync(Looper.getMainLooper());
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                firstTouch = false;
+                            }
+                        }, 700);
+                        touchToFocus(v,event);
+                        time = System.currentTimeMillis();
+                        Log.e("** SINGLE  TAP**"," First Tap time  "+time);
+                        return false;
+                    }
+                }
+                /**
+                 * PINCH TO ZOOM
+                 */
+                if (event.getPointerCount() > 1) {
+                    pinchtoZoom(event);
+                }
+                return true;
            }
-
 
        });
 
-       PickerLayoutManager pickerLayoutManager = new PickerLayoutManager(this, PickerLayoutManager.HORIZONTAL, false);
-       pickerLayoutManager.setChangeAlpha(true);
-       pickerLayoutManager.setScaleDownBy(1.0f);
-       pickerLayoutManager.setScaleDownDistance(2f);
-
-       List<String> adapter_data = new ArrayList<>();
-       adapter_data.add("Night");
-       adapter_data.add("Photo");
-       adapter_data.add("Video");
-       adapter_data.add("Slo Motion");
-       adapter_data.add("Timelapse");
-       adapter_data.add("Reverse");
-       adapter_data.add("Pro");
+//       PickerLayoutManager pickerLayoutManager = new PickerLayoutManager(this, PickerLayoutManager.HORIZONTAL, false);
+//       pickerLayoutManager.setChangeAlpha(true);
+//       pickerLayoutManager.setScaleDownBy(1.0f);
+//       pickerLayoutManager.setScaleDownDistance(2f);
+//
+//       List<String> adapter_data = new ArrayList<>();
+//       adapter_data.add("Night");
+//       adapter_data.add("Photo");
+//       adapter_data.add("Video");
+//       adapter_data.add("Slo Motion");
+//       adapter_data.add("Timelapse");
+//       adapter_data.add("Reverse");
+//       adapter_data.add("Pro");
 //        adapter = new PickerAdapter(this, adapter_data, rv);
 //        SnapHelper snapHelper = new LinearSnapHelper();
 //        snapHelper.attachToRecyclerView(rv);
@@ -346,7 +429,33 @@ public class AndroidCameraApi extends AppCompatActivity{
 
    }
 
+    private void doubleTaptoZoom() throws CameraAccessException {
+        float maxZoom = 1;
+        try {
+            maxZoom = getMaxZoom();
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+        float DT_value = maxZoom/2;
+
+        Log.e(TAG, "doubleTaptoZoom: Zoom Level "+zoom_level);
+        if(zoom_level<DT_value){
+            setZoom(maxZoom,DT_value);
+            zoom_level = DT_value;
+        }
+        else if(zoom_level>DT_value){
+            setZoom(maxZoom,DT_value);
+            zoom_level = DT_value;
+        }
+        else if(zoom_level==DT_value){
+            setZoom(maxZoom,1f);
+            zoom_level = 1f;
+        }
+        Log.e(TAG, "doubleTaptoZoom: D O U B L E - T A P P E D");
+    }
+
     private void touchToFocus(View v,MotionEvent event) {
+        Log.e(TAG, "touchToFocus: F O C U S I N G");
         CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
             characteristics = manager.getCameraCharacteristics(getCameraId());
@@ -429,21 +538,17 @@ public class AndroidCameraApi extends AppCompatActivity{
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-        mManualFocusEngaged = true;
+//        mManualFocusEngaged = true;
     }
 
     private void pinchtoZoom(MotionEvent event){
         try {
-            CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-            CameraCharacteristics characteristics = manager.getCameraCharacteristics(getCameraId());
-            float maxzoom = (characteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM))*4.5f;
 
-            Rect m = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
-            int action = event.getAction();
+            float maxzoom = getMaxZoom();
             float current_finger_spacing;
 
 //            Log.e(TAG, "pinchtoZoom: Pointer Count : "+event.getPointerCount());
-            if (event.getPointerCount() > 1) {
+
                 // Multi touch logic
                 current_finger_spacing = getFingerSpacing(event);
 //                Log.e(TAG, "pinchtoZoom: getFingerSpacing : "+current_finger_spacing);
@@ -455,33 +560,36 @@ public class AndroidCameraApi extends AppCompatActivity{
                         zoom_level-=0.5f;
                         Log.e(TAG, "pinchtoZoom: Zoom Out "+zoom_level);
                     }
-                    int minW = (int) (m.width() / maxzoom);
-                    int minH = (int) (m.height() / maxzoom);
-                    int difW = m.width() - minW;
-                    int difH = m.height() - minH;
-                    int cropW = difW /100 *(int)zoom_level;
-                    int cropH = difH /100 *(int)zoom_level;
-                    cropW -= cropW & 3;
-                    cropH -= cropH & 3;
-                    zoom = new Rect(cropW, cropH, m.width() - cropW, m.height() - cropH);
-//                    Log.e(TAG, "pinchtoZoom: ZOOM VALUE : "+zoom);
-                    captureRequestBuilder.set(CaptureRequest.SCALER_CROP_REGION, zoom);
+                    setZoom(maxzoom,zoom_level);
                 }
                 finger_spacing = current_finger_spacing;
-            } else{
-                if (action == MotionEvent.ACTION_UP) {
-                    //single touch logic
-                }
-            }
 
-            try {
-                cameraCaptureSessions
-                        .setRepeatingRequest(captureRequestBuilder.build(), null, null);
-            } catch (CameraAccessException | NullPointerException e) {
-                e.printStackTrace();
-            }
         } catch (CameraAccessException e) {
             throw new RuntimeException("can not access camera.", e);
+        }
+    }
+
+    private void setZoom(float maxzoom, float zoom_level) throws CameraAccessException {
+        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        CameraCharacteristics characteristics = manager.getCameraCharacteristics(getCameraId());
+        Rect m = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+
+        int minW = (int) (m.width() / maxzoom);
+        int minH = (int) (m.height() / maxzoom);
+        int difW = m.width() - minW;
+        int difH = m.height() - minH;
+        int cropW = difW /100 *(int)zoom_level;
+        int cropH = difH /100 *(int)zoom_level;
+        cropW -= cropW & 3;
+        cropH -= cropH & 3;
+        zoom = new Rect(cropW, cropH, m.width() - cropW, m.height() - cropH);
+//                    Log.e(TAG, "pinchtoZoom: ZOOM VALUE : "+zoom);
+        captureRequestBuilder.set(CaptureRequest.SCALER_CROP_REGION, zoom);
+        try {
+            cameraCaptureSessions
+                    .setRepeatingRequest(captureRequestBuilder.build(), null, null);
+        } catch (CameraAccessException | NullPointerException e) {
+            e.printStackTrace();
         }
     }
 
@@ -491,66 +599,13 @@ public class AndroidCameraApi extends AppCompatActivity{
         return (float) Math.sqrt(x * x + y * y);
     }
 
-    TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
-       @Override
-       public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-           //open your camera here
-           openCamera();
-
-           int device_width = textureView.getWidth();
-           RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(device_width,(int) (device_width * getRatioCoeff()));
-           textureView.setLayoutParams(layoutParams);
-       }
-       @Override
-       public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-           // Transform you image captured size according to the surface width and height
-
-       }
-       @Override
-       public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-           return false;
-       }
-       @Override
-       public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-       }
-   };
-
-   private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
-       @Override
-       public void onOpened(CameraDevice camera) {
-           //This is called when the camera is open
-           Log.e(TAG, "onOpened");
-           cameraDevice = camera;
-           createCameraPreview();
-       }
-       @Override
-       public void onDisconnected(CameraDevice camera) {
-           cameraDevice.close();
-       }
-       @Override
-       public void onError(CameraDevice camera, int error) {
-           if(cameraDevice!=null) {
-               cameraDevice.close();
-           }
-           cameraDevice = null;
-       }
-   };
-
-   final CameraCaptureSession.CaptureCallback captureCallbackListener = new CameraCaptureSession.CaptureCallback() {
-       @Override
-       public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
-           super.onCaptureCompleted(session, request, result);
-           createCameraPreview();
-       }
-   };
-
-   protected void startBackgroundThread() {
+    protected void startBackgroundThread() {
        mBackgroundThread = new HandlerThread("Camera Background");
        mBackgroundThread.start();
        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
    }
 
-   protected void stopBackgroundThread() {
+    protected void stopBackgroundThread() {
        mBackgroundThread.quitSafely();
        try {
            mBackgroundThread.join();
@@ -561,7 +616,7 @@ public class AndroidCameraApi extends AppCompatActivity{
        }
    }
 
-   protected void takePicture() throws CameraAccessException {
+    protected void takePicture() {
        if(null == cameraDevice) {
            Log.e(TAG, "cameraDevice is null");
            return;
@@ -691,7 +746,7 @@ public class AndroidCameraApi extends AppCompatActivity{
 //       cameraCaptureSessions.abortCaptures();
    }
 
-   protected void createCameraPreview() {
+    protected void createCameraPreview() {
        try {
            SurfaceTexture texture = textureView.getSurfaceTexture();
            assert texture != null;
@@ -723,7 +778,7 @@ public class AndroidCameraApi extends AppCompatActivity{
        }
    }
 
-   private void openCamera() {
+    private void openCamera() {
        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
        Log.e(TAG, "is camera open");
        try {
@@ -759,8 +814,8 @@ public class AndroidCameraApi extends AppCompatActivity{
        }
    }
 
-   @Override
-   public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == REQUEST_CAMERA_PERMISSION) {
             if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
                 Toast.makeText(AndroidCameraApi.this, "Sorry!!!, you can't use this app without granting permission", Toast.LENGTH_LONG).show();
@@ -769,13 +824,13 @@ public class AndroidCameraApi extends AppCompatActivity{
         }
     }
 
-   private void requestRuntimePermission() {
+    private void requestRuntimePermission() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(AndroidCameraApi.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CAMERA_PERMISSION);
         }
     }
 
-   protected void updatePreview() {
+    protected void updatePreview() {
        if(null == cameraDevice) {
            Log.e(TAG, "updatePreview error, return");
        }
@@ -791,7 +846,7 @@ public class AndroidCameraApi extends AppCompatActivity{
        }
    }
 
-   private void closeCamera() {
+    private void closeCamera() {
        if (null != cameraDevice) {
            cameraDevice.close();
            cameraDevice = null;
@@ -802,7 +857,7 @@ public class AndroidCameraApi extends AppCompatActivity{
        }
    }
 
-   private boolean check_null_camiID(String id){
+    private boolean check_null_camiID(String id){
        try {
            CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
            CameraCharacteristics characteristics = manager.getCameraCharacteristics(id);
@@ -812,49 +867,38 @@ public class AndroidCameraApi extends AppCompatActivity{
        return false;
    }
 
-   private void check_aux() {
-       StringBuilder msg = new StringBuilder("CAMID : ");
-       Handler handler = new Handler();
-       handler.post(new Runnable() {
-           @Override
-           public void run() {
-               for(int i = 0; i<=144 ; i++){
-                   try {
-                       CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-                       CameraCharacteristics characteristics = manager.getCameraCharacteristics(String.valueOf(i));
-                       if (!characteristics.getAvailableCaptureRequestKeys().isEmpty() ) {
+    private void check_aux() {
+        StringBuilder msg = new StringBuilder("CAMID : ");
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                for(int i = 0; i<=144 ; i++){
+                    try {
+                        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+                        CameraCharacteristics characteristics = manager.getCameraCharacteristics(String.valueOf(i));
+                        if (!characteristics.getAvailableCaptureRequestKeys().isEmpty() ) {
 //                            Log.e(TAG, "check_aux: getcamera Characteristics => "+ characteristics.getAvailableCaptureRequestKeys());
-                           msg.append(i).append(",");
-                           Log.e(TAG, "check_aux: value of array at " + i + " : " + i);
-                           Set<String> ids;
-                           if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                               ids = characteristics.getPhysicalCameraIds();
-                               for (String id: ids) {
-                                   Log.e(TAG, "openCamera: getPhysicalCameraIds "+id);
-                                   msg.append(" pid_").append(id).append("_at_").append(i).append(",");
-                           }
-                           }
-                       }
-                   }
-                   catch (IllegalArgumentException | CameraAccessException ignored){ }
-               }
-               logtext.setText(msg);
-           }
-       });
-       Toast.makeText(AndroidCameraApi.this, "COMPLETE EXECUTION cam_aux()", Toast.LENGTH_SHORT).show();
-   }
-
-   private static void closeOutput(OutputStream outputStream) {
-        if (null != outputStream) {
-            try {
-                outputStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+                            msg.append(i).append(",");
+                            Log.e(TAG, "check_aux: value of array at " + i + " : " + i);
+                            Set<String> ids;
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                                ids = characteristics.getPhysicalCameraIds();
+                                for (String id: ids) {
+                                    Log.e(TAG, "openCamera: getPhysicalCameraIds "+id);
+                                    msg.append(" pid_").append(id).append("_at_").append(i).append(",");
+                            }
+                            }
+                        }
+                    }
+                    catch (IllegalArgumentException | CameraAccessException ignored){ }
+                }
+                logtext.setText(msg);
             }
-        }
+        });
+        Toast.makeText(AndroidCameraApi.this, "COMPLETE EXECUTION cam_aux()", Toast.LENGTH_SHORT).show();
     }
 
-   private Map<Integer, Size> getHighestResolution(CameraCharacteristics characteristics) {
+    private Map<Integer, Size> getHighestResolution(CameraCharacteristics characteristics) {
         Size [] resolutions;
         int highest = 0,iF = 0;
         Size hSize = null;
@@ -926,17 +970,22 @@ public class AndroidCameraApi extends AppCompatActivity{
                 CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY;
     }
 
-   public String getCameraId() {
+    public String getCameraId() {
         return cameraId;
     }
 
-   public void setCameraId(String cameraId) {
+    public void setCameraId(String cameraId) {
         this.cameraId = cameraId;
     }
 
-   private void display_latest_image_from_gallery() {
-        File external_dir = Environment.getExternalStorageDirectory();
-        File f = new File(external_dir + "//DCIM//Camera//");
+    public float getMaxZoom() throws CameraAccessException {
+        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        CameraCharacteristics characteristics = manager.getCameraCharacteristics(getCameraId());
+        return (characteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM))*4.5f;
+   }
+
+    private void display_latest_image_from_gallery() {
+        File f = new File("//storage//emulated//0//DCIM//Camera//");
         File[] dcimFiles = f.listFiles(FILENAME_FILTER);
 
         List<File> filesList = new ArrayList<>(Arrays.asList(dcimFiles != null ? dcimFiles : new File[0]));
@@ -952,36 +1001,21 @@ public class AndroidCameraApi extends AppCompatActivity{
 
     }
 
-   private boolean isMeteringAreaAESupported() {
+    private boolean isMeteringAreaAESupported() {
        Integer aeState = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AE);
        return aeState!=null && aeState >=1;
    }
 
-   private boolean isMeteringAreaAFSupported() {
+    private boolean isMeteringAreaAFSupported() {
        return characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF) >= 1;
    }
 
-   private double getRatioCoeff(){
+    private double getRatioCoeff(){
        return ratioCoeff;
    }
 
-   static int gcd(int a, int b) {
-        if (a == 0)
-            return b;
-        if (b == 0)
-            return a;
-
-        if (a == b)
-            return a;
-
-        if (a > b)
-            return gcd(a-b, b);
-        return gcd(a, b-a);
-    }
-
-
-   @Override
-   protected void onResume() {
+    @Override
+    protected void onResume() {
        super.onResume();
        startBackgroundThread();
        if(Objects.equals(getCameraId(),null)) {
@@ -997,8 +1031,8 @@ public class AndroidCameraApi extends AppCompatActivity{
        }
    }
 
-   @Override
-   protected void onPause() {
+    @Override
+    protected void onPause() {
        Log.e(TAG, "onPause");
        closeCamera();
        stopBackgroundThread();
