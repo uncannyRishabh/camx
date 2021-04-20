@@ -18,12 +18,10 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
-import android.media.Image;
 import android.media.ImageReader;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -56,11 +54,9 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.textview.MaterialTextView;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -89,7 +85,7 @@ public class AndroidCameraApi extends AppCompatActivity{
    }
 
     private final String [] camID= {"0","1","20","21","22","2","6","3"}; //0,1,2,3,4,5,6,7 in realme and stock android
-                                  // 0   1   2    3    4    5   6   7ou
+                                  // 0   1   2    3    4    5   6   7
     private final int resultCode = 1;
 
 //    private Range<Integer> FpsRangeHigh = Range.create(31,60); // Force High FPS preview
@@ -118,49 +114,51 @@ public class AndroidCameraApi extends AppCompatActivity{
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
     private Rect zoom = new Rect();
+    private boolean firstTouch = false;
+    private long time;
+    private double ratioCoeff = 1;
+    private CameraCharacteristics characteristics;
+    private Uri uri;
+    //FLAGS
+    private boolean mManualFocusEngaged = false;
+    private boolean ASPECT_RATIO_43 = true;
+    private boolean ASPECT_RATIO_169 = false;
+    private Map<Integer,Size> hRes = new HashMap<>();
+    private Map<Integer,Size> map169 = new HashMap<>();
     private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
-       @Override
-       public void onOpened(CameraDevice camera) {
-           //This is called when the camera is open
-           Log.e(TAG, "onOpened");
-           cameraDevice = camera;
-           createCameraPreview();
-       }
-       @Override
-       public void onDisconnected(CameraDevice camera) {
-           cameraDevice.close();
-       }
-       @Override
-       public void onError(CameraDevice camera, int error) {
-           if(cameraDevice!=null) {
-               cameraDevice.close();
-           }
-           cameraDevice = null;
-       }
-   };
+        @Override
+        public void onOpened(CameraDevice camera) {
+            //This is called when the camera is open
+            Log.e(TAG, "onOpened");
+            cameraDevice = camera;
+            createCameraPreview();
+        }
+        @Override
+        public void onDisconnected(CameraDevice camera) {
+            cameraDevice.close();
+        }
+        @Override
+        public void onError(CameraDevice camera, int error) {
+            if(cameraDevice!=null) {
+                cameraDevice.close();
+            }
+            cameraDevice = null;
+        }
+    };
     final CameraCaptureSession.CaptureCallback captureCallbackListener = new CameraCaptureSession.CaptureCallback() {
         @Override
         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
             super.onCaptureCompleted(session, request, result);
             createCameraPreview();
         }
-     };
-    private boolean firstTouch = false;
-    private long time;
-    private double ratioCoeff = 1;
-    private CameraCharacteristics characteristics;
-    //FLAGS
-    private boolean mManualFocusEngaged = false;
-    private boolean ASPECT_RATIO_43 = true;
-    private boolean ASPECT_RATIO_169 = false;
-    Map<Integer,Size> map169 = new HashMap<>();
+    };
 
     TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
             //open your camera here
             openCamera();
-            configureTextureView();
+            configureTextureView(width,height);
         }
         @Override
         public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
@@ -176,7 +174,9 @@ public class AndroidCameraApi extends AppCompatActivity{
         }
     };
 
-    private void configureTextureView() {
+    private void configureTextureView(int width, int height) {
+        Log.e(TAG, "configureTextureView: width : "+width+" height : "+height);
+        Log.e(TAG, "configureTextureView: hxw "+width*height);
         int device_width = textureView.getWidth();
         RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(device_width, (int) (device_width * (ASPECT_RATIO_43 ? 1.333f : 1.777f)));
         textureView.setLayoutParams(layoutParams);
@@ -248,8 +248,8 @@ public class AndroidCameraApi extends AppCompatActivity{
         takePictureButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                takePicture();
-                new Handler(Looper.getMainLooper()).postDelayed(() -> display_latest_image_from_gallery(),1500);
+                new Handler(Looper.getMainLooper()).post(() -> takePicture());
+                new Handler(Looper.getMainLooper()).postDelayed(() -> display_latest_image_from_gallery(),1800);
             }
         });
 
@@ -261,7 +261,7 @@ public class AndroidCameraApi extends AppCompatActivity{
                     if(!getCameraId().equals(camID[3])) {
                         closeCamera();
                         setCameraId(camID[3]);
-                        getHighestResolution(getcameraCharacteristics());
+                        hRes = getHighestResolution(getcameraCharacteristics());
                         openCamera();
                         ultra_wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                         wide_lens.setBackground(null);
@@ -272,26 +272,35 @@ public class AndroidCameraApi extends AppCompatActivity{
                     if(!getCameraId().equals(camID[5])) {
                         closeCamera();
                         setCameraId(camID[5]);
-                        getHighestResolution(getcameraCharacteristics());
+                        hRes = getHighestResolution(getcameraCharacteristics());
                         openCamera();
                         ultra_wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                         wide_lens.setBackground(null);
                         macro_tele_lens.setBackground(null);
                     }
                }
-
+                else if (check_null_camiID(camID[2])){ //green lens on samsung
+                    if(!getCameraId().equals(camID[2])) {
+                        closeCamera();
+                        setCameraId(camID[2]);
+                        hRes = getHighestResolution(getcameraCharacteristics());
+                        openCamera();
+                        ultra_wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+                        wide_lens.setBackground(null);
+                        macro_tele_lens.setBackground(null);
+                    }
+               }
            }
        });
 
         wide_lens.setOnClickListener(new View.OnClickListener(){
            @Override
            public void onClick(View v) {
-
                if(!getCameraId().equals(camID[0])) {
                    zoom_level = 1;
                    closeCamera();
                    setCameraId(camID[0]);
-                   getHighestResolution(getcameraCharacteristics());
+                   hRes = getHighestResolution(getcameraCharacteristics());
                    openCamera();
                    wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                    ultra_wide_lens.setBackground(null);
@@ -303,28 +312,27 @@ public class AndroidCameraApi extends AppCompatActivity{
         macro_tele_lens.setOnClickListener(new View.OnClickListener(){
            @Override
            public void onClick(View v) {
-               if(check_null_camiID(camID[4])){
-                   if(!getCameraId().equals(camID[4])) {
+//               if(check_null_camiID(camID[4])){
                        closeCamera();
-                       setCameraId(camID[4]);
-                       getHighestResolution(getcameraCharacteristics());
+                       setCameraId((check_null_camiID(camID[6])) ? ((!getCameraId().equals(camID[6]))?camID[6] : getCameraId())
+                               : ((!getCameraId().equals(camID[4]))?camID[4] : getCameraId()));
+                       hRes = getHighestResolution(getcameraCharacteristics());
                        openCamera();
                        macro_tele_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                        ultra_wide_lens.setBackground(null);
                        wide_lens.setBackground(null);
-                   }
-               }
-               else if (check_null_camiID(camID[6])){
-                   if(!getCameraId().equals(camID[6])) {
-                       closeCamera();
-                       setCameraId(camID[6]);
-                       getHighestResolution(getcameraCharacteristics());
-                       openCamera();
-                       macro_tele_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
-                       ultra_wide_lens.setBackground(null);
-                       wide_lens.setBackground(null);
-                   }
-               }
+//               }
+//               else if (check_null_camiID(camID[6])){
+//                   if(!getCameraId().equals(camID[6])) {
+//                       closeCamera();
+//                       setCameraId(camID[6]);
+//                       getHighestResolution(getcameraCharacteristics());
+//                       openCamera();
+//                       macro_tele_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+//                       ultra_wide_lens.setBackground(null);
+//                       wide_lens.setBackground(null);
+//                   }
+//               }
            }
        });
 
@@ -335,7 +343,7 @@ public class AndroidCameraApi extends AppCompatActivity{
                if(cardView.getVisibility()==View.VISIBLE){
                    closeCamera();
                    setCameraId(camID[1]);
-                   getHighestResolution(getcameraCharacteristics());
+                   hRes = getHighestResolution(getcameraCharacteristics());
                    openCamera();
                    cardView.setVisibility(View.INVISIBLE);
                    front_switch.animate().rotation(180f);
@@ -346,7 +354,7 @@ public class AndroidCameraApi extends AppCompatActivity{
                    wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                    ultra_wide_lens.setBackground(null);
                    macro_tele_lens.setBackground(null);
-                   getHighestResolution(getcameraCharacteristics());
+                   hRes = getHighestResolution(getcameraCharacteristics());
                    openCamera();
                    cardView.setVisibility(View.VISIBLE);
                    front_switch.animate().rotation(-180f);
@@ -430,14 +438,14 @@ public class AndroidCameraApi extends AppCompatActivity{
                 if(ASPECT_RATIO_43){
                     ASPECT_RATIO_43 = false;
                     ASPECT_RATIO_169 = true;
-                    configureTextureView();
+                    configureTextureView(textureView.getWidth(),textureView.getHeight());
                     openCamera();
                     aspectRatio.setImageResource(R.drawable.ic_sixteennine);
                 }
                 else if(ASPECT_RATIO_169){
                     ASPECT_RATIO_169 = false;
                     ASPECT_RATIO_43 = true;
-                    configureTextureView();
+                    configureTextureView(textureView.getWidth(),textureView.getHeight());
                     openCamera();
                     aspectRatio.setImageResource(R.drawable.ic_fourthree);
                 }
@@ -561,11 +569,11 @@ public class AndroidCameraApi extends AppCompatActivity{
         };
 
         //first stop the existing repeating request
-        try {
-            cameraCaptureSessions.stopRepeating();
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            cameraCaptureSessions.stopRepeating();
+//        } catch (CameraAccessException e) {
+//            e.printStackTrace();
+//        }
 
         //cancel any existing AF trigger (repeated touches, etc.)
         captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
@@ -672,28 +680,23 @@ public class AndroidCameraApi extends AppCompatActivity{
        }
    }
 
+
     protected void takePicture() {
        if(null == cameraDevice) {
            Log.e(TAG, "cameraDevice is null");
            return;
        }
-
        final CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
        try {
            characteristics = manager.getCameraCharacteristics(getCameraId());
-           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-               characteristics.getKeysNeedingPermission();
-           }
 //            Log.e(TAG, "takePicture: getcamera Characteristics => "+ characteristics.getAvailableCaptureRequestKeys());
            Size[] jpegSizes = null;
-
-           Map <Integer,Size> hRes = (ASPECT_RATIO_43 ? getHighestResolution(characteristics):map169);
-
+           Map <Integer,Size> res = (ASPECT_RATIO_43 ? hRes:map169);
            /**
             * 0x100 gives output size [6000*8000] in redmi k20 a10
             */
            int imageFormat= 0x20;
-           for (Integer item : hRes.keySet()) {
+           for (Integer item : res.keySet()) {
                imageFormat = Integer.parseUnsignedInt(Integer.toHexString(item), 16);
                Log.e(TAG, "takePicture: ImageFormat in Hex : 0x" + String.format("%x", imageFormat));
            }
@@ -706,7 +709,7 @@ public class AndroidCameraApi extends AppCompatActivity{
            int width = 640;
            int height = 480;
            if (jpegSizes != null && 0 < jpegSizes.length) {
-               for(Size size : hRes.values()){
+               for(Size size : res.values()){
                    /**
                     * 48mp(8000*6000) 64mp(6944*9280)
                     */
@@ -716,20 +719,19 @@ public class AndroidCameraApi extends AppCompatActivity{
            }
            Log.e(TAG, "takePicture: jpeg sizes before taking pic : width : "+width+"height : "+height);
 
-           ImageReader reader = ImageReader.newInstance(width, height, ImageFormat.JPEG, 2);
+           ImageReader reader = ImageReader.newInstance(width, height, ImageFormat.JPEG, 1);
            List<Surface> outputSurfaces = new ArrayList<>(2);
            outputSurfaces.add(reader.getSurface());
            outputSurfaces.add(new Surface(textureView.getSurfaceTexture()));
 
            final CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-           captureBuilder.set(CaptureRequest.CONTROL_ENABLE_ZSL,true);
 
            captureBuilder.addTarget(reader.getSurface());
            captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
            // Orientation
 
            int rotation = 0;
-           if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                rotation = getDisplay().getRotation();
            }
            assert characteristics != null;
@@ -737,7 +739,6 @@ public class AndroidCameraApi extends AppCompatActivity{
            /**
             * FRONT CAMERA INVERSION FIX
             */
-
            if(characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_FRONT){
                captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(Surface.ROTATION_180));
            }
@@ -749,31 +750,11 @@ public class AndroidCameraApi extends AppCompatActivity{
                captureBuilder.set(CaptureRequest.SCALER_CROP_REGION, zoom);
            }
 
-           /**
-            * Had to replace getExternalStorageDirectory() with "//storage//emulated//0" since its deprecated 😬😬😬
-            */
-           File imgLocation = new File("//storage//emulated//0//DCIM//Camera//" );
-           Log.d(TAG, "takePicture: FILE LOCATION BEFORE STORING Environment.getExternalStorageDirectory() [ Deprecated ] "+Environment.getExternalStorageDirectory());
-           File file =new File(imgLocation.getAbsolutePath(),"camX_"+ System.currentTimeMillis() +"_"+getCameraId()+".jpg");
            ImageReader.OnImageAvailableListener readerListener = new ImageReader.OnImageAvailableListener() {
                @Override
                public void onImageAvailable(ImageReader reader) {
-                   try (Image image = reader.acquireLatestImage()) {
-                       ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-                       byte[] bytes = new byte[buffer.capacity()];
-                       buffer.get(bytes);
-                       try {
-                           save(bytes);
-                           image.close();
-                       } catch (IOException e) {
-                           e.printStackTrace();
-                       }
-                   }
-               }
-               private void save(byte[] bytes) throws IOException {
-                   try (OutputStream output = new FileOutputStream(file)) {
-                       output.write(bytes);
-                   }
+//                   new Handler(Looper.getMainLooper()).post(new ImageSaver(reader.acquireNextImage(),getCameraId(),getContentResolver(),uri));
+                   mBackgroundHandler.post(new ImageSaverThread(reader.acquireNextImage(),getCameraId(),getContentResolver(),uri));
                }
            };
            reader.setOnImageAvailableListener(readerListener, mBackgroundHandler);
@@ -781,7 +762,7 @@ public class AndroidCameraApi extends AppCompatActivity{
                @Override
                public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
                    super.onCaptureCompleted(session, request, result);
-                   Toast.makeText(AndroidCameraApi.this, "Saved:" + file, Toast.LENGTH_SHORT).show();
+                   Toast.makeText(AndroidCameraApi.this, "Saved:" , Toast.LENGTH_SHORT).show();
                    createCameraPreview();
                }
            };
@@ -801,8 +782,7 @@ public class AndroidCameraApi extends AppCompatActivity{
        } catch (CameraAccessException e) {
            e.printStackTrace();
        }
-//       cameraCaptureSessions.stopRepeating();
-//       cameraCaptureSessions.abortCaptures();
+
    }
 
     protected void createCameraPreview() {
@@ -810,6 +790,7 @@ public class AndroidCameraApi extends AppCompatActivity{
            SurfaceTexture texture = textureView.getSurfaceTexture();
            assert texture != null;
            texture.setDefaultBufferSize(imageDimension.getWidth(), imageDimension.getHeight());
+           Log.e(TAG, "createCameraPreview: Dimension : "+imageDimension);
            Surface surface = new Surface(texture);
            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
            captureRequestBuilder.addTarget(surface);
@@ -857,10 +838,10 @@ public class AndroidCameraApi extends AppCompatActivity{
            Map<Integer,Size> hMap = (ASPECT_RATIO_43 ? getHighestResolution(characteristics):map169);
            for(Size item : hMap.values()){
                imageDimension = item;
+               Log.e(TAG, "openCamera: imageDimension : "+item);
            }
 
            requestRuntimePermission();
-
            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                ActivityCompat.requestPermissions(AndroidCameraApi.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CAMERA_PERMISSION);
            }
@@ -961,16 +942,14 @@ public class AndroidCameraApi extends AppCompatActivity{
         Size [] resolutions;
         int highest = 0,iF = 0;
         Size hSize = null;
-        ArrayList<Integer> store = new ArrayList<>();
-        ArrayList<String> ratio = new ArrayList<>();
         Map<Integer,Size> imageFormat_resolution_map = new HashMap<>();
         Map<Integer,Size> imageFormat_resolution_map_169 = new HashMap<>();
         Map<Integer,Size> mreturn = new HashMap<>();
         ArrayList<Integer> image_formats = new ArrayList<>();
         image_formats.add(ImageFormat.RAW_PRIVATE);
+        image_formats.add(ImageFormat.RAW_SENSOR);
         image_formats.add(ImageFormat.JPEG);
         image_formats.add(ImageFormat.YUV_420_888);
-        image_formats.add(ImageFormat.RAW_SENSOR);
 //        image_formats.add(ImageFormat.RAW10);
 //        image_formats.add(ImageFormat.RAW12);
 
@@ -984,6 +963,7 @@ public class AndroidCameraApi extends AppCompatActivity{
                 if (resolutions!=null){
                     for (Size resolution : resolutions) {
                         float resolution_coeff = (float)resolution.getWidth() / resolution.getHeight();
+                        Log.e(TAG, "getHighestResolution: "+resolution.getWidth()+"x"+resolution.getHeight()+" coeff : "+resolution_coeff);
                         if( resolution_coeff> 1.4f && resolution_coeff< 1.9f) {
                             if (previous169<resolution.getHeight()*resolution.getWidth()) {
                                 imageFormat_resolution_map_169.put(i, resolution);
@@ -995,12 +975,9 @@ public class AndroidCameraApi extends AppCompatActivity{
                             Log.e(TAG, "getHighestResolution: resolution coeff float : "+((float) resolution.getWidth()/resolution.getHeight())%.2f);
                             previous = resolution.getHeight()*resolution.getWidth();
                         }
-                        store.add(resolution.getHeight() * resolution.getWidth());
                     }
                 }
             }
-
-//             Log.e(TAG, "getHighestResolution: store "+store );
              Log.e(TAG, "getHighestResolution: imageformatresolutionmap "+imageFormat_resolution_map );
              Log.e(TAG, "getHighestResolution: imageformatresolutionmap 16:9 "+imageFormat_resolution_map_169 );
 
