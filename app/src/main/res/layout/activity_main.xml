@@ -10,51 +10,59 @@
         android:id="@+id/appbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintStart_toStartOf="parent"
+        android:backgroundTint="#000000"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:backgroundTint="#80000000"
-        android:alpha=".95"
-        >
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="92dp"
-            android:background="#020202"
-            android:paddingBottom="12dp"
+            android:layout_height="72dp"
+            android:background="#000000"
             android:paddingHorizontal="24dp"
-            >
+            android:paddingBottom="8dp">
+
             <ImageButton
                 android:id="@+id/aspectRatio"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
                 android:layout_alignParentBottom="true"
-                android:src="@drawable/ic_fourthree"
-                android:scaleType="fitCenter"
+                android:layout_marginBottom="6dp"
                 android:background="#00000000"
-                />
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_fourthree" />
 
             <ImageButton
                 android:id="@+id/flash"
-                android:layout_width="40dp"
-                android:layout_height="35dp"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
                 android:layout_alignParentEnd="true"
                 android:layout_alignParentBottom="true"
-                android:src="@drawable/flash_on"
-                android:scaleType="fitCenter"
+                android:layout_marginBottom="6dp"
                 android:background="#00000000"
-                />
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/flash_on" />
 
             <TextView
                 android:id="@+id/logtxt"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_centerHorizontal="true"
+                android:gravity="center"
                 android:text="log"
                 android:textColor="@color/white"
-                android:gravity="center"
                 android:textSize="12sp"
-                android:layout_centerHorizontal="true"
+                android:visibility="invisible" />
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="60dp"
+                android:layout_height="3dp"
                 android:layout_alignParentBottom="true"
-                />
+                android:layout_centerHorizontal="true"
+                app:cardBackgroundColor="#FAFAFA"
+                app:cardCornerRadius="2dp" />
         </RelativeLayout>
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -62,34 +70,32 @@
         android:id="@+id/relative_textureView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/appbar"
+        android:background="#000000"
+        android:elevation="2dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:background="@color/black"
-        android:elevation="2dp"
+        app:layout_constraintTop_toBottomOf="@id/appbar"
         >
-
         <TextureView
             android:id="@+id/preview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:backgroundTint="@color/light_black"
             android:drawingCacheQuality="auto"
-            android:foregroundTint="@color/light_black" />
+            />
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/aux_cam_switch"
             android:layout_width="wrap_content"
             android:layout_height="35dp"
+            android:layout_above="@id/relative_layout_button_dock"
             android:layout_centerHorizontal="true"
+            android:layout_marginBottom="38dp"
             android:backgroundTint="@color/light_black"
             android:elevation="4dp"
-            android:textSize="11sp"
             app:cardCornerRadius="16dp"
-            android:layout_marginBottom="22dp"
-            android:layout_above="@id/relative_layout_1"
-            tools:ignore="SmallSp">
+            >
+
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -141,44 +147,43 @@
         </com.google.android.material.card.MaterialCardView>
 
         <RelativeLayout
-            android:id="@+id/relative_layout_1"
+            android:id="@+id/relative_layout_button_dock"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_marginBottom="96dp"
+            android:layout_above="@id/horizontal_scroll"
+            android:background="#000000"
+            android:paddingVertical="28dp"
             >
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/imageViewHolder"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="28dp"
-                android:layout_centerVertical="true"
                 android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
                 android:layout_marginStart="38dp"
-
+                app:cardCornerRadius="28dp"
                 >
                 <ImageView
                     android:id="@+id/image_gallery"
                     android:layout_width="55dp"
                     android:layout_height="55dp"
-                    android:src="@drawable/rami"
-                    android:scaleType="centerCrop"
-                    android:focusable="true"
                     android:clickable="true"
-                    />
+                    android:focusable="true"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/rami" />
             </com.google.android.material.card.MaterialCardView>
 
             <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/capture"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
+                android:layout_width="82dp"
+                android:layout_height="82dp"
+                android:padding="2dp"
                 android:layout_centerHorizontal="true"
                 android:layout_centerVertical="true"
                 android:background="#00FFFFFF"
-                android:scaleType="fitXY"
-                android:src="@drawable/capture_1"
                 android:hapticFeedbackEnabled="true"
-                />
+                android:scaleType="fitXY"
+                android:src="@drawable/capture_1" />
 
             <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/front_back_switch"
@@ -190,23 +195,17 @@
                 android:background="#00020202"
                 android:scaleType="fitXY"
                 android:src="@drawable/front_switch" />
+        </RelativeLayout>
 
+        <RelativeLayout
+            android:id="@+id/horizontal_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="98dp"
+            android:layout_alignParentBottom="true"
+            android:background="#000000"
+            >
 
         </RelativeLayout>
     </RelativeLayout>
-
-    <RelativeLayout
-        android:id="@+id/cardview_buttons_dock"
-        android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:background="#020202"
-        android:paddingVertical="38dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        >
-
-    </RelativeLayout>
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>
