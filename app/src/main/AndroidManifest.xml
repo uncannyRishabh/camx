@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.camx">
+    package="com.uncanny.camx">
 
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-feature android:name="android.hardware.camera.capability.raw" />
     <uses-feature android:name="android.hardware.camera.raw" />
+    <uses-feature android:name="android.hardware.camera.any" />
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-feature android:name="android.hardware.camera"
@@ -23,7 +24,7 @@
         android:largeHeap="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.Camx">
-        <activity android:name=".AndroidCameraApi" android:theme="@style/Statusbar_navbar_scrim" android:screenOrientation="nosensor">
+        <activity android:name="com.uncanny.camx.AndroidCameraApi" android:theme="@style/Statusbar_navbar_scrim" android:screenOrientation="nosensor">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

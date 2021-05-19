@@ -53,8 +53,7 @@
                 android:gravity="center"
                 android:text="log"
                 android:textColor="@color/white"
-                android:textSize="12sp"
-                android:visibility="invisible" />
+                android:textSize="12sp" />
 
             <androidx.cardview.widget.CardView
                 android:layout_width="60dp"

@@ -16,6 +16,6 @@
 
     <style name="Statusbar_navbar_scrim" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:navigationBarColor">#00000000</item>
-        <item name="android:statusBarColor">#00000000</item>
+        <item name="statusBarScrim">#00000000</item>
     </style>
 </resources>

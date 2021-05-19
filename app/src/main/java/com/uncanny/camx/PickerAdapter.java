@@ -1,4 +1,4 @@
-package com.example.camx;
+package com.uncanny.camx;
 
 import android.content.Context;
 import android.view.LayoutInflater;
