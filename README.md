@@ -1,16 +1,5 @@
 # camx
 Camera2 api with auxillary camera support, written in pure java (currently supports xiaomi/~~oppo~~/realme and devices running stock android), pushing progress bi-weekly. <br/>
-### Tested on >>
-
--Redmi note 9pro (Curtana)
-  
--Redmi k20/pro (Raphael)
-
--Realme C3
-
--Redmi note 8
-
--ZenFone Max Pro M1/M2
 
 For queries,contribution,bug fixes... [mail me](mailto:rishabhrajgupta2000@gmail.com).
 ✌😉
