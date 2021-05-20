@@ -23,8 +23,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:largeHeap="true"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Camx">
-        <activity android:name="com.uncanny.camx.AndroidCameraApi" android:theme="@style/Statusbar_navbar_scrim" android:screenOrientation="nosensor">
+        android:theme="@style/Theme.camX">
+        <activity android:name="com.uncanny.camx.MainActivity" android:theme="@style/AestheticWRLD" android:screenOrientation="nosensor">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

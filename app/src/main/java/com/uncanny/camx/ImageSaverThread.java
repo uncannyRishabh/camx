@@ -27,7 +27,7 @@ public class ImageSaverThread implements Runnable {
     Path jpgPath;
 
     ImageSaverThread(Image image, String cameraId, ContentResolver contentResolver) {
-        mImage = image;
+        this.mImage = image;
         this.cameraId = cameraId;
         this.contentResolver = contentResolver;
     }
@@ -65,6 +65,7 @@ public class ImageSaverThread implements Runnable {
         ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
         byte[] bytes = new byte[buffer.remaining()];
         buffer.get(bytes);
+
         try {
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 OutputStream outputStream = contentResolver.openOutputStream(uri);
@@ -84,7 +85,8 @@ public class ImageSaverThread implements Runnable {
             }
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
+        }
+        finally {
             mImage.close();
         }
     }

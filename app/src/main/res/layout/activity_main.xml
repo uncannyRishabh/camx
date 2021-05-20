@@ -1,210 +1,237 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/black"
     tools:context=".MainActivity">
 
-    <com.google.android.material.appbar.AppBarLayout
+    <RelativeLayout
         android:id="@+id/appbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:backgroundTint="#000000"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        android:layout_height="52dp"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="0dp"
+        android:background="@drawable/rounded_relative_layout"
+        android:elevation="4dp"
+        android:paddingBottom="6dp">
 
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="72dp"
-            android:background="#000000"
-            android:paddingHorizontal="24dp"
-            android:paddingBottom="8dp">
+        <include
+            android:id="@+id/btn_group"
+            layout="@layout/button_group" />
 
-            <ImageButton
-                android:id="@+id/aspectRatio"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:layout_alignParentBottom="true"
-                android:layout_marginBottom="6dp"
-                android:background="#00000000"
-                android:scaleType="fitCenter"
-                android:src="@drawable/ic_fourthree" />
-
-            <ImageButton
-                android:id="@+id/flash"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:layout_alignParentEnd="true"
-                android:layout_alignParentBottom="true"
-                android:layout_marginBottom="6dp"
-                android:background="#00000000"
-                android:padding="4dp"
-                android:scaleType="fitCenter"
-                android:src="@drawable/flash_on" />
-
-            <TextView
-                android:id="@+id/logtxt"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:layout_centerHorizontal="true"
-                android:gravity="center"
-                android:text="log"
-                android:textColor="@color/white"
-                android:textSize="12sp" />
-
-            <androidx.cardview.widget.CardView
-                android:layout_width="60dp"
-                android:layout_height="3dp"
-                android:layout_alignParentBottom="true"
-                android:layout_centerHorizontal="true"
-                app:cardBackgroundColor="#FAFAFA"
-                app:cardCornerRadius="2dp" />
-        </RelativeLayout>
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <RelativeLayout
-        android:id="@+id/relative_textureView"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:background="#000000"
-        android:elevation="2dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/appbar"
-        >
-        <TextureView
-            android:id="@+id/preview"
+        <TextView
+            android:id="@+id/logtxt"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:drawingCacheQuality="auto"
-            />
-
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/aux_cam_switch"
-            android:layout_width="wrap_content"
-            android:layout_height="35dp"
-            android:layout_above="@id/relative_layout_button_dock"
-            android:layout_centerHorizontal="true"
-            android:layout_marginBottom="38dp"
-            android:backgroundTint="@color/light_black"
-            android:elevation="4dp"
-            app:cardCornerRadius="16dp"
-            >
-
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_marginHorizontal="4dp">
-
-                <com.google.android.material.textview.MaterialTextView
-                    android:id="@+id/ultra_wide"
-                    android:layout_width="30dp"
-                    android:layout_height="29dp"
-                    android:layout_centerVertical="true"
-                    android:background="@null"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center"
-                    android:text="0.6"
-                    android:textColor="@color/white"
-                    android:textSize="10sp" />
-
-                <com.google.android.material.textview.MaterialTextView
-                    android:id="@+id/main_wide"
-                    android:layout_width="30dp"
-                    android:layout_height="29dp"
-                    android:layout_centerVertical="true"
-                    android:layout_marginStart="12dp"
-                    android:layout_toEndOf="@id/ultra_wide"
-                    android:background="@drawable/colored_textview"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center"
-                    android:text="1.0"
-                    android:textColor="@color/white"
-                    android:textSize="10sp" />
-
-                <com.google.android.material.textview.MaterialTextView
-                    android:id="@+id/macro_tele"
-                    android:layout_width="30dp"
-                    android:layout_height="29dp"
-                    android:layout_marginStart="14dp"
-                    android:layout_toEndOf="@id/main_wide"
-                    android:background="@null"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center"
-                    android:text="2.0"
-                    android:textColor="@color/white"
-                    android:textSize="10sp" />
-            </RelativeLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <RelativeLayout
-            android:id="@+id/relative_layout_button_dock"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_above="@id/horizontal_scroll"
-            android:background="#000000"
-            android:paddingVertical="28dp"
-            >
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/imageViewHolder"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:layout_marginStart="38dp"
-                app:cardCornerRadius="28dp"
-                >
-                <ImageView
-                    android:id="@+id/image_gallery"
-                    android:layout_width="55dp"
-                    android:layout_height="55dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/rami" />
-            </com.google.android.material.card.MaterialCardView>
-
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/capture"
-                android:layout_width="82dp"
-                android:layout_height="82dp"
-                android:padding="2dp"
-                android:layout_centerHorizontal="true"
-                android:layout_centerVertical="true"
-                android:background="#00FFFFFF"
-                android:hapticFeedbackEnabled="true"
-                android:scaleType="fitXY"
-                android:src="@drawable/capture_1" />
-
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/front_back_switch"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:layout_marginEnd="40dp"
-                android:background="#00020202"
-                android:scaleType="fitXY"
-                android:src="@drawable/front_switch" />
-        </RelativeLayout>
-
-        <RelativeLayout
-            android:id="@+id/horizontal_scroll"
-            android:layout_width="match_parent"
-            android:layout_height="98dp"
             android:layout_alignParentBottom="true"
-            android:background="#000000"
-            >
+            android:layout_centerHorizontal="true"
+            android:gravity="center"
+            android:text="log"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:visibility="invisible" />
 
-        </RelativeLayout>
+        <com.uncanny.camx.CustomViews.GestureBar
+            android:id="@+id/gesture_bar"
+            android:layout_width="match_parent"
+            android:layout_height="10dp"
+            android:layout_alignParentBottom="true" />
     </RelativeLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <com.uncanny.camx.CustomViews.AutoFitPreviewView
+        android:id="@+id/preview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="52dp"
+        />
+
+    <TextView
+        android:id="@+id/zoom_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="36dp"
+        android:textSize="38sp"
+        android:textColor="#E3DDDD"
+        android:visibility="invisible"
+        android:layout_below="@id/appbar"
+        />
+
+    <com.uncanny.camx.CustomViews.Grids
+        android:id="@+id/grid"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="invisible"
+        android:layout_alignTop="@id/preview"
+        />
+
+    <com.uncanny.camx.CustomViews.FocusCircle
+        android:id="@+id/focus_circle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_alignTop="@id/preview"
+        />
+
+    <com.uncanny.camx.CustomViews.FaceMeteringRect
+        android:id="@+id/fm_rect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_below="@id/appbar"
+        />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/aux_cam_switch"
+        android:layout_width="wrap_content"
+        android:layout_height="35dp"
+        android:layout_above="@id/relative_layout_button_dock"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="14dp"
+        android:backgroundTint="#1B1A1A"
+        android:elevation="4dp"
+        app:cardCornerRadius="16dp"
+        >
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginHorizontal="4dp">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/ultra_wide"
+                android:layout_width="30dp"
+                android:layout_height="29dp"
+                android:layout_centerVertical="true"
+                android:background="@null"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="0.6"
+                android:textColor="@color/white"
+                android:textSize="10sp" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/main_wide"
+                android:layout_width="30dp"
+                android:layout_height="29dp"
+                android:layout_centerVertical="true"
+                android:layout_marginStart="12dp"
+                android:layout_toEndOf="@id/ultra_wide"
+                android:background="@drawable/colored_textview"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="1.0"
+                android:textColor="@color/white"
+                android:textSize="10sp" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/macro_tele"
+                android:layout_width="30dp"
+                android:layout_height="29dp"
+                android:layout_marginStart="14dp"
+                android:layout_toEndOf="@id/main_wide"
+                android:background="@null"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="2.0"
+                android:textColor="@color/white"
+                android:textSize="10sp" />
+        </RelativeLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/zoom_slider"
+        android:layout_width="210dp"
+        android:layout_height="30dp"
+        android:layout_above="@id/relative_layout_button_dock"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="12dp"
+        android:elevation="6dp"
+        android:value="0"
+        android:valueFrom="0"
+        android:valueTo="10"
+        app:labelBehavior="gone"
+        app:haloRadius="0dp"
+        app:thumbRadius="12dp"
+        app:thumbColor="#C5C5C5"
+        app:trackColorActive="@color/white"
+        app:trackColorInactive="#CD535252"
+        app:trackHeight="4dp"
+        android:visibility="invisible"
+        />
+
+    <RelativeLayout
+        android:id="@+id/relative_layout_button_dock"
+        android:layout_width="match_parent"
+        android:layout_height="154dp"
+        android:minHeight="108dp"
+        android:paddingTop="20dp"
+        android:layout_above="@id/mode_picker_view"
+        >
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/imageViewHolder"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="38dp"
+            app:cardCornerRadius="28dp"
+            >
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/img_gal"
+                android:layout_width="55dp"
+                android:layout_height="55dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:scaleType="centerCrop"
+                android:src="@drawable/rami" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <androidx.appcompat.widget.AppCompatImageButton
+            android:id="@+id/capture"
+            android:layout_width="88dp"
+            android:layout_height="88dp"
+            android:padding="4dp"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:background="#00FFFFFF"
+            android:hapticFeedbackEnabled="true"
+            android:scaleType="fitXY"
+            android:src="@drawable/capture_1" />
+
+        <androidx.appcompat.widget.AppCompatImageButton
+            android:id="@+id/front_back_switch"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="40dp"
+            android:background="#00020202"
+            android:scaleType="fitXY"
+            android:src="@drawable/front_switch" />
+    </RelativeLayout>
+
+    <com.uncanny.camx.CustomViews.HorizontalPicker
+        android:id="@+id/mode_picker_view"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:minHeight="32dp"
+        android:layout_marginBottom="14dp"
+        android:layout_alignParentBottom="true"
+        android:paddingVertical="10dp"
+        android:paddingHorizontal="12dp"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:hapticFeedbackEnabled="true"
+        android:marqueeRepeatLimit="-1"
+        android:ellipsize="end"
+        app:selectedColor="?colorControlActivated"
+        app:sideItems="2"
+        />
+
+</RelativeLayout>
