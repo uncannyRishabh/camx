@@ -5,5 +5,5 @@ For queries,contribution,bug fixes... [mail me](mailto:rishabhrajgupta2000@gmail
 ✌😉
 
 ## APP PREVIEW : <br /><br />
-![app preview](https://user-images.githubusercontent.com/47218749/112975423-3d420180-9171-11eb-95f0-c945971fd3db.gif?raw=true) <br /><br />
+![app preview](https://github.com/uncannyRishabh/camx/blob/master/demo_ss.jpg) <br /><br />
 [Try out](https://github.com/uncannyRishabh/camx/blob/master/camx-debug.apk?raw=true)
