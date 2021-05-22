@@ -8,6 +8,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Insets;
@@ -43,6 +45,7 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
+import android.util.TypedValue;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.Surface;
@@ -64,16 +67,14 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatImageButton;
-import androidx.appcompat.widget.AppCompatImageView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.os.HandlerCompat;
 
-import com.bumptech.glide.Glide;
-import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.slider.Slider;
 import com.google.android.material.textview.MaterialTextView;
 import com.uncanny.camx.CustomViews.AutoFitPreviewView;
+import com.uncanny.camx.CustomViews.CircularImageView;
 import com.uncanny.camx.CustomViews.FaceMeteringRect;
 import com.uncanny.camx.CustomViews.FocusCircle;
 import com.uncanny.camx.CustomViews.GestureBar;
@@ -129,9 +130,9 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton shutter;
     private MaterialTextView ultra_wide_lens, wide_lens, macro_tele_lens;
     private AppCompatImageButton front_switch;
-    private MaterialCardView auxDock;
+    private LinearLayout auxDock;
     private TextView zoomText;
-    private AppCompatImageView thumbPreview;
+    private CircularImageView thumbPreview;
     private ImageButton aspectRatio, flash, grid, settings;
     private RelativeLayout dock;
     private ImageReader imgReader;
@@ -198,7 +199,15 @@ public class MainActivity extends AppCompatActivity {
     private Runnable hideAuxDock = new Runnable() {
         @Override
         public void run() {
-            auxDock.setVisibility((auxDock.getVisibility()==View.VISIBLE) ? View.GONE : View.VISIBLE);
+            if(auxDock.getVisibility()==View.INVISIBLE){
+                if(characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_FRONT) {
+                    auxDock.setVisibility(View.VISIBLE);
+                }
+            }
+            else {
+                auxDock.setVisibility(View.GONE);
+            }
+//            auxDock.setVisibility((auxDock.getVisibility()==View.VISIBLE) ? View.GONE : View.VISIBLE);
         }
     };
 
@@ -279,8 +288,8 @@ public class MainActivity extends AppCompatActivity {
                     ASPECT_RATIO_169 = true;
                     ASPECT_RATIO_43 = false;
 
-                    tvPreview.animate().scaleX(1.7f).scaleY(1.7f)
-                            .setDuration(1020).setInterpolator(new CycleInterpolator(1));
+                    tvPreview.animate().alpha(0f)
+                            .setDuration(1200).setInterpolator(new CycleInterpolator(1));
                     closeCamera();
                     openCamera();
 
@@ -291,8 +300,8 @@ public class MainActivity extends AppCompatActivity {
                     ASPECT_RATIO_43 = true;
                     ASPECT_RATIO_169 = false;
 
-                    tvPreview.animate().scaleX(.4f).scaleY(.4f)
-                            .setDuration(1020).setInterpolator(new CycleInterpolator(1));
+                    tvPreview.animate().alpha(0f)
+                            .setDuration(1200).setInterpolator(new CycleInterpolator(1));
                     closeCamera();
                     tvPreview.measure(imageSize.getHeight(),imageSize.getWidth());
                     openCamera();
@@ -368,7 +377,6 @@ public class MainActivity extends AppCompatActivity {
         ultra_wide_lens.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //makes changes in takePicture() and  opencamera()
                 if (check_null_camiID(camID[3])) {
                     if (!getCameraId().equals(camID[3])) {
 
@@ -380,6 +388,10 @@ public class MainActivity extends AppCompatActivity {
                         ultra_wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                         wide_lens.setBackground(null);
                         macro_tele_lens.setBackground(null);
+
+                        ultra_wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,14);
+                        wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
+                        macro_tele_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
                     }
                 } else if (check_null_camiID(camID[5])) { //green lens on samsung
                     if (!getCameraId().equals(camID[5])) {
@@ -387,9 +399,14 @@ public class MainActivity extends AppCompatActivity {
                         setCameraId(camID[5]);
                         getHighestResolution();
                         openCamera();
+
                         ultra_wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                         wide_lens.setBackground(null);
                         macro_tele_lens.setBackground(null);
+
+                        ultra_wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,14);
+                        wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
+                        macro_tele_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
                     }
                 } else if (check_null_camiID(camID[2])) { //green lens on samsung
                     if (!getCameraId().equals(camID[2])) {
@@ -397,9 +414,14 @@ public class MainActivity extends AppCompatActivity {
                         setCameraId(camID[2]);
                         getHighestResolution();
                         openCamera();
+
                         ultra_wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                         wide_lens.setBackground(null);
                         macro_tele_lens.setBackground(null);
+
+                        ultra_wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,14);
+                        wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
+                        macro_tele_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
                     }
                 }
             }
@@ -417,6 +439,10 @@ public class MainActivity extends AppCompatActivity {
                     wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                     ultra_wide_lens.setBackground(null);
                     macro_tele_lens.setBackground(null);
+
+                    ultra_wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
+                    wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,14);
+                    macro_tele_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
                 }
             }
         });
@@ -430,9 +456,14 @@ public class MainActivity extends AppCompatActivity {
                         setCameraId(camID[4]);
                         getHighestResolution();
                         openCamera();
+
                         macro_tele_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                         ultra_wide_lens.setBackground(null);
                         wide_lens.setBackground(null);
+
+                        ultra_wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
+                        wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
+                        macro_tele_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,14);
                     }
                 }
                 else if (check_null_camiID(camID[6])){
@@ -441,9 +472,14 @@ public class MainActivity extends AppCompatActivity {
                         setCameraId(camID[6]);
                         getHighestResolution();
                         openCamera();
+
                         macro_tele_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                         ultra_wide_lens.setBackground(null);
                         wide_lens.setBackground(null);
+
+                        ultra_wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
+                        wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
+                        macro_tele_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,14);
                     }
                 }
             }
@@ -457,9 +493,9 @@ public class MainActivity extends AppCompatActivity {
                     setCameraId(camID[1]);
                     getHighestResolution();
                     openCamera();
-                    auxDock.setVisibility(View.INVISIBLE);
+                    auxDock.setVisibility(View.GONE);
                     front_switch.animate().rotation(180f).setDuration(800);
-                } else if (auxDock.getVisibility() == View.INVISIBLE) {
+                } else if (auxDock.getVisibility() == View.GONE) {
                     closeCamera();
                     setCameraId(camID[0]);
                     getHighestResolution();
@@ -500,10 +536,12 @@ public class MainActivity extends AppCompatActivity {
         zSlider.addOnChangeListener(new Slider.OnChangeListener() {
             @Override
             public void onValueChange(@NonNull Slider slider, float value, boolean fromUser) {
-                try {
-                    setZoom(mZoom,value*4.5f);
-                } catch (CameraAccessException e) {
-                    e.printStackTrace();
+                if(camDeviceCaptureRequest!=null) {
+                    try {
+                        setZoom(mZoom, value * 4.5f);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
                 }
 
             }
@@ -607,7 +645,7 @@ public class MainActivity extends AppCompatActivity {
             btn_grid1.animate().translationY(28f)
                     .setInterpolator(new DecelerateInterpolator());
             btn_grid2.animate().translationY(22f)
-                    .setInterpolator(new DecelerateInterpolator()).setStartDelay(200);
+                    .setInterpolator(new DecelerateInterpolator()).setStartDelay(100);
 
             RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
                     appbar.getWidth(), cachedHeight * 3);
@@ -726,7 +764,7 @@ public class MainActivity extends AppCompatActivity {
             zoom_level = 1f;
             zSlider.setValue(0f);
         }
-        auxDock.setVisibility(View.INVISIBLE);
+        auxDock.setVisibility(View.GONE);
         zSlider.setVisibility(View.VISIBLE);
 
         if(!is_sliding) {
@@ -736,7 +774,6 @@ public class MainActivity extends AppCompatActivity {
                 zSlider.setVisibility(View.INVISIBLE);
             }, 1500);
         }
-
         Log.e(TAG, "doubleTaptoZoom: D O U B L E - T A P P E D");
     }
 
@@ -861,24 +898,26 @@ public class MainActivity extends AppCompatActivity {
                     zoom_level+=0.5f;
 //                    Log.e(TAG, "pinchtoZoom: Zoom In "+zoom_level);
 
-                    auxDock.setVisibility(View.INVISIBLE);
+                    auxDock.setVisibility(View.GONE);
                     zSlider.setVisibility(View.VISIBLE);
                     zSlider.setValue((float) getZoomValueSingleDecimal((zoom_level/4.5f)));
                 } else if (current_finger_spacing < finger_spacing && zoom_level > 1){
                     zoom_level-=0.5f;
 //                    Log.e(TAG, "pinchtoZoom: Zoom Out "+zoom_level);
 
-                    auxDock.setVisibility(View.INVISIBLE);
+                    auxDock.setVisibility(View.GONE);
                     zSlider.setVisibility(View.VISIBLE);
                     zSlider.setValue((float) getZoomValueSingleDecimal((zoom_level/4.5f)));
                 }
                 setZoom(maxzoom,zoom_level);
 
-                auxDock.postDelayed(hideAuxDock,2000);
-                if(!is_sliding){
-                    zSlider.postDelayed(hideZoomSlider,2000);
+                if(!is_sliding) {
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        //TODO : ADD SEMAPHORE
+                        auxDock.setVisibility(View.VISIBLE);
+                        zSlider.setVisibility(View.INVISIBLE);
+                    }, 1500);
                 }
-
 
             }
             finger_spacing = current_finger_spacing;
@@ -1075,8 +1114,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
-//             Log.e(TAG, "getHighestResolution: imageformatresolutionmap "+imageFormat_resolution_map );
-//             Log.e(TAG, "getHighestResolution: imageformatresolutionmap 16:9 "+imageFormat_resolution_map_169 );
+             Log.e(TAG, "getHighestResolution: imageformatresolutionmap "+imageFormat_resolution_map );
+             Log.e(TAG, "getHighestResolution: imageformatresolutionmap 16:9 "+imageFormat_resolution_map_169 );
             Set<Map.Entry<Integer, Size>> set = imageFormat_resolution_map.entrySet();
             Set<Map.Entry<Integer, Size>> set169 = imageFormat_resolution_map_169.entrySet();
             for (Map.Entry<Integer, Size> entry : set) {
@@ -1215,7 +1254,9 @@ public class MainActivity extends AppCompatActivity {
             if (!filesList.isEmpty()) {
                 filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
                 File lastImage = filesList.get(0);
-                Glide.with(MainActivity.this).load(lastImage).into(thumbPreview);
+                Uri liu = Uri.fromFile(lastImage);
+                Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
+                thumbPreview.setBitmap(bmp);
             } else {
                 Log.e(TAG, "display_latest_image_from_gallery(): Could not find any Image Files [1]");
             }
@@ -1230,7 +1271,8 @@ public class MainActivity extends AppCompatActivity {
                     filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
                     File lastImage = filesList.get(0);
                     Uri liu = Uri.fromFile(lastImage);
-                    Glide.with(this).load(liu).into(thumbPreview);
+                    Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
+                    thumbPreview.setBitmap(bmp);
                 } else {
                     Log.e(TAG, "getAllImageFiles(): Could not find any Image Files");
                 }
@@ -1291,7 +1333,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     protected void stopBackgroundThread() {
-        mBackgroundThread.quitSafely();
+        if(mBackgroundThread!=null){
+            mBackgroundThread.quitSafely();
+        }
+        else{
+            finishAffinity();
+            return;
+        }
         try {
             mBackgroundThread.join();
             mBackgroundThread = null;
@@ -1486,4 +1534,13 @@ public class MainActivity extends AppCompatActivity {
         closeCamera();
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.e(TAG, "onDestroy");
+        stopBackgroundThread();
+        ready = false;
+        resumed = false;
+        closeCamera();
+    }
 }

@@ -49,15 +49,14 @@ public class FocusCircle extends View {
     }
 
     public void animateInnerCircle(){
-        PropertyValuesHolder rPropertyValuesHolder = PropertyValuesHolder.ofFloat("radius",10f,2f);
-        PropertyValuesHolder aPropertyValuesHolder = PropertyValuesHolder.ofFloat("alpha",1f,.1f);
-        ValueAnimator valueAnimator = ValueAnimator.ofPropertyValuesHolder(rPropertyValuesHolder,aPropertyValuesHolder);
-        valueAnimator.setInterpolator(new CycleInterpolator(1));
+        PropertyValuesHolder rPropertyValuesHolder = PropertyValuesHolder.ofFloat("radius",11f,9f);
+        ValueAnimator valueAnimator = ValueAnimator.ofPropertyValuesHolder(rPropertyValuesHolder);
+        valueAnimator.setInterpolator(new CycleInterpolator(2));
         valueAnimator.addUpdateListener(animation -> {
             invalidate();
             circleRadius = (float) animation.getAnimatedValue();
         });
-        valueAnimator.setDuration(1000);
+        valueAnimator.setDuration(1500);
         valueAnimator.start();
     }
 

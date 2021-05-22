@@ -15,7 +15,8 @@
         android:layout_marginTop="0dp"
         android:background="@drawable/rounded_relative_layout"
         android:elevation="4dp"
-        android:paddingBottom="6dp">
+        android:paddingBottom="6dp"
+        >
 
         <include
             android:id="@+id/btn_group"
@@ -83,66 +84,58 @@
         android:layout_below="@id/appbar"
         />
 
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
         android:id="@+id/aux_cam_switch"
-        android:layout_width="wrap_content"
-        android:layout_height="35dp"
+        android:layout_width="130dp"
+        android:layout_height="38dp"
         android:layout_above="@id/relative_layout_button_dock"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="14dp"
-        android:backgroundTint="#1B1A1A"
-        android:elevation="4dp"
-        app:cardCornerRadius="16dp"
+        android:paddingHorizontal="6dp"
+        android:background="@drawable/rounded_relative_layout"
         >
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginHorizontal="4dp">
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/ultra_wide"
+            android:layout_width="30dp"
+            android:layout_height="29dp"
+            android:layout_gravity="center_vertical"
+            android:background="@null"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="0.6"
+            android:textColor="@color/white"
+            android:textSize="11sp" />
 
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/ultra_wide"
-                android:layout_width="30dp"
-                android:layout_height="29dp"
-                android:layout_centerVertical="true"
-                android:background="@null"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="0.6"
-                android:textColor="@color/white"
-                android:textSize="10sp" />
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/main_wide"
+            android:layout_width="30dp"
+            android:layout_height="29dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/colored_textview"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="1.0"
+            android:textColor="@color/white"
+            android:textSize="14sp" />
 
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/main_wide"
-                android:layout_width="30dp"
-                android:layout_height="29dp"
-                android:layout_centerVertical="true"
-                android:layout_marginStart="12dp"
-                android:layout_toEndOf="@id/ultra_wide"
-                android:background="@drawable/colored_textview"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="1.0"
-                android:textColor="@color/white"
-                android:textSize="10sp" />
-
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/macro_tele"
-                android:layout_width="30dp"
-                android:layout_height="29dp"
-                android:layout_marginStart="14dp"
-                android:layout_toEndOf="@id/main_wide"
-                android:background="@null"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="2.0"
-                android:textColor="@color/white"
-                android:textSize="10sp" />
-        </RelativeLayout>
-    </com.google.android.material.card.MaterialCardView>
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/macro_tele"
+            android:layout_width="30dp"
+            android:layout_height="29dp"
+            android:layout_marginStart="14dp"
+            android:layout_toEndOf="@id/main_wide"
+            android:background="@null"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:layout_gravity="center_vertical"
+            android:text="2.0"
+            android:textColor="@color/white"
+            android:textSize="11sp" />
+    </LinearLayout>
 
     <com.google.android.material.slider.Slider
         android:id="@+id/zoom_slider"
@@ -173,24 +166,19 @@
         android:paddingTop="20dp"
         android:layout_above="@id/mode_picker_view"
         >
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/imageViewHolder"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+        <com.uncanny.camx.CustomViews.CircularImageView
+            android:id="@+id/img_gal"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:scaleType="centerCrop"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:layout_marginStart="38dp"
             app:cardCornerRadius="28dp"
             >
-            <androidx.appcompat.widget.AppCompatImageView
-                android:id="@+id/img_gal"
-                android:layout_width="55dp"
-                android:layout_height="55dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:scaleType="centerCrop"
-                android:src="@drawable/rami" />
-        </com.google.android.material.card.MaterialCardView>
+        </com.uncanny.camx.CustomViews.CircularImageView>
 
         <androidx.appcompat.widget.AppCompatImageButton
             android:id="@+id/capture"
