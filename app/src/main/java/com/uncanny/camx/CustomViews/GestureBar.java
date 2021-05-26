@@ -12,6 +12,10 @@ import android.view.animation.CycleInterpolator;
 
 import androidx.annotation.Nullable;
 
+/**
+ * @author uncannyRishabh (17/5/2021)
+ */
+
 @SuppressWarnings({"FieldMayBeFinal","FieldCanBeLocal"})
 public class GestureBar extends View {
     private int sWidth,startX,stopX;
@@ -37,18 +41,17 @@ public class GestureBar extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        sWidth = this.getRootView().getWidth();
+        sWidth = getWidth();
         startX = (sWidth/2)-45;
         stopX  = (sWidth/2)+45;
         Log.e("TAG", "onDraw: appbar Width : "+sWidth);
-        canvas.drawLine(startX,12f,stopX,12f,paint);
+        canvas.drawLine(startX,getHeight()/2f,stopX,getHeight()/2f,paint);
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if(event.getAction()==MotionEvent.ACTION_DOWN){
             this.animate().scaleX(1.3f).setInterpolator(new CycleInterpolator(1));
-
         }
         return super.onTouchEvent(event);
     }

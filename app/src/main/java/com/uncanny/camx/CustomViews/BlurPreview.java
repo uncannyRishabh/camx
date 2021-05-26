@@ -12,7 +12,7 @@ import android.view.View;
 import androidx.annotation.Nullable;
 
 /**
- * @author uncannyRishabh(13/05/2021)
+ * @author uncannyRishabh (13/05/2021)
  */
 
 public class BlurPreview extends View {

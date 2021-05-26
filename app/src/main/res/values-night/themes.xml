@@ -14,6 +14,11 @@
         <!-- Customize your theme here. -->
     </style>
 
+    <style name="circularImageView">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
     <style name="AestheticWRLD" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:statusBarColor">#00000000</item>
         <item name="android:navigationBarColor">#000000</item>
