@@ -32,6 +32,7 @@ import android.hardware.camera2.params.RecommendedStreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
 import android.media.MediaActionSound;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -53,7 +54,6 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
-import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.view.WindowMetrics;
 import android.view.animation.CycleInterpolator;
@@ -77,6 +77,7 @@ import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.slider.Slider;
 import com.google.android.material.textview.MaterialTextView;
 import com.uncanny.camx.CustomViews.AutoFitPreviewView;
+import com.uncanny.camx.CustomViews.CaptureButton;
 import com.uncanny.camx.CustomViews.FaceMeteringRect;
 import com.uncanny.camx.CustomViews.FocusCircle;
 import com.uncanny.camx.CustomViews.GestureBar;
@@ -121,15 +122,19 @@ public class CamxFragment extends Fragment {
     private CameraCharacteristics characteristics = null;
     private CaptureRequest.Builder captureRequest = null;
     private CaptureRequest.Builder camDeviceCaptureRequest;
+    private MediaRecorder mMediaRecorder;
 
     private static String cameraId = "0";
     private boolean resumed = false, surface = false, ready = false;
+    public enum CamState {
+        CAMERA,VIDEO,VIDEO_PROGRESSED,NIGHT,SLOMO,TIMELAPSE
+    }
 
     private Vector<Surface> surfaceList = new Vector<>();
     private Handler mHandler = new Handler();
     private RelativeLayout appbar;
     private AutoFitPreviewView tvPreview;
-    private ImageButton shutter;
+    private CaptureButton shutter;
     private MaterialTextView ultra_wide_lens, wide_lens, macro_tele_lens;
     private AppCompatImageButton front_switch;
     private LinearLayout auxDock;
@@ -282,11 +287,13 @@ public class CamxFragment extends Fragment {
                 switch (index){
                     case 0:
                         Log.e(TAG, "onItemSelected: CAMERA MODE");
+                        shutter.colorInnerCircle(CamState.CAMERA);
                         break;
                     case 1:
                         Log.e(TAG, "onItemSelected: VIDEO MODE");
                         requestVideoPermissions();
-
+                        createVideoPreview();
+                        shutter.colorInnerCircle(CamState.VIDEO);
                         break;
                     case 2:
                         Log.e(TAG, "onItemSelected: SLO-MO MODE");
@@ -394,6 +401,7 @@ public class CamxFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 captureImage();
+                shutter.animateShutterButton(.7f);
                 MediaActionSound sound = new MediaActionSound();
                 sound.play(MediaActionSound.SHUTTER_CLICK);
                 //TODO : ADD SEMAPHORE
@@ -1011,7 +1019,7 @@ public class CamxFragment extends Fragment {
     }
 
     /**
-     * ESSENTIAL M E T H O D S
+     * CAMERA M E T H O D S
      */
 
     private void openCamera() {
@@ -1092,6 +1100,14 @@ public class CamxFragment extends Fragment {
 
     private boolean isMeteringAreaAFSupported() {
         return characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF) >= 1;
+    }
+
+    /**
+     * VIDEO M E T H O D S
+     */
+    private void createVideoPreview(){
+        if (!resumed || !surface)
+            return;
     }
 
     /**
@@ -1197,18 +1213,11 @@ public class CamxFragment extends Fragment {
     }
 
     private void setAestheticLayout() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            WindowInsetsController controller = requireActivity().getWindow().getInsetsController();
-            if (controller != null) {
-                controller.hide(WindowInsets.Type.statusBars() );
-                controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-            }
-        } else {
-            requireActivity().getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-            requireActivity().getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
-        }
-
+        requireActivity().getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN
+                , WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        requireActivity().getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | View.SYSTEM_UI_FLAG_FULLSCREEN);
     }
 
     private static int getScreenWidth(@NonNull Activity activity) {

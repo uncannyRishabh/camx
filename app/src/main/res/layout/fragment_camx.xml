@@ -88,7 +88,7 @@ tools:context=".CamxFragment">
     android:layout_centerHorizontal="true"
     android:layout_marginBottom="14dp"
     android:paddingHorizontal="6dp"
-    android:background="@drawable/rounded_relative_layout"
+    android:background="@drawable/rounded_aux_dock"
     >
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/ultra_wide"
@@ -180,17 +180,15 @@ tools:context=".CamxFragment">
         app:shapeAppearanceOverlay="@style/circularImageView"
         />
 
-    <androidx.appcompat.widget.AppCompatImageButton
+    <com.uncanny.camx.CustomViews.CaptureButton
         android:id="@+id/capture"
-        android:layout_width="88dp"
+        android:layout_width="82dp"
         android:layout_height="88dp"
         android:padding="4dp"
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true"
-        android:background="#00FFFFFF"
         android:hapticFeedbackEnabled="true"
-        android:scaleType="fitXY"
-        android:src="@drawable/capture_1" />
+         />
 
     <androidx.appcompat.widget.AppCompatImageButton
         android:id="@+id/front_back_switch"

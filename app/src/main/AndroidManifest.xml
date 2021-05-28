@@ -24,7 +24,9 @@
         android:largeHeap="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.camX">
-        <activity android:name="com.uncanny.camx.MainActivity" android:theme="@style/AestheticWRLD" android:screenOrientation="nosensor">
+        <activity android:name="com.uncanny.camx.MainActivity"
+            android:theme="@style/AestheticWRLD"
+            android:screenOrientation="nosensor">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
