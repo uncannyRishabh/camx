@@ -15,7 +15,7 @@ public class MainActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             CamxFragment camxFragment = CamxFragment.newInstance();
             getSupportFragmentManager().beginTransaction()
-                    .add(R.id.frag_container, camxFragment)
+                    .replace(R.id.frag_container, camxFragment)
                     .commitNow();
         }
     }

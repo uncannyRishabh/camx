@@ -1,6 +1,7 @@
 package com.uncanny.camx;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ContentUris;
 import android.content.Context;
@@ -29,10 +30,13 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.Face;
 import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.RecommendedStreamConfigurationMap;
+import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.CamcorderProfile;
 import android.media.Image;
 import android.media.ImageReader;
 import android.media.MediaActionSound;
 import android.media.MediaRecorder;
+import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -40,6 +44,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -83,14 +88,19 @@ import com.uncanny.camx.CustomViews.FocusCircle;
 import com.uncanny.camx.CustomViews.GestureBar;
 import com.uncanny.camx.CustomViews.Grids;
 import com.uncanny.camx.CustomViews.HorizontalPicker;
+import com.uncanny.camx.CustomViews.UncannyChronometer;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -123,11 +133,13 @@ public class CamxFragment extends Fragment {
     private CaptureRequest.Builder captureRequest = null;
     private CaptureRequest.Builder camDeviceCaptureRequest;
     private MediaRecorder mMediaRecorder;
+    private SurfaceTexture stPreview;
 
     private static String cameraId = "0";
+    private String mVideoFileName;
     private boolean resumed = false, surface = false, ready = false;
     public enum CamState {
-        CAMERA,VIDEO,VIDEO_PROGRESSED,NIGHT,SLOMO,TIMELAPSE
+        CAMERA,VIDEO,VIDEO_PROGRESSED,PORTRAIT,PRO,NIGHT,SLOMO,TIMEWARP
     }
 
     private Vector<Surface> surfaceList = new Vector<>();
@@ -149,16 +161,19 @@ public class CamxFragment extends Fragment {
     private FocusCircle focusCircle;
     private GestureBar gestureBar;
     private LinearLayout btn_grid1,btn_grid2;
+    private UncannyChronometer chronometer;
 
     private int resultCode = 1;
     private long time;
     private Size imageSize;
+    private Size mVideoSize;
     private float mZoom = 1.0f;
     public float zoom_level = 1;
     public float finger_spacing = 0;
     private int cachedHeight;
     private Rect zoom = new Rect();
     //    private double ratioCoeff = 1.3333f;
+
     private Map<Integer, Size> hRes = new HashMap<>();
     private Map<Integer,Size> map43 = new HashMap<>();
     private Map<Integer, Size> map169 = new HashMap<>();
@@ -167,6 +182,8 @@ public class CamxFragment extends Fragment {
 
     //    private boolean pinched = false;
 //    private boolean capturing = false;
+    private CamState state = CamState.CAMERA;
+    private boolean isRecording = false;
     private boolean mflash = false;
     private volatile boolean is_sliding = false;
     private boolean firstTouch = false;
@@ -274,6 +291,7 @@ public class CamxFragment extends Fragment {
         return view;
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -287,25 +305,32 @@ public class CamxFragment extends Fragment {
                 switch (index){
                     case 0:
                         Log.e(TAG, "onItemSelected: CAMERA MODE");
+                        state = CamState.CAMERA;
                         shutter.colorInnerCircle(CamState.CAMERA);
                         break;
                     case 1:
                         Log.e(TAG, "onItemSelected: VIDEO MODE");
+                        state = CamState.VIDEO;
+                        mMediaRecorder = new MediaRecorder();
                         requestVideoPermissions();
-                        createVideoPreview();
+                        createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
                         shutter.colorInnerCircle(CamState.VIDEO);
                         break;
                     case 2:
+                        state = CamState.SLOMO;
                         Log.e(TAG, "onItemSelected: SLO-MO MODE");
                         break;
                     case 3:
-                        Log.e(TAG, "onItemSelected: PORTRAIT MODE");
+                        state = CamState.TIMEWARP;
+                        Log.e(TAG, "onItemSelected: TIME WARP MODE");
                         break;
                     case 4:
-                        Log.e(TAG, "onItemSelected: NIGHT MODE");
+                        state = CamState.PORTRAIT;
+                        Log.e(TAG, "onItemSelected: PORTRAIT MODE");
                         break;
                     case 5:
-                        Log.e(TAG, "onItemSelected: PRO MODE");
+                        state = CamState.NIGHT;
+                        Log.e(TAG, "onItemSelected: NIGHT MODE");
                         break;
                 }
 
@@ -400,12 +425,45 @@ public class CamxFragment extends Fragment {
         shutter.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                captureImage();
-                shutter.animateShutterButton(.7f);
-                MediaActionSound sound = new MediaActionSound();
-                sound.play(MediaActionSound.SHUTTER_CLICK);
-                //TODO : ADD SEMAPHORE
-                new Handler(Looper.getMainLooper()).postDelayed(() -> display_latest_image_from_gallery(), 1800);
+                switch (state) {
+                    case CAMERA:
+                        captureImage();
+                        shutter.animateShutterButtonStateCamera(.7f);
+                        MediaActionSound sound = new MediaActionSound();
+                        sound.play(MediaActionSound.SHUTTER_CLICK);
+                        //TODO : ADD SEMAPHORE
+                        new Handler(Looper.getMainLooper()).postDelayed(() -> display_latest_image_from_gallery(), 1800);
+                        break;
+                    case VIDEO:
+                        chronometer = view.findViewById(R.id.chronometer);
+                        if(isRecording){
+                            isRecording = false;
+                            chronometer.stop();
+                            chronometer.setVisibility(View.INVISIBLE);
+                            mModePicker.setVisibility(View.VISIBLE);
+                            mMediaRecorder.stop(); //TODO: handle stop before preview is generated
+                            mMediaRecorder.reset();
+                            shutter.resetStateVideo();
+                            createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
+//                            Intent mediaStoreUpdateIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+                        }else {
+                            startRecording();
+                            mModePicker.setVisibility(View.INVISIBLE);
+                            chronometer.setBase(SystemClock.elapsedRealtime());
+                            chronometer.start();
+                            chronometer.setVisibility(View.VISIBLE);
+                            shutter.animateShutterButtonStateVideo();
+                            mMediaRecorder.start();
+                            isRecording = true;
+                        }
+                        break;
+                    case SLOMO:
+//                        startSloMo();
+                        break;
+                    default:
+                        break;
+                }
+
             }
         });
 
@@ -742,6 +800,7 @@ public class CamxFragment extends Fragment {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i1) {
             surface = true;
+            stPreview = tvPreview.getSurfaceTexture();
             cachedHeight = appbar.getHeight();
             setDockHeight();
             openCamera();
@@ -1026,7 +1085,7 @@ public class CamxFragment extends Fragment {
         if (!resumed || !surface)
             return;
 
-        SurfaceTexture stPreview = tvPreview.getSurfaceTexture();
+        ;
         hRes = (ASPECT_RATIO_43 ? map43 : map169);
         for (Size item : hRes.values()) {
             imageSize = item;
@@ -1105,9 +1164,126 @@ public class CamxFragment extends Fragment {
     /**
      * VIDEO M E T H O D S
      */
-    private void createVideoPreview(){
+
+    private void createVideoPreview(int height,int width){
         if (!resumed || !surface)
             return;
+        Set<String> set=new HashSet();
+        set.add("1");
+        set.add("21");
+
+        StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+        // Size[] mVideoSize = map.getHighResolutionOutputSizes(ImageFormat.JPEG); // HIGHRES MODE
+//        Log.e(TAG, "createVideoPreview: "+ Arrays.toString(mVideoSize));
+        mVideoSize = getVideoPreviewResolution(map.getOutputSizes(MediaRecorder.class),height,width);
+        stPreview.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
+        tvPreview.setAspectRatio(mVideoSize.getHeight(),mVideoSize.getWidth());
+        Surface previewSurface = new Surface(stPreview);
+        try {
+            camDeviceCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            camDeviceCaptureRequest.addTarget(previewSurface);
+            camDevice.createCaptureSession(Arrays.asList(previewSurface,imgReader.getSurface())
+                    , new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession session) {
+                    camSession = session;
+                    try {
+                        camSession.setRepeatingRequest(camDeviceCaptureRequest.build(), null,mBackgroundHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+
+                }
+            },null);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void startRecording(){
+        try {
+            if(!isRecording){
+                setupMediaRecorder();
+            }
+            SurfaceTexture surfaceTexture = tvPreview.getSurfaceTexture();
+            surfaceTexture.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
+            Surface previewSurface = new Surface(surfaceTexture); //TODO : free surface with #release
+            Surface recordSurface = mMediaRecorder.getSurface();
+            camDeviceCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+            camDeviceCaptureRequest.addTarget(previewSurface);
+            camDeviceCaptureRequest.addTarget(recordSurface);
+            camDevice.createCaptureSession(Arrays.asList(previewSurface, recordSurface, imgReader.getSurface()),
+                    new CameraCaptureSession.StateCallback() {
+                        @Override
+                        public void onConfigured(CameraCaptureSession session) {
+                            camSession = session;
+                            try {
+                                camSession.setRepeatingRequest(
+                                        camDeviceCaptureRequest.build(),null, null
+                                );
+                            } catch (CameraAccessException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        @Override
+                        public void onConfigureFailed(CameraCaptureSession session) {
+                            Log.d(TAG, "onConfigureFailed: startRecord");
+                        }
+                    }, null);
+
+        }
+        catch (IOException|CameraAccessException e){
+            e.printStackTrace();
+        }
+
+    }
+
+    private Size getVideoPreviewResolution(Size[] outputSizes, int height, int width) {
+        ArrayList<Size> sizeArrayList = new ArrayList<>();
+        for(Size size : outputSizes){
+            float ar = (float) size.getWidth()/ size.getHeight();
+            if(size.getHeight() == width && ar > 1.5f){
+                sizeArrayList.add(size);
+            }
+        }
+        if(sizeArrayList.size() > 0){
+            return Collections.min(sizeArrayList,new CompareSizeByArea());
+        }
+        else return outputSizes[0];
+    }
+
+    private void setupMediaRecorder() throws IOException {
+        CamcorderProfile camcorderProfile = CamcorderProfile.get(1,CamcorderProfile.QUALITY_1080P);
+        Log.e(TAG, "setupMediaRecorder: CP : h : "+camcorderProfile.videoFrameHeight
+                                                +" w : "+camcorderProfile.videoFrameWidth);
+        Log.e(TAG, "setupMediaRecorder: vBR : "+camcorderProfile.videoBitRate );
+        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mMediaRecorder.setAudioSamplingRate(8000);
+        mMediaRecorder.setAudioEncodingBitRate(96000);
+        mMediaRecorder.setAudioEncodingBitRate(camcorderProfile.audioBitRate);
+        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+        mMediaRecorder.setVideoFrameRate(30);
+        mMediaRecorder.setVideoEncodingBitRate(16400000);
+        mMediaRecorder.setVideoSize(camcorderProfile.videoFrameWidth, camcorderProfile.videoFrameHeight);
+        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+//        mMediaRecorder.setOrientationHint(90);      //TODO : CHANGE ACCORDING TO SENSOR ORIENTATION
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            mMediaRecorder.setOutputFile(new File("//storage//emulated//0//DCIM//Camera//CamX"
+                    +System.currentTimeMillis()+"_"+getCameraId()+".mp4"));
+        }
+        else {
+            mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//CamX"
+                    +System.currentTimeMillis()+"_"+getCameraId()+".mp4");
+        }
+//        mMediaRecorder.setOrientationHint(mTotalRotation);
+        mMediaRecorder.prepare();
     }
 
     /**
@@ -1294,8 +1470,10 @@ public class CamxFragment extends Fragment {
                 filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
                 File lastImage = filesList.get(0);
                 Uri liu = Uri.fromFile(lastImage);
-                Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
-                thumbPreview.setImageBitmap(bmp);
+//                Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
+                Bitmap ThumbImage = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(String.valueOf(liu))
+                        ,100,100);
+                thumbPreview.setImageBitmap(ThumbImage);
             } else {
                 Log.e(TAG, "display_latest_image_from_gallery(): Could not find any Image Files [1]");
             }
@@ -1586,4 +1764,12 @@ public class CamxFragment extends Fragment {
         closeCamera();
     }
 
+    private static class CompareSizeByArea implements Comparator<Size> {
+
+        @Override
+        public int compare(Size lhs, Size rhs) {
+            return Long.signum( (long)(lhs.getWidth() * lhs.getHeight()) -
+                    (long)(rhs.getWidth() * rhs.getHeight()));
+        }
+    }
 }

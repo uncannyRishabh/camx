@@ -3,6 +3,7 @@ package com.uncanny.camx;
 import android.annotation.SuppressLint;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
@@ -31,7 +32,7 @@ public class SettingsFragment extends Fragment {
     private ScrollView settings;
     private MotionLayout motionLayout;
 
-    private ColorStateList stateList;
+    private ColorStateList thumbStateList,trackStateList;
 
     public SettingsFragment() {
         // Required empty public constructor
@@ -44,15 +45,28 @@ public class SettingsFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        int[][] states = new int[][] {
+        int[][] thumbStates = new int[][] {
                 new int[] { android.R.attr.state_checked}, // enabled
                 new int[] {-android.R.attr.state_checked}, // disabled
         };
-        int[] colors = new int[] {
+        int[] thumbColors = new int[] {
                 getDeviceAccent(),
                 Color.WHITE
         };
-        stateList = new ColorStateList(states, colors);
+        thumbStateList = new ColorStateList(thumbStates, thumbColors);
+
+        int[][] trackStates = new int[][] {
+                new int[] { android.R.attr.state_checked}, // enabled
+        };
+        int[] trackColors = new int[] {
+                getDeviceAccent(),
+        };
+        trackStateList = new ColorStateList(trackStates, trackColors);
+//        Explode explode = new Explode();
+//        Slide slide = new Slide(Gravity.END);
+//        this.setEnterTransition(slide);
+//        this.setExitTransition(null)
+
     }
 
     @Override
@@ -60,7 +74,6 @@ public class SettingsFragment extends Fragment {
                              Bundle savedInstanceState) {
         View view =  inflater.inflate(R.layout.fragment_settings, container, false);
         appBarLayout = view.findViewById(R.id.appbar_layout);
-
 
         toolbar = view.findViewById(R.id.toolbar);
         toolbar = view.findViewById(R.id.toolbar);
@@ -72,11 +85,15 @@ public class SettingsFragment extends Fragment {
 
         s_description = view.findViewById(R.id.s_c);
         SwitchCompat switch_1 = s_description.findViewById(R.id.custom_switch);
-        switch_1.setThumbTintList(stateList);
+
+        //TODO: DO THE FOLLOWING IN XML
+        switch_1.setThumbTintList(thumbStateList);
+        switch_1.setTrackTintList(thumbStateList);
+        switch_1.setTrackTintMode(PorterDuff.Mode.MULTIPLY);
 
         s_description = view.findViewById(R.id.s_c1);
         SwitchCompat switch_2 = s_description.findViewById(R.id.custom_switch);
-        switch_2.setThumbTintList(stateList);
+        switch_2.setThumbTintList(thumbStateList);
 
 
         return view;

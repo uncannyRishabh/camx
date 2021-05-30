@@ -6,6 +6,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.animation.CycleInterpolator;
@@ -21,10 +22,12 @@ import com.uncanny.camx.CamxFragment.CamState;
  */
 
 public class CaptureButton extends View {
-    private Paint paint, nPaint;
+    private RectF rectF;
+    private Paint paint, nPaint, mPaint;
     private int cx,cy;
     private float icRadius;
     private CamState mState;
+    private boolean drawSquare=false;
 
     public CaptureButton(Context context) {
         super(context);
@@ -42,8 +45,11 @@ public class CaptureButton extends View {
     }
 
     private void init() {
+        rectF = new RectF();
         paint = new Paint();
         nPaint = new Paint();
+        mPaint = new Paint();
+
         paint.setColor(Color.WHITE);
         paint.setAntiAlias(true);
         paint.setStrokeWidth(10f);
@@ -53,6 +59,11 @@ public class CaptureButton extends View {
         nPaint.setAntiAlias(true);
         nPaint.setStrokeWidth(10f);
         nPaint.setStyle(Paint.Style.STROKE);
+
+        mPaint.setColor(Color.RED);
+        mPaint.setAntiAlias(true);
+        mPaint.setStrokeWidth(10f);
+        mPaint.setStyle(Paint.Style.FILL_AND_STROKE);
 
         icRadius = 52f;
         mState = CamState.CAMERA;
@@ -72,6 +83,7 @@ public class CaptureButton extends View {
                 icRadius = 52f*2;
                 break;
             case VIDEO:
+                icRadius = 52f;
                 break;
             case VIDEO_PROGRESSED:
                 break;
@@ -95,7 +107,7 @@ public class CaptureButton extends View {
         invalidate();
     }
 
-    public void animateShutterButton(float multiplier) {
+    public void animateShutterButtonStateCamera(float multiplier) {
         PropertyValuesHolder rPropertyValuesHolder = PropertyValuesHolder.ofFloat("radius"
                                                         ,icRadius,icRadius*multiplier);
         ValueAnimator valueAnimator = ValueAnimator.ofPropertyValuesHolder(rPropertyValuesHolder);
@@ -107,6 +119,16 @@ public class CaptureButton extends View {
         valueAnimator.setDuration(520);
         valueAnimator.start();
         invalidate();
+    }
+
+    public void animateShutterButtonStateVideo(){
+        drawSquare = true;
+        invalidate();
+    }
+
+    public void resetStateVideo(){
+        drawSquare = false;
+        this.invalidate();
     }
 
     public void sizeInnerCircle(float multiplier) {
@@ -128,7 +150,11 @@ public class CaptureButton extends View {
         super.onDraw(canvas);
         cx = getWidth()/2;
         cy = getHeight()/2;
+        rectF.set(72,78,getWidth()-72,getHeight()-78);
 
+        if(drawSquare){
+            canvas.drawRoundRect(rectF,22,22,mPaint);
+        }
         canvas.drawCircle(cx,cy,icRadius,paint);
         canvas.drawCircle(cx,cy,Math.min(cx,cy)-10, nPaint);
     }
