@@ -260,7 +260,7 @@ public class CamxFragment extends Fragment {
                              Bundle savedInstanceState) {
         setAestheticLayout();
         check_aux();
-        getHighestResolution();
+//        getHighestResolution();
 
         View view = inflater.inflate(R.layout.fragment_camx, container, false);
 
@@ -305,7 +305,8 @@ public class CamxFragment extends Fragment {
                     case 0:
                         state = CamState.CAMERA;
                         Log.e(TAG, "onItemSelected: CAMERA MODE");
-
+                        closeCamera();
+                        openCamera();
                         shutter.colorInnerCircle(state);
                         break;
                     case 1:
@@ -484,7 +485,7 @@ public class CamxFragment extends Fragment {
 
                         closeCamera();
                         setCameraId(camID[3]);
-                        getHighestResolution();
+//                        getHighestResolution();
                         openCamera();
 
                         ultra_wide_lens.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.colored_textview));
@@ -499,7 +500,7 @@ public class CamxFragment extends Fragment {
                     if (!getCameraId().equals(camID[5])) {
                         closeCamera();
                         setCameraId(camID[5]);
-                        getHighestResolution();
+//                        getHighestResolution();
                         openCamera();
 
                         ultra_wide_lens.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.colored_textview));
@@ -514,7 +515,7 @@ public class CamxFragment extends Fragment {
                     if (!getCameraId().equals(camID[2])) {
                         closeCamera();
                         setCameraId(camID[2]);
-                        getHighestResolution();
+//                        getHighestResolution();
                         openCamera();
 
                         ultra_wide_lens.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.colored_textview));
@@ -536,7 +537,7 @@ public class CamxFragment extends Fragment {
 //                    zoom_level = 1;
                     closeCamera();
                     setCameraId(camID[0]);
-                    getHighestResolution();
+//                    getHighestResolution();
                     openCamera();
                     wide_lens.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.colored_textview));
                     ultra_wide_lens.setBackground(null);
@@ -556,7 +557,7 @@ public class CamxFragment extends Fragment {
                     if(!getCameraId().equals(camID[4])) {
                         closeCamera();
                         setCameraId(camID[4]);
-                        getHighestResolution();
+//                        getHighestResolution();
                         openCamera();
 
                         macro_tele_lens.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.colored_textview));
@@ -572,7 +573,7 @@ public class CamxFragment extends Fragment {
                     if(!getCameraId().equals(camID[6])) {
                         closeCamera();
                         setCameraId(camID[6]);
-                        getHighestResolution();
+//                        getHighestResolution();
                         openCamera();
 
                         macro_tele_lens.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.colored_textview));
@@ -593,14 +594,14 @@ public class CamxFragment extends Fragment {
                 if (auxDock.getVisibility() == View.VISIBLE) {
                     closeCamera();
                     setCameraId(camID[1]);
-                    getHighestResolution();
+//                    getHighestResolution();
                     openCamera();
                     auxDock.setVisibility(View.GONE);
                     front_switch.animate().rotation(180f).setDuration(800);
                 } else if (auxDock.getVisibility() == View.GONE) {
                     closeCamera();
                     setCameraId(camID[0]);
-                    getHighestResolution();
+//                    getHighestResolution();
                     wide_lens.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.colored_textview));
                     ultra_wide_lens.setBackground(null);
                     macro_tele_lens.setBackground(null);
@@ -1085,11 +1086,10 @@ public class CamxFragment extends Fragment {
         if (!resumed || !surface)
             return;
 
-        hRes = (ASPECT_RATIO_43 ? map43 : map169);
-        for (Size item : hRes.values()) {
-            imageSize = item;
-            Log.e(TAG, "openCamera: imageDimension : " + item);
-        }
+        StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+        imageSize = getVideoPreviewResolution(map.getOutputSizes(ImageFormat.JPEG)
+                ,tvPreview.getHeight(),tvPreview.getWidth(),ASPECT_RATIO_43);
+
         tvPreview.measure(imageSize.getHeight(),imageSize.getWidth());
         stPreview.setDefaultBufferSize(imageSize.getWidth(),imageSize.getHeight());
 
@@ -1171,7 +1171,7 @@ public class CamxFragment extends Fragment {
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         // Size[] mVideoSize = map.getHighResolutionOutputSizes(ImageFormat.JPEG); // HIGHRES MODE
 //        Log.e(TAG, "createVideoPreview: "+ Arrays.toString(mVideoSize));
-        mVideoSize = getVideoPreviewResolution(map.getOutputSizes(MediaRecorder.class),height,width);
+        mVideoSize = getVideoPreviewResolution(map.getOutputSizes(MediaRecorder.class),height,width,false);
         stPreview.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
         tvPreview.setAspectRatio(mVideoSize.getHeight(),mVideoSize.getWidth());
         Surface previewSurface = new Surface(stPreview);
@@ -1237,12 +1237,19 @@ public class CamxFragment extends Fragment {
         }
     }
 
-    private Size getVideoPreviewResolution(Size[] outputSizes, int height, int width) {
+    private Size getVideoPreviewResolution(Size[] outputSizes, int height, int width, boolean aspectRatio43) {
         ArrayList<Size> sizeArrayList = new ArrayList<>();
         for(Size size : outputSizes){
             float ar = (float) size.getWidth()/ size.getHeight();
-            if(size.getHeight() == width && ar > 1.5f){
-                sizeArrayList.add(size);
+            if(aspectRatio43) {
+                if (size.getHeight() == width && ar > 1.2f) {
+                    sizeArrayList.add(size);
+                }
+            }
+            else {
+                if (size.getHeight() == width && ar > 1.6f) {
+                    sizeArrayList.add(size);
+                }
             }
         }
         if(sizeArrayList.size() > 0){
@@ -1252,6 +1259,7 @@ public class CamxFragment extends Fragment {
     }
 
     private void setupMediaRecorder() throws IOException {
+        mVideoFileName = "CamX"+System.currentTimeMillis()+"_"+getCameraId()+".mp4";
         CamcorderProfile camcorderProfile = CamcorderProfile.get(1,CamcorderProfile.QUALITY_1080P);
         Log.e(TAG, "setupMediaRecorder: CP : h : "+camcorderProfile.videoFrameHeight
                                                 +" w : "+camcorderProfile.videoFrameWidth);
@@ -1269,12 +1277,10 @@ public class CamxFragment extends Fragment {
         mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
 //        mMediaRecorder.setOrientationHint(90);      //TODO : CHANGE ACCORDING TO SENSOR ORIENTATION
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            mMediaRecorder.setOutputFile(new File("//storage//emulated//0//DCIM//Camera//CamX"
-                    +System.currentTimeMillis()+"_"+getCameraId()+".mp4"));
+            mMediaRecorder.setOutputFile(new File("//storage//emulated//0//DCIM//Camera//"+mVideoFileName));
         }
         else {
-            mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//CamX"
-                    +System.currentTimeMillis()+"_"+getCameraId()+".mp4");
+            mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//"+mVideoFileName);
         }
 //        mMediaRecorder.setOrientationHint(mTotalRotation);
         mMediaRecorder.prepare();
