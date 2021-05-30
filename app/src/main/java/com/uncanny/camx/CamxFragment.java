@@ -100,7 +100,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -304,17 +303,18 @@ public class CamxFragment extends Fragment {
                 mModePicker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
                 switch (index){
                     case 0:
-                        Log.e(TAG, "onItemSelected: CAMERA MODE");
                         state = CamState.CAMERA;
-                        shutter.colorInnerCircle(CamState.CAMERA);
+                        Log.e(TAG, "onItemSelected: CAMERA MODE");
+
+                        shutter.colorInnerCircle(state);
                         break;
                     case 1:
-                        Log.e(TAG, "onItemSelected: VIDEO MODE");
                         state = CamState.VIDEO;
-                        mMediaRecorder = new MediaRecorder();
+                        Log.e(TAG, "onItemSelected: VIDEO MODE");
+
                         requestVideoPermissions();
                         createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
-                        shutter.colorInnerCircle(CamState.VIDEO);
+                        shutter.colorInnerCircle(state);
                         break;
                     case 2:
                         state = CamState.SLOMO;
@@ -1085,7 +1085,6 @@ public class CamxFragment extends Fragment {
         if (!resumed || !surface)
             return;
 
-        ;
         hRes = (ASPECT_RATIO_43 ? map43 : map169);
         for (Size item : hRes.values()) {
             imageSize = item;
@@ -1168,10 +1167,7 @@ public class CamxFragment extends Fragment {
     private void createVideoPreview(int height,int width){
         if (!resumed || !surface)
             return;
-        Set<String> set=new HashSet();
-        set.add("1");
-        set.add("21");
-
+        mMediaRecorder = new MediaRecorder();
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         // Size[] mVideoSize = map.getHighResolutionOutputSizes(ImageFormat.JPEG); // HIGHRES MODE
 //        Log.e(TAG, "createVideoPreview: "+ Arrays.toString(mVideoSize));
@@ -1229,7 +1225,6 @@ public class CamxFragment extends Fragment {
                                 e.printStackTrace();
                             }
                         }
-
                         @Override
                         public void onConfigureFailed(CameraCaptureSession session) {
                             Log.d(TAG, "onConfigureFailed: startRecord");
@@ -1240,7 +1235,6 @@ public class CamxFragment extends Fragment {
         catch (IOException|CameraAccessException e){
             e.printStackTrace();
         }
-
     }
 
     private Size getVideoPreviewResolution(Size[] outputSizes, int height, int width) {
@@ -1265,7 +1259,7 @@ public class CamxFragment extends Fragment {
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
         mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mMediaRecorder.setAudioSamplingRate(8000);
-        mMediaRecorder.setAudioEncodingBitRate(96000);
+        mMediaRecorder.setAudioEncodingBitRate(96000); //TODO : UNABLE TO SET HIGHER THAN 48kbits/sec
         mMediaRecorder.setAudioEncodingBitRate(camcorderProfile.audioBitRate);
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         mMediaRecorder.setVideoFrameRate(30);
@@ -1645,6 +1639,10 @@ public class CamxFragment extends Fragment {
         public void onOpened(@NonNull CameraDevice cameraDevice) {
             camDevice = cameraDevice;
             try {
+                if(state == CamState.VIDEO){
+                    createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
+                    return;
+                }
                 camDevice.createCaptureSession(surfaceList,stateCallback, mBackgroundHandler);
                 tvPreview.setAspectRatio(imageSize.getHeight(),imageSize.getWidth());
                 Log.e(TAG, "onOpened: tvPreview.SetAspectRatio : h : "+imageSize.getHeight() + " w : "+imageSize.getWidth());
@@ -1751,7 +1749,12 @@ public class CamxFragment extends Fragment {
         resumed = true;
         display_latest_image_from_gallery();
         startBackgroundThread();
-        openCamera();
+        shutter.colorInnerCircle(state);
+        if(state == CamState.CAMERA)
+            openCamera();
+        else if(state == CamState.VIDEO){
+            createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
+        }
     }
 
     @Override
@@ -1761,7 +1764,15 @@ public class CamxFragment extends Fragment {
         stopBackgroundThread();
         ready = false;
         resumed = false;
-        closeCamera();
+
+        if(state == CamState.CAMERA)
+            closeCamera();
+        else if(state == CamState.VIDEO) {
+            if(isRecording) {
+            mMediaRecorder.stop();
+            mMediaRecorder.reset();
+            }
+        }
     }
 
     private static class CompareSizeByArea implements Comparator<Size> {
