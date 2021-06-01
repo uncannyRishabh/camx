@@ -14,7 +14,7 @@ import android.view.animation.CycleInterpolator;
 import androidx.annotation.Nullable;
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
 
-import com.uncanny.camx.CamxFragment.CamState;
+import com.uncanny.camx.MainActivity.CamState;
 
 
 /**
