@@ -36,7 +36,6 @@ import android.media.Image;
 import android.media.ImageReader;
 import android.media.MediaActionSound;
 import android.media.MediaRecorder;
-import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -81,14 +80,16 @@ import androidx.fragment.app.Fragment;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.slider.Slider;
 import com.google.android.material.textview.MaterialTextView;
-import com.uncanny.camx.CustomViews.AutoFitPreviewView;
 import com.uncanny.camx.CustomViews.CaptureButton;
-import com.uncanny.camx.CustomViews.FaceMeteringRect;
-import com.uncanny.camx.CustomViews.FocusCircle;
 import com.uncanny.camx.CustomViews.GestureBar;
-import com.uncanny.camx.CustomViews.Grids;
 import com.uncanny.camx.CustomViews.HorizontalPicker;
 import com.uncanny.camx.CustomViews.UncannyChronometer;
+import com.uncanny.camx.CustomViews.ViewFinder.AutoFitPreviewView;
+import com.uncanny.camx.CustomViews.ViewFinder.FaceMeteringRect;
+import com.uncanny.camx.CustomViews.ViewFinder.FocusCircle;
+import com.uncanny.camx.CustomViews.ViewFinder.Grids;
+import com.uncanny.camx.Data.LensData;
+import com.uncanny.camx.Utility.CompareSizeByArea;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -98,7 +99,6 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -122,6 +122,7 @@ public class CamxFragment extends Fragment {
         ORIENTATIONS.append(Surface.ROTATION_180, 270);
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
+    private LensData lensData;
     private final String [] camID= {"0","1","20","21","22","2","6","3"}; //0,1,2,3,4,5,6,7 in realme and stock android
     // 0   1   2    3    4    5   6   7
 
@@ -192,6 +193,20 @@ public class CamxFragment extends Fragment {
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
 
+    private Runnable openingChores = new Runnable() {
+        @Override
+        public void run() {
+            new Handler(Looper.myLooper()).post(getSensorSize);
+        }
+    };
+
+    private Runnable getSensorSize = new Runnable() {
+        @Override
+        public void run() {
+            getHighestResolution();
+        }
+    };
+
     private Runnable hideFocusCircle = new Runnable() {
         @Override
         public void run() {
@@ -250,20 +265,17 @@ public class CamxFragment extends Fragment {
             requestRuntimePermission();
         }
         if(ContextCompat.checkSelfPermission(requireContext(),Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
-            display_latest_image_from_gallery();
+//            display_latest_image_from_gallery();
         }
-
+        lensData = new LensData(requireActivity());
+        lensData.getCameraLensCharacteristics(getCameraId());
+        Log.e(TAG, "onCreate: LensData "+lensData.getCameraId().size());
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        setAestheticLayout();
-        check_aux();
-//        getHighestResolution();
-
         View view = inflater.inflate(R.layout.fragment_camx, container, false);
-
         appbar = view.findViewById(R.id.appbar);
         thumbPreview = view.findViewById(R.id.img_gal);
         tvPreview = view.findViewById(R.id.preview);
@@ -287,6 +299,9 @@ public class CamxFragment extends Fragment {
         btn_grid1 = view.findViewById(R.id.top_bar_0);
         settings = view.findViewById(R.id.settings);
 
+        setAestheticLayout();
+        new Handler(Looper.myLooper()).post(openingChores);
+
         return view;
     }
 
@@ -307,12 +322,12 @@ public class CamxFragment extends Fragment {
                         Log.e(TAG, "onItemSelected: CAMERA MODE");
                         closeCamera();
                         openCamera();
+                        new Handler(Looper.myLooper()).post(getSensorSize);
                         shutter.colorInnerCircle(state);
                         break;
                     case 1:
                         state = CamState.VIDEO;
                         Log.e(TAG, "onItemSelected: VIDEO MODE");
-
                         requestVideoPermissions();
                         createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
                         shutter.colorInnerCircle(state);
@@ -485,7 +500,6 @@ public class CamxFragment extends Fragment {
 
                         closeCamera();
                         setCameraId(camID[3]);
-//                        getHighestResolution();
                         openCamera();
 
                         ultra_wide_lens.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.colored_textview));
@@ -500,7 +514,6 @@ public class CamxFragment extends Fragment {
                     if (!getCameraId().equals(camID[5])) {
                         closeCamera();
                         setCameraId(camID[5]);
-//                        getHighestResolution();
                         openCamera();
 
                         ultra_wide_lens.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.colored_textview));
@@ -515,7 +528,6 @@ public class CamxFragment extends Fragment {
                     if (!getCameraId().equals(camID[2])) {
                         closeCamera();
                         setCameraId(camID[2]);
-//                        getHighestResolution();
                         openCamera();
 
                         ultra_wide_lens.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.colored_textview));
@@ -537,7 +549,6 @@ public class CamxFragment extends Fragment {
 //                    zoom_level = 1;
                     closeCamera();
                     setCameraId(camID[0]);
-//                    getHighestResolution();
                     openCamera();
                     wide_lens.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.colored_textview));
                     ultra_wide_lens.setBackground(null);
@@ -557,7 +568,6 @@ public class CamxFragment extends Fragment {
                     if(!getCameraId().equals(camID[4])) {
                         closeCamera();
                         setCameraId(camID[4]);
-//                        getHighestResolution();
                         openCamera();
 
                         macro_tele_lens.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.colored_textview));
@@ -573,7 +583,6 @@ public class CamxFragment extends Fragment {
                     if(!getCameraId().equals(camID[6])) {
                         closeCamera();
                         setCameraId(camID[6]);
-//                        getHighestResolution();
                         openCamera();
 
                         macro_tele_lens.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.colored_textview));
@@ -594,14 +603,12 @@ public class CamxFragment extends Fragment {
                 if (auxDock.getVisibility() == View.VISIBLE) {
                     closeCamera();
                     setCameraId(camID[1]);
-//                    getHighestResolution();
                     openCamera();
                     auxDock.setVisibility(View.GONE);
                     front_switch.animate().rotation(180f).setDuration(800);
                 } else if (auxDock.getVisibility() == View.GONE) {
                     closeCamera();
                     setCameraId(camID[0]);
-//                    getHighestResolution();
                     wide_lens.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.colored_textview));
                     ultra_wide_lens.setBackground(null);
                     macro_tele_lens.setBackground(null);
@@ -1099,7 +1106,7 @@ public class CamxFragment extends Fragment {
         surfaceList.clear();
         surfaceList.add(new Surface(stPreview));
 
-        imgReader = ImageReader.newInstance(imageSize.getWidth(),imageSize.getHeight(), ImageFormat.JPEG, 10);
+        imgReader = ImageReader.newInstance(imageSize.getWidth(), imageSize.getHeight(), ImageFormat.JPEG, 10);
         imgReader.setOnImageAvailableListener(snapshotImageCallback, mBackgroundHandler);
         surfaceList.add(imgReader.getSurface());
         Log.e(TAG, "openCamera: snapshot into ImageReader at " + imageSize.getWidth() + "x" + imageSize.getHeight());
@@ -1170,8 +1177,12 @@ public class CamxFragment extends Fragment {
         mMediaRecorder = new MediaRecorder();
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         // Size[] mVideoSize = map.getHighResolutionOutputSizes(ImageFormat.JPEG); // HIGHRES MODE
-//        Log.e(TAG, "createVideoPreview: "+ Arrays.toString(mVideoSize));
+        Log.e(TAG, "createVideoPreview: "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
         mVideoSize = getVideoPreviewResolution(map.getOutputSizes(MediaRecorder.class),height,width,false);
+        Log.e(TAG, "createVideoPreview: mVideoSize : "+mVideoSize);
+        Log.e(TAG, "createVideoPreview: 720p test : "+getVideoPreviewResolution(
+                map.getOutputSizes(MediaRecorder.class),height,720,true
+        ));
         stPreview.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
         tvPreview.setAspectRatio(mVideoSize.getHeight(),mVideoSize.getWidth());
         Surface previewSurface = new Surface(stPreview);
@@ -1260,21 +1271,24 @@ public class CamxFragment extends Fragment {
 
     private void setupMediaRecorder() throws IOException {
         mVideoFileName = "CamX"+System.currentTimeMillis()+"_"+getCameraId()+".mp4";
-        CamcorderProfile camcorderProfile = CamcorderProfile.get(1,CamcorderProfile.QUALITY_1080P);
+
+        CamcorderProfile camcorderProfile = CamcorderProfile.get(Integer.parseInt(getCameraId())
+                ,CamcorderProfile.QUALITY_720P);
         Log.e(TAG, "setupMediaRecorder: CP : h : "+camcorderProfile.videoFrameHeight
                                                 +" w : "+camcorderProfile.videoFrameWidth);
         Log.e(TAG, "setupMediaRecorder: vBR : "+camcorderProfile.videoBitRate );
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-        mMediaRecorder.setAudioSamplingRate(8000);
+        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
+        mMediaRecorder.setAudioSamplingRate(96);
         mMediaRecorder.setAudioEncodingBitRate(96000); //TODO : UNABLE TO SET HIGHER THAN 48kbits/sec
         mMediaRecorder.setAudioEncodingBitRate(camcorderProfile.audioBitRate);
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         mMediaRecorder.setVideoFrameRate(30);
         mMediaRecorder.setVideoEncodingBitRate(16400000);
         mMediaRecorder.setVideoSize(camcorderProfile.videoFrameWidth, camcorderProfile.videoFrameHeight);
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+
 //        mMediaRecorder.setOrientationHint(90);      //TODO : CHANGE ACCORDING TO SENSOR ORIENTATION
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             mMediaRecorder.setOutputFile(new File("//storage//emulated//0//DCIM//Camera//"+mVideoFileName));
@@ -1282,7 +1296,6 @@ public class CamxFragment extends Fragment {
         else {
             mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//"+mVideoFileName);
         }
-//        mMediaRecorder.setOrientationHint(mTotalRotation);
         mMediaRecorder.prepare();
     }
 
@@ -1290,7 +1303,7 @@ public class CamxFragment extends Fragment {
      *  U N C A N N Y  M E T H O D S
      */
 
-    private void getHighestResolution() {
+    private Map<Integer,Size> getHighestResolution() {
         Size [] resolutions;
         int highest = 0,iF = 0;
         Size hSize43 = null, hSize169 = null;
@@ -1368,6 +1381,7 @@ public class CamxFragment extends Fragment {
         Log.e(TAG, "getHighestResolution: map169(highest res 16:9) : "+map169.entrySet() );
 
         hRes = (ASPECT_RATIO_43 ? map43 : map169);
+        return hRes;
     }
 
     private CameraCharacteristics getCameraCharacteristics() {
@@ -1422,34 +1436,6 @@ public class CamxFragment extends Fragment {
         }
     }
 
-    private void check_aux() {
-        StringBuilder msg = new StringBuilder("CAMID : ");
-        new Handler(Looper.getMainLooper()).post(() -> {
-            for(int i = 0; i<=33 ; i++){
-                try {
-                    CameraManager manager = (CameraManager) requireActivity().getSystemService(Context.CAMERA_SERVICE);
-                    CameraCharacteristics characteristics = manager.getCameraCharacteristics(String.valueOf(i));
-                    if (!characteristics.getAvailableCaptureRequestKeys().isEmpty() ) {
-//                            Log.e(TAG, "check_aux: getcamera Characteristics => "+ characteristics.getAvailableCaptureRequestKeys());
-                        msg.append(i).append(",");
-                        Log.e(TAG, "check_aux: value of array at " + i + " : " + i);
-                        Set<String> ids;
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                            ids = characteristics.getPhysicalCameraIds();
-                            for (String id: ids) {
-                                Log.e(TAG, "check_aux: getPhysicalCameraIds "+id);
-                                msg.append(" pid_").append(id).append("_at_").append(i).append(",");
-                            }
-                        }
-                    }
-                }
-                catch (IllegalArgumentException | CameraAccessException ignored){ }
-            }
-//                logtext.setText(msg);
-        });
-        Toast.makeText(requireActivity(), "COMPLETE EXECUTION cam_aux()", Toast.LENGTH_SHORT).show();
-    }
-
     private boolean check_null_camiID(String id){
         try {
             CameraManager manager = (CameraManager) requireActivity().getSystemService(Context.CAMERA_SERVICE);
@@ -1469,11 +1455,9 @@ public class CamxFragment extends Fragment {
             if (!filesList.isEmpty()) {
                 filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
                 File lastImage = filesList.get(0);
-                Uri liu = Uri.fromFile(lastImage);
-//                Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
-                Bitmap ThumbImage = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(String.valueOf(liu))
-                        ,100,100);
-                thumbPreview.setImageBitmap(ThumbImage);
+//                Uri liu = Uri.fromFile(lastImage);
+                Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
+                thumbPreview.setImageBitmap(bmp);
             } else {
                 Log.e(TAG, "display_latest_image_from_gallery(): Could not find any Image Files [1]");
             }
@@ -1487,7 +1471,7 @@ public class CamxFragment extends Fragment {
                 if (!filesList.isEmpty()) {
                     filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
                     File lastImage = filesList.get(0);
-                    Uri liu = Uri.fromFile(lastImage);
+//                    Uri liu = Uri.fromFile(lastImage);
                     Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
                     thumbPreview.setImageBitmap(bmp);
                 } else {
@@ -1533,14 +1517,18 @@ public class CamxFragment extends Fragment {
         return listOfAllImages;
     }
 
+    @Override
+    public boolean shouldShowRequestPermissionRationale(@NonNull String permission) {
+
+        return super.shouldShowRequestPermissionRationale(permission);
+    }
+
     private void requestVideoPermissions() {
-        if (ActivityCompat.checkSelfPermission(requireActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(requireActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
-                PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(requireActivity()
+        if (ActivityCompat.checkSelfPermission(requireActivity()
                 , Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(requireActivity()
                     , new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE
-                                                             , Manifest.permission.RECORD_AUDIO}
+                    , Manifest.permission.RECORD_AUDIO}
                     , REQUEST_PERMISSIONS);
         }
     }
@@ -1664,7 +1652,6 @@ public class CamxFragment extends Fragment {
         public void onDisconnected(@NonNull CameraDevice cameraDevice) {
             Log.e(TAG, "onDisconnected: camera disconnected");
             closeCamera();
-            requireActivity().finish();
         }
 
         @Override
@@ -1781,12 +1768,4 @@ public class CamxFragment extends Fragment {
         }
     }
 
-    private static class CompareSizeByArea implements Comparator<Size> {
-
-        @Override
-        public int compare(Size lhs, Size rhs) {
-            return Long.signum( (long)(lhs.getWidth() * lhs.getHeight()) -
-                    (long)(rhs.getWidth() * rhs.getHeight()));
-        }
-    }
 }

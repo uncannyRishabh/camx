@@ -74,9 +74,9 @@ public class UncannyChronometer extends View {
         minutes = (int) TimeUnit.MILLISECONDS.toMinutes(timeDiff);
         hours   = (int) TimeUnit.MILLISECONDS.toHours(timeDiff);
 
-        mSeconds = (seconds<10 ? "0"+seconds : seconds+"");
-        mMinutes = (minutes<10 ? "0"+minutes : minutes+"");
-        mHours = (hours<10 ? "0"+hours : hours+"");
+        mSeconds = (seconds>60 ? (seconds%60<10 ? "0"+seconds%60:seconds%60+"" ) : (seconds<10 ? "0"+seconds: seconds+""));
+        mMinutes = (minutes>60 ? (minutes%60<10 ? "0"+minutes%60:minutes%60+"" ) : (minutes<10 ? "0"+minutes: minutes+""));
+        mHours   = (hours>60   ? (hours%60<10 ? "0"+hours%60:hours%60+"" )       : (hours<10   ? "0"+hours: hours+""));
 
         drawTime = mHours+":"+mMinutes+":"+mSeconds;
 //        Log.e("TAG", "setBase: "+currentTime);

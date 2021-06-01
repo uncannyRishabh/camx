@@ -37,7 +37,7 @@ tools:context=".CamxFragment">
             />
     </RelativeLayout>
 
-    <com.uncanny.camx.CustomViews.AutoFitPreviewView
+    <com.uncanny.camx.CustomViews.ViewFinder.AutoFitPreviewView
         android:id="@+id/preview"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -56,7 +56,7 @@ tools:context=".CamxFragment">
         android:layout_below="@id/appbar"
         />
 
-    <com.uncanny.camx.CustomViews.Grids
+    <com.uncanny.camx.CustomViews.ViewFinder.Grids
         android:id="@+id/grid"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -64,7 +64,7 @@ tools:context=".CamxFragment">
         android:layout_alignTop="@id/preview"
         />
 
-    <com.uncanny.camx.CustomViews.FocusCircle
+    <com.uncanny.camx.CustomViews.ViewFinder.FocusCircle
         android:id="@+id/focus_circle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -72,7 +72,7 @@ tools:context=".CamxFragment">
         android:layout_alignTop="@id/preview"
         />
 
-    <com.uncanny.camx.CustomViews.FaceMeteringRect
+    <com.uncanny.camx.CustomViews.ViewFinder.FaceMeteringRect
         android:id="@+id/fm_rect"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -82,18 +82,18 @@ tools:context=".CamxFragment">
 
     <LinearLayout
         android:id="@+id/aux_cam_switch"
-        android:layout_width="118dp"
-        android:layout_height="38dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_above="@id/relative_layout_button_dock"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="14dp"
-        android:paddingHorizontal="6dp"
+        android:layout_marginBottom="6dp"
+        android:padding="3dp"
         android:background="@drawable/rounded_aux_dock"
         >
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/ultra_wide"
             android:layout_width="30dp"
-            android:layout_height="29dp"
+            android:layout_height="30dp"
             android:layout_gravity="center_vertical"
             android:background="@null"
             android:clickable="true"
@@ -107,7 +107,7 @@ tools:context=".CamxFragment">
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/main_wide"
             android:layout_width="30dp"
-            android:layout_height="29dp"
+            android:layout_height="30dp"
             android:layout_gravity="center_vertical"
             android:layout_marginStart="12dp"
             android:background="@drawable/colored_textview"
@@ -122,7 +122,7 @@ tools:context=".CamxFragment">
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/macro_tele"
             android:layout_width="30dp"
-            android:layout_height="29dp"
+            android:layout_height="30dp"
             android:layout_marginStart="14dp"
             android:layout_toEndOf="@id/main_wide"
             android:background="@null"
@@ -142,7 +142,7 @@ tools:context=".CamxFragment">
         android:layout_height="30dp"
         android:layout_above="@id/relative_layout_button_dock"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="12dp"
+        android:layout_marginBottom="4dp"
         android:elevation="6dp"
         android:value="0"
         android:valueFrom="0"
@@ -167,8 +167,8 @@ tools:context=".CamxFragment">
         >
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/img_gal"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
+            android:layout_width="54dp"
+            android:layout_height="54dp"
             app:srcCompat="@drawable/rami"
             android:padding="1dp"
             app:strokeWidth="1dp"
@@ -185,7 +185,7 @@ tools:context=".CamxFragment">
 
         <com.uncanny.camx.CustomViews.CaptureButton
             android:id="@+id/capture"
-            android:layout_width="82dp"
+            android:layout_width="78dp"
             android:layout_height="88dp"
             android:padding="4dp"
             android:layout_centerHorizontal="true"
@@ -195,14 +195,14 @@ tools:context=".CamxFragment">
 
         <androidx.appcompat.widget.AppCompatImageButton
             android:id="@+id/front_back_switch"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:layout_marginEnd="40dp"
             android:background="#00020202"
-            android:scaleType="fitXY"
-            android:src="@drawable/front_switch" />
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_front_switch" />
     </RelativeLayout>
 
     <com.uncanny.camx.CustomViews.HorizontalPicker

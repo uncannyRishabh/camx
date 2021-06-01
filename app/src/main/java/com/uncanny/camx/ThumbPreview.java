@@ -33,5 +33,4 @@ public class ThumbPreview {
         Log.e(TAG, "getAllImageFiles: "+filesList);
         return filesList;
     }
-
 }
