@@ -257,6 +257,7 @@ public class CameraActivity extends AppCompatActivity {
 
     private int cachedScreenWidth ;
     private int cachedScreenHeight;
+    private Map<Integer,Integer> modeMap = new HashMap<>(); //cameraId,modeIndex
     private String[][] CachedCameraModes = new String[10][];
 
     @Override
@@ -299,21 +300,21 @@ public class CameraActivity extends AppCompatActivity {
         setAestheticLayout();
         new Handler(Looper.myLooper()).post(openingChores);
 
+        modeMap.put(0,0);
+        modeMap.put(1,1);
+
         cachedScreenWidth  = getScreenWidth(this);
         cachedScreenHeight = getScreenHeight(this);
 
-        lensData = new LensData(CameraActivity.this);
-        lensData.getCameraLensCharacteristics("100");
-        Log.e(TAG, "onCreate: "+lensData.hasCamera2api());
-        Log.e(TAG, "onCreate: LensData "+lensData.totalPhysicalCameras());
+        lensData = new LensData(getApplicationContext());
+        lensData.getCameraLensCharacteristics("1");
         cameraList =  lensData.getPhysicalCameras();
         auxCameraList = lensData.getAuxiliaryCameras();
-
         final float param= getResources().getDimension(R.dimen.aux_param);
-
         if(auxCameraList.size()>0){
             //LOGIC FOR ADDING BUTTONS
             for (int i=0 ; i< auxCameraList.size() ; i++) {
+                modeMap.put(auxCameraList.get(i),1+i);
                 LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams((int) param
                         ,LinearLayout.LayoutParams.MATCH_PARENT);
 //                layoutParams.setMargins(6,0,6,0);
@@ -323,12 +324,11 @@ public class CameraActivity extends AppCompatActivity {
                 aux_btn.setId(auxCameraList.get(i));
                 aux_btn.setGravity(Gravity.CENTER);
                 aux_btn.setText(auxCameraList.get(i).toString());
-                Log.e(TAG, "onCreate: "+aux_btn.getId());
                 auxDock.addView(aux_btn);
                 aux_btn.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        mModePicker.setValues(CachedCameraModes[0]);
+                        mModePicker.setValues(CachedCameraModes[modeMap.get(aux_btn.getId())]);
                         setCameraId(aux_btn.getId()+"");
                         closeCamera();
                         setCameraId(aux_btn.getId()+"");
@@ -361,7 +361,6 @@ public class CameraActivity extends AppCompatActivity {
     @Override
     protected void onPostCreate(@Nullable Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-        String [] modes = {"Photo","Video","Slo-mo","Time Warp","Portrait","Night","Pro"};
         Log.e(TAG, "onPostCreate: "+ Arrays.toString(lensData.getAvailableModes(getCameraId())));
         mModePicker.setValues(lensData.getAvailableModes(getCameraId()));
         mModePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -564,16 +563,17 @@ public class CameraActivity extends AppCompatActivity {
         front_switch.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
-                mModePicker.setValues(CachedCameraModes[1]);
-                if (auxDock.getVisibility() == View.VISIBLE) {
+                if (characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_BACK) {
                     closeCamera();
                     setCameraId(camID[1]);
+                    mModePicker.setValues(CachedCameraModes[modeMap.get(Integer.parseInt(getCameraId()))]);
                     openCamera();
                     auxDock.setVisibility(View.GONE);
                     front_switch.animate().rotation(180f).setDuration(800);
-                } else if (auxDock.getVisibility() == View.GONE) {
+                } else {
                     closeCamera();
                     setCameraId(camID[0]);
+                    mModePicker.setValues(CachedCameraModes[modeMap.get(Integer.parseInt(getCameraId()))]);
                     wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                     openCamera();
                     auxDock.setVisibility(View.VISIBLE);

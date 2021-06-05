@@ -1,6 +1,5 @@
 package com.uncanny.camx.Data;
 
-import android.app.Activity;
 import android.content.Context;
 import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraAccessException;
@@ -26,7 +25,7 @@ public class LensData {
     private static final String CAMERA_MAIN_BACK = "0";
     private static final String CAMERA_MAIN_FRONT = "1";
     private int LOGICAL_ID;
-    Activity activity;
+    Context activity;
     CameraCharacteristics characteristics;
     CameraManager cameraManager;
     List<Integer> physicalCameras = new ArrayList<>();
@@ -47,7 +46,7 @@ public class LensData {
     /**
      * Constructor for this class.
      */
-    public LensData(Activity activity){
+    public LensData(Context activity){
         this.activity = activity;
         getAuxCameras();
     }
@@ -72,7 +71,7 @@ public class LensData {
      * Returns a list of camera Ids for {@link LensData#totalAuxCameras()}.
      */
     public List<Integer> getAuxiliaryCameras(){
-        auxiliaryCameras = physicalCameras;
+        auxiliaryCameras = new ArrayList<>(physicalCameras);
         auxiliaryCameras.remove((Object)0);
         auxiliaryCameras.remove((Object)1);
         Log.e(TAG, "getAuxiliaryCameras: "+auxiliaryCameras);
@@ -147,6 +146,7 @@ public class LensData {
         cameraModes.add("Camera");
         cameraModes.add("Video");
         StreamConfigurationMap map = getStreamConfigMap(id);
+        Log.e(TAG, "getAvailableModes: SLO MOE CHECK CID : "+id+" HSV ranges : "+ Arrays.toString(map.getHighSpeedVideoFpsRanges()));
         if(Arrays.asList(map.getHighSpeedVideoFpsRanges()).size()!=0){
             cameraModes.add("Slo Moe");
             //didn't add the unnecessary checks
@@ -171,7 +171,7 @@ public class LensData {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             Log.e(TAG, "getCameraLensCharacteristics: "+cc.getPhysicalCameraIds());
         }
-//        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoFpsRanges()));
+        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoFpsRanges()));
 //        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : VDO SIZES : "+ Arrays.toString(map.getHighSpeedVideoSizes()));
 
     }
@@ -202,6 +202,8 @@ public class LensData {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         if(characteristics.getPhysicalCameraIds().size() > 0){
                             LOGICAL_ID = i;
+                            Toast.makeText(activity, "Execution Completed cam_aux() Logical_ID "
+                                            +i, Toast.LENGTH_LONG).show();
                         }
                     }
                     if(LOGICAL_ID != 0 && i >= LOGICAL_ID){
