@@ -36,6 +36,7 @@ import android.text.Layout;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
@@ -57,6 +58,7 @@ import androidx.customview.widget.ExploreByTouchHelper;
 import com.uncanny.camx.R;
 
 import java.lang.ref.WeakReference;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -689,7 +691,7 @@ public class HorizontalPicker extends View {
      * @param values New values to choose from
      */
     public void setValues(CharSequence[] values) {
-
+        Log.e(TAG, "setValues: VALUES CHANGED"+ Arrays.toString(values));
         if (this.values != values) {
             this.values = values;
 

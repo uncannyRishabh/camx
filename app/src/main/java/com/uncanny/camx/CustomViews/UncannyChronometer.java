@@ -95,6 +95,7 @@ public class UncannyChronometer extends View {
     public void stop(){
         isRunning = false;
         removeCallbacks(startTick);
+        drawTime = "00:00:00";
     }
 
     @Override

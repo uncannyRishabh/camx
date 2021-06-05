@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black"
-    tools:context=".MainActivity">
+    tools:context=".CameraActivity">
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/settings_frag"
@@ -88,26 +88,25 @@
         android:padding="3dp"
         android:background="@drawable/rounded_aux_dock"
         >
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/ultra_wide"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:layout_gravity="center_vertical"
-            android:background="@null"
-            android:clickable="true"
-            android:focusable="true"
-            android:gravity="center"
-            android:text="0.6"
-            android:textColor="@color/white"
-            android:textSize="11sp"
-            android:layout_weight="1"/>
+<!--        <com.google.android.material.textview.MaterialTextView-->
+<!--            android:id="@+id/ultra_wide"-->
+<!--            android:layout_width="30dp"-->
+<!--            android:layout_height="30dp"-->
+<!--            android:layout_gravity="center_vertical"-->
+<!--            android:background="@null"-->
+<!--            android:clickable="true"-->
+<!--            android:focusable="true"-->
+<!--            android:gravity="center"-->
+<!--            android:text="0.6"-->
+<!--            android:textColor="@color/white"-->
+<!--            android:textSize="11sp"-->
+<!--            android:layout_weight="1"/>-->
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/main_wide"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_gravity="center_vertical"
-            android:layout_marginStart="12dp"
             android:background="@drawable/colored_textview"
             android:clickable="true"
             android:focusable="true"
@@ -117,21 +116,22 @@
             android:textSize="14sp"
             android:layout_weight="1"/>
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/macro_tele"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:layout_marginStart="14dp"
-            android:layout_toEndOf="@id/main_wide"
-            android:background="@null"
-            android:clickable="true"
-            android:focusable="true"
-            android:gravity="center"
-            android:layout_gravity="center_vertical"
-            android:text="2.0"
-            android:textColor="@color/white"
-            android:textSize="11sp"
-            android:layout_weight="1"/>
+<!--        <com.google.android.material.textview.MaterialTextView-->
+<!--            android:id="@+id/macro_tele"-->
+<!--            android:layout_width="30dp"-->
+<!--            android:layout_height="30dp"-->
+<!--            android:layout_marginStart="14dp"-->
+<!--            android:layout_toEndOf="@id/main_wide"-->
+<!--            android:background="@null"-->
+<!--            android:clickable="true"-->
+<!--            android:focusable="true"-->
+<!--            android:gravity="center"-->
+<!--            android:layout_gravity="center_vertical"-->
+<!--            android:text="2.0"-->
+<!--            android:textColor="@color/white"-->
+<!--            android:textSize="11sp"-->
+<!--            android:layout_weight="1"/>-->
+
     </LinearLayout>
 
     <com.google.android.material.slider.Slider
@@ -141,7 +141,7 @@
         android:layout_above="@id/relative_layout_button_dock"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="6dp"
-        android:elevation="6dp"
+        android:elevation="2dp"
         android:value="0"
         android:valueFrom="0"
         android:valueTo="10"
@@ -183,8 +183,9 @@
 
         <com.uncanny.camx.CustomViews.CaptureButton
             android:id="@+id/capture"
-            android:layout_width="78dp"
-            android:layout_height="88dp"
+            android:layout_width="84dp"
+            android:layout_height="82dp"
+            android:minHeight="78dp"
             android:padding="4dp"
             android:layout_centerHorizontal="true"
             android:layout_centerVertical="true"
@@ -223,11 +224,11 @@
 
     <com.uncanny.camx.CustomViews.UncannyChronometer
         android:id="@+id/chronometer"
-        android:layout_width="66dp"
-        android:layout_height="34dp"
+        android:layout_width="70dp"
+        android:layout_height="36dp"
         android:minHeight="32dp"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="14dp"
+        android:layout_marginBottom="12dp"
         android:layout_alignParentBottom="true"
         android:visibility="invisible"
         />

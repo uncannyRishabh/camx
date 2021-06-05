@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.util.TypedValue;
+import android.view.WindowManager;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 
@@ -38,6 +39,9 @@ public class SettingsActivity extends AppCompatActivity {
         toolbar = findViewById(R.id.custom_toolbar);
         setSupportActionBar(toolbar);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN
+                , WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         int[][] thumbStates = new int[][] {
                 new int[] { android.R.attr.state_checked}, // enabled
@@ -56,10 +60,6 @@ public class SettingsActivity extends AppCompatActivity {
                 getDeviceAccent(),
         };
         trackStateList = new ColorStateList(trackStates, trackColors);
-//        Explode explode = new Explode();
-//        Slide slide = new Slide(Gravity.END);
-//        this.setEnterTransition(slide);
-//        this.setExitTransition(null)
     }
 
     @Override

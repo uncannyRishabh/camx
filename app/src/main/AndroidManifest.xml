@@ -28,9 +28,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.camX">
-        <activity android:name=".SettingsActivity"  android:theme="@style/EdgeToEdge"/>
+        <activity android:name=".SettingsActivity"
+            android:theme="@style/EdgeToEdge"
+            android:parentActivityName=".CameraActivity"/>
         <activity
-            android:name=".MainActivity"
+            android:name=".CameraActivity"
             android:screenOrientation="nosensor"
             >
             <intent-filter>

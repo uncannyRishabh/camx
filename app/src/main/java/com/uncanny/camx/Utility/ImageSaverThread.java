@@ -1,4 +1,4 @@
-package com.uncanny.camx;
+package com.uncanny.camx.Utility;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -26,7 +26,7 @@ public class ImageSaverThread implements Runnable {
     private Uri uri;
     Path jpgPath;
 
-    ImageSaverThread(Image image, String cameraId, ContentResolver contentResolver) {
+    public ImageSaverThread(Image image, String cameraId, ContentResolver contentResolver) {
         this.mImage = image;
         this.cameraId = cameraId;
         this.contentResolver = contentResolver;

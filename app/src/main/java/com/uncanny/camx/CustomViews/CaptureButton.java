@@ -3,18 +3,20 @@ package com.uncanny.camx.CustomViews;
 import android.animation.PropertyValuesHolder;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.CycleInterpolator;
 
 import androidx.annotation.Nullable;
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
 
-import com.uncanny.camx.MainActivity.CamState;
+import com.uncanny.camx.CameraActivity.CamState;
 
 
 /**
@@ -24,7 +26,7 @@ import com.uncanny.camx.MainActivity.CamState;
 public class CaptureButton extends View {
     private RectF rectF;
     private Paint paint, nPaint, mPaint;
-    private int cx,cy;
+    private int cx,cy,screenWidth;
     private float icRadius;
     private CamState mState;
     private boolean drawSquare=false;
@@ -65,25 +67,25 @@ public class CaptureButton extends View {
         mPaint.setStrokeWidth(10f);
         mPaint.setStyle(Paint.Style.FILL_AND_STROKE);
 
-        icRadius = 52f;
+        screenWidth = getScreenWidth();
+        icRadius = screenWidth/12f;
         mState = CamState.CAMERA;
     }
 
     @Override
     public void onWindowFocusChanged(boolean hasWindowFocus) {
         super.onWindowFocusChanged(hasWindowFocus);
-        cx = getWidth()/2;
-        cy = getHeight()/2;
+        Log.e("CaptureButton", "onWindowFocusChanged: winH : "+getScreenHeight()+" winW : "+screenWidth);
     }
 
     public void setState(CamState state){
         mState = state;
         switch (state){
             case CAMERA:
-                icRadius = 52f*2;
+                icRadius = screenWidth/12f;
                 break;
             case VIDEO:
-                icRadius = 52f;
+                icRadius = screenWidth/24f;
                 break;
             case VIDEO_PROGRESSED:
                 break;
@@ -101,7 +103,7 @@ public class CaptureButton extends View {
             paint.setColor(Color.RED);
         }
         else if(mState == CamState.CAMERA){
-            icRadius = 52f;
+            icRadius = screenWidth/12f;
             paint.setColor(Color.WHITE);
         }
         invalidate();
@@ -145,6 +147,14 @@ public class CaptureButton extends View {
         invalidate();
     }
 
+    public static int getScreenWidth() {
+        return Resources.getSystem().getDisplayMetrics().widthPixels;
+    }
+
+    public static int getScreenHeight() {
+        return Resources.getSystem().getDisplayMetrics().heightPixels;
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -155,8 +165,8 @@ public class CaptureButton extends View {
         if(drawSquare){
             canvas.drawRoundRect(rectF,22,22,mPaint);
         }
-        canvas.drawCircle(cx,cy,icRadius,paint);
-        canvas.drawCircle(cx,cy,Math.min(cx,cy)-10, nPaint);
+        canvas.drawCircle(cx,cy,icRadius,paint); //INNER CIRCLE
+        canvas.drawCircle(cx,cy,cy-10, nPaint); //OUTER CIRCLE
     }
 
 }
