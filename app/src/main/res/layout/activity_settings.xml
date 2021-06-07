@@ -58,7 +58,7 @@
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_margin="22dp">
+            android:layout_marginVertical="22dp">
             <!--GENERAL SETTINGS -->
             <include
                 android:id="@+id/s_dc"
@@ -69,35 +69,35 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_dc"
-                android:layout_marginBottom="12dp"
+                android:layout_marginBottom="22dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c"
-                android:layout_marginBottom="12dp"
+                android:layout_marginBottom="22dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c1"
-                android:layout_marginBottom="12dp"
+                android:layout_marginBottom="22dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c2"
-                android:layout_marginBottom="12dp"
+                android:layout_marginBottom="22dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c4"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c3"
-                android:layout_marginBottom="12dp"
+                android:layout_marginBottom="22dp"
                 layout="@layout/settings_content"/>
             <!--CAMERA SETTINGS -->
             <include

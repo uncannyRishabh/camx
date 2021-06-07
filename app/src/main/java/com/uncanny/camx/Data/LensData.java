@@ -10,6 +10,8 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.CamcorderProfile;
 import android.os.Build;
 import android.util.Log;
+import android.util.Pair;
+import android.util.Range;
 import android.util.Size;
 import android.widget.Toast;
 
@@ -18,7 +20,9 @@ import com.uncanny.camx.Utility.CompareSizeByArea;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class LensData {
     private static final String TAG = "LensData";
@@ -27,10 +31,14 @@ public class LensData {
     private int LOGICAL_ID;
     Context activity;
     CameraCharacteristics characteristics;
+    int[] capabilities;
     CameraManager cameraManager;
     List<Integer> physicalCameras = new ArrayList<>();
     List<Integer> logicalCameras  = new ArrayList<>();
     List<Integer> auxiliaryCameras  = new ArrayList<>();
+    Range<Integer>[] highFPSRanges;
+    ArrayList<Pair<Size, Range<Integer>>> fpsResolutionPair = new ArrayList<>();
+    Map<Range<Integer>, Size[]> slowMoeMap = new HashMap<>();
     LensResolutionData lensResolutionData = new LensResolutionData();
     int[] camcorderQualities = {
             CamcorderProfile.QUALITY_LOW, CamcorderProfile.QUALITY_HIGH, CamcorderProfile.QUALITY_QCIF
@@ -74,7 +82,6 @@ public class LensData {
         auxiliaryCameras = new ArrayList<>(physicalCameras);
         auxiliaryCameras.remove((Object)0);
         auxiliaryCameras.remove((Object)1);
-        Log.e(TAG, "getAuxiliaryCameras: "+auxiliaryCameras);
         return auxiliaryCameras;
     }
 
@@ -143,13 +150,12 @@ public class LensData {
      */
     public String[] getAvailableModes(String id){
         List<String> cameraModes = new ArrayList<>();
+        capabilities = getCameraCharacteristics(id).get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
         cameraModes.add("Camera");
         cameraModes.add("Video");
-        StreamConfigurationMap map = getStreamConfigMap(id);
-        Log.e(TAG, "getAvailableModes: SLO MOE CHECK CID : "+id+" HSV ranges : "+ Arrays.toString(map.getHighSpeedVideoFpsRanges()));
-        if(Arrays.asList(map.getHighSpeedVideoFpsRanges()).size()!=0){
+
+        if(capabilities!=null && findHSVCapability(capabilities)){
             cameraModes.add("Slo Moe");
-            //didn't add the unnecessary checks
             cameraModes.add("TimeWarp");
         }
         cameraModes.add("Portrait");
@@ -161,6 +167,41 @@ public class LensData {
         return cameraModes.toArray(new String[0]);
     }
 
+    public Map<Range<Integer>, Size[]> getSlowMoeMap(String id){
+        StreamConfigurationMap map = getStreamConfigMap(id);
+        Range<Integer>[] smRange = map.getHighSpeedVideoFpsRanges();
+        for(Range<Integer> range : smRange){
+            slowMoeMap.put(range,map.getHighSpeedVideoSizesFor(range));
+        }
+        Log.e(TAG, "getSlowMoeMap: "+slowMoeMap);
+        return slowMoeMap;
+    }
+
+    public Range<Integer>[] getFPSRanges(String id){
+        StreamConfigurationMap map = getStreamConfigMap(id);
+        highFPSRanges = map.getHighSpeedVideoFpsRanges();
+        Log.e(TAG, "getFPSRanges: FPS ranges"+ Arrays.toString(highFPSRanges));
+        return highFPSRanges;
+    }
+
+    public Size[] getSizeForRange(String id,Range<Integer> range){
+        StreamConfigurationMap map = getStreamConfigMap(id);
+        Log.e(TAG, "getSizeForRange: "+ Arrays.toString(map.getHighResolutionOutputSizes(ImageFormat.JPEG)));
+        return map.getHighResolutionOutputSizes(ImageFormat.JPEG);
+    }
+
+    public ArrayList<Pair<Size, Range<Integer>>> getFpsResolutionPair(String id){
+        StreamConfigurationMap map = getStreamConfigMap(id);
+        for(Range<Integer> range : map.getHighSpeedVideoFpsRanges()){
+            if(range.getLower().equals(range.getUpper())) {
+                for (Size size : map.getHighSpeedVideoSizesFor(range)) {
+                    fpsResolutionPair.add(new Pair<>(size, range));
+                }
+            }
+        }
+        return fpsResolutionPair;
+    }
+
     /**
      * DEBUGGING purposes
      */
@@ -168,12 +209,8 @@ public class LensData {
         StreamConfigurationMap map = getStreamConfigMap(id);
         CameraCharacteristics cc = getCameraCharacteristics(id);
         cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            Log.e(TAG, "getCameraLensCharacteristics: "+cc.getPhysicalCameraIds());
-        }
-        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoFpsRanges()));
-//        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : VDO SIZES : "+ Arrays.toString(map.getHighSpeedVideoSizes()));
-
+//        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoFpsRanges()));
+//        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoSizes()));
     }
 
     /**
@@ -193,7 +230,7 @@ public class LensData {
     }
 
     private void getAuxCameras(){
-        for(int i = 0; i<=102 ; i++){
+        for(int i = 0; i<=64 ; i++){
             try {
                 cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
                 CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(String.valueOf(i));
@@ -238,6 +275,13 @@ public class LensData {
                 Log.e(TAG, "BayerCheck: NOT BAYER : ID : " + id);
             }
         }
+    }
+
+    private static boolean findHSVCapability(int[] capabilities) {
+        for(int caps : capabilities){
+            if(caps == CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_CONSTRAINED_HIGH_SPEED_VIDEO) return true;
+        }
+        return false;
     }
 
     private CameraCharacteristics getCameraCharacteristics(String camId) {

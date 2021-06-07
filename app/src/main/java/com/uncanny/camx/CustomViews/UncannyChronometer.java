@@ -64,7 +64,7 @@ public class UncannyChronometer extends View {
         tPaint.setColor(Color.WHITE);
         tPaint.setTextAlign(Paint.Align.CENTER);
         tPaint.setAntiAlias(true);
-        tPaint.setTextSize(34f);
+        tPaint.setTextSize(36f);
     }
 
     private void updateDrawText(){

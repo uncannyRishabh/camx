@@ -12,13 +12,13 @@
             android:layout_marginBottom="12dp"
             android:text="General"
             android:textSize="16sp"
-            android:paddingStart="42dp"
+            android:paddingStart="32dp"
             />
         <View
             android:id="@+id/divider"
             android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginBottom="12dp"
+            android:layout_height="2dp"
+            android:layout_marginBottom="22dp"
             android:layout_below="@id/s_description_header"
             android:background="?android:attr/listDivider"
             />

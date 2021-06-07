@@ -47,6 +47,8 @@ import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.Pair;
+import android.util.Range;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.util.TypedValue;
@@ -150,14 +152,13 @@ public class CameraActivity extends AppCompatActivity {
     private RelativeLayout appbar;
     private AutoFitPreviewView tvPreview;
     private CaptureButton shutter;
-    private MaterialTextView ultra_wide_lens, wide_lens, macro_tele_lens;
+    private MaterialTextView wide_lens;
     private AppCompatImageButton front_switch;
     private LinearLayout auxDock;
     private TextView zoomText;
     private ShapeableImageView thumbPreview;
     private ImageButton aspectRatio, flash, grid, toolbar_inflate_btn,settings;
     private RelativeLayout dock;
-    private RelativeLayout parent;
     private ImageReader imgReader;
     private HorizontalPicker mModePicker;
     private Slider zSlider;
@@ -273,7 +274,6 @@ public class CameraActivity extends AppCompatActivity {
             requestPermissions(PERMISSION_STRING,REQUEST_PERMISSIONS);
         }
 
-        parent = findViewById(R.id.parent);
         appbar = findViewById(R.id.appbar);
         thumbPreview = findViewById(R.id.img_gal);
         tvPreview = findViewById(R.id.preview);
@@ -307,42 +307,10 @@ public class CameraActivity extends AppCompatActivity {
         cachedScreenHeight = getScreenHeight(this);
 
         lensData = new LensData(getApplicationContext());
-        lensData.getCameraLensCharacteristics("1");
         cameraList =  lensData.getPhysicalCameras();
         auxCameraList = lensData.getAuxiliaryCameras();
-        final float param= getResources().getDimension(R.dimen.aux_param);
-        if(auxCameraList.size()>0){
-            //LOGIC FOR ADDING BUTTONS
-            for (int i=0 ; i< auxCameraList.size() ; i++) {
-                modeMap.put(auxCameraList.get(i),1+i);
-                LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams((int) param
-                        ,LinearLayout.LayoutParams.MATCH_PARENT);
-//                layoutParams.setMargins(6,0,6,0);
-                layoutParams.weight = 1.0f;
-                MaterialTextView aux_btn = new MaterialTextView(this);
-                aux_btn.setLayoutParams(layoutParams);
-                aux_btn.setId(auxCameraList.get(i));
-                aux_btn.setGravity(Gravity.CENTER);
-                aux_btn.setText(auxCameraList.get(i).toString());
-                auxDock.addView(aux_btn);
-                aux_btn.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        mModePicker.setValues(CachedCameraModes[modeMap.get(aux_btn.getId())]);
-                        setCameraId(aux_btn.getId()+"");
-                        closeCamera();
-                        setCameraId(aux_btn.getId()+"");
-                        openCamera();
-                        aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP,14);
-                        aux_btn.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
-                    }
-                });
-            }
-        }
-        else{
-            auxDock.setVisibility(View.GONE);
-        }
 
+        addAuxButtons();
         /*
         Caching Camera Modes for every camera id
          */
@@ -351,7 +319,6 @@ public class CameraActivity extends AppCompatActivity {
                 CachedCameraModes[i] = lensData.getAvailableModes(cameraList.get(i)+"");
             }
         }
-
         if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
             display_latest_image_from_gallery();
         }
@@ -361,7 +328,6 @@ public class CameraActivity extends AppCompatActivity {
     @Override
     protected void onPostCreate(@Nullable Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-        Log.e(TAG, "onPostCreate: "+ Arrays.toString(lensData.getAvailableModes(getCameraId())));
         mModePicker.setValues(lensData.getAvailableModes(getCameraId()));
         mModePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
         mModePicker.setOnItemSelectedListener(new HorizontalPicker.OnItemSelected() {
@@ -385,23 +351,34 @@ public class CameraActivity extends AppCompatActivity {
                         shutter.colorInnerCircle(state);
                         break;
                     case 2:
-                        state = CamState.SLOMO;
-                        Log.e(TAG, "onItemSelected: SLO-MO MODE");
+                        state = (mModePicker.getValues()[2]=="Portrait" ? CamState.PORTRAIT:CamState.SLOMO);
+                        if(state == CamState.SLOMO){
+//                            for(Pair<Size,Range<Integer>> pair : lensData.getFpsResolutionPair("0")){
+//                                Log.e(TAG, "onCreate: "+pair.first+" , "+pair.second.getLower());
+//                            }
+                            requestVideoPermissions();
+                            createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
+                            shutter.colorInnerCircle(state);
+                        }
+                        Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[2]);
                         break;
                     case 3:
-                        state = CamState.TIMEWARP;
-                        Log.e(TAG, "onItemSelected: TIME WARP MODE");
+                        state = (mModePicker.getValues()[3]=="Night" ? CamState.NIGHT:CamState.TIMEWARP);
+                        Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[3]);
                         break;
                     case 4:
-                        state = CamState.PORTRAIT;
-                        Log.e(TAG, "onItemSelected: PORTRAIT MODE");
+                        state = (mModePicker.getValues()[4]=="Pro" ? CamState.PRO:CamState.PORTRAIT);
+                        Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[4]);
                         break;
                     case 5:
                         state = CamState.NIGHT;
-                        Log.e(TAG, "onItemSelected: NIGHT MODE");
+                        Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[5]);
+                        break;
+                    case 6:
+                        state = CamState.PRO;
+                        Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[6]);
                         break;
                 }
-
             }
         });
 
@@ -486,9 +463,11 @@ public class CameraActivity extends AppCompatActivity {
         });
 
         tvPreview.setSurfaceTextureListener(surfaceTextureListener);
+
         shutter.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                chronometer = findViewById(R.id.chronometer);
                 switch (state) {
                     case CAMERA:
                         captureImage();
@@ -499,7 +478,6 @@ public class CameraActivity extends AppCompatActivity {
                         new Handler(Looper.getMainLooper()).postDelayed(() -> display_latest_image_from_gallery(), 1800);
                         break;
                     case VIDEO:
-                        chronometer = findViewById(R.id.chronometer);
                         if(!isRecording) {
                             startRecording();
                             state = CamState.VIDEO_PROGRESSED;
@@ -513,7 +491,6 @@ public class CameraActivity extends AppCompatActivity {
                         }
                         break;
                     case VIDEO_PROGRESSED:
-                        chronometer = findViewById(R.id.chronometer);
                         if(isRecording){
                             isRecording = false;
                             chronometer.stop();
@@ -528,7 +505,7 @@ public class CameraActivity extends AppCompatActivity {
                         }
                         break;
                     case SLOMO:
-//                        startSloMo();
+                        setupMediaRecorder_SloMoe(lensData.getFpsResolutionPair(getCameraId()).get(0));
                         break;
                     default:
                         break;
@@ -1141,7 +1118,7 @@ public class CameraActivity extends AppCompatActivity {
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         // Size[] mVideoSize = map.getHighResolutionOutputSizes(ImageFormat.JPEG); // HIGHRES MODE
         Log.e(TAG, "createVideoPreview: "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
-        mVideoSize = getVideoPreviewResolution(map.getOutputSizes(MediaRecorder.class),height,width,ASPECT_RATIO_43);
+        mVideoSize = getVideoPreviewResolution(map.getOutputSizes(MediaRecorder.class),height,width,false);
         Log.e(TAG, "createVideoPreview: mVideoSize : "+mVideoSize);
         Log.e(TAG, "createVideoPreview: 720p test : "+getVideoPreviewResolution(
                 map.getOutputSizes(MediaRecorder.class),height,720,ASPECT_RATIO_43
@@ -1263,6 +1240,28 @@ public class CameraActivity extends AppCompatActivity {
         mMediaRecorder.prepare();
     }
 
+    private void setupMediaRecorder_SloMoe(Pair<Size,Range<Integer>> size) {
+        mMediaRecorder.reset();
+        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+        mMediaRecorder.setVideoFrameRate(size.second.getLower());
+        mMediaRecorder.setVideoSize(size.first.getWidth(), size.first.getHeight());
+        mMediaRecorder.setVideoEncodingBitRate((size.first.getWidth()*size.first.getHeight()*size.second.getLower()) / 15);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            mMediaRecorder.setOutputFile(new File("//storage//emulated//0//DCIM//Camera//"+mVideoFileName));
+        }
+        else {
+            mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//"+mVideoFileName);
+        }
+        try {
+            mMediaRecorder.prepare();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        surfaceList.add(mMediaRecorder.getSurface());
+    }
+
     /**
      *  U N C A N N Y  M E T H O D S
      */
@@ -1366,6 +1365,41 @@ public class CameraActivity extends AppCompatActivity {
         CameraActivity.cameraId = cameraId;
     }
 
+    private void addAuxButtons() {
+        final float param= getResources().getDimension(R.dimen.aux_param);
+        if(auxCameraList.size()>0){
+            for (int i=0 ; i< auxCameraList.size() ; i++) {
+                modeMap.put(auxCameraList.get(i),2+i);
+                LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams((int) param
+                        ,LinearLayout.LayoutParams.MATCH_PARENT);
+//                layoutParams.setMargins(6,0,6,0);
+                layoutParams.weight = 1.0f;
+                MaterialTextView aux_btn = new MaterialTextView(this);
+                aux_btn.setLayoutParams(layoutParams);
+                aux_btn.setId(auxCameraList.get(i));
+                aux_btn.setGravity(Gravity.CENTER);
+                aux_btn.setText(auxCameraList.get(i).toString());
+                auxDock.addView(aux_btn);
+                aux_btn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        mModePicker.setValues(CachedCameraModes[modeMap.get(aux_btn.getId())]);
+                        Log.e(TAG, "onClick: "+ Arrays.toString(CachedCameraModes[modeMap.get(20)]));
+                        setCameraId(aux_btn.getId()+"");
+                        closeCamera();
+                        setCameraId(aux_btn.getId()+"");
+                        openCamera();
+                        aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP,14);
+                        aux_btn.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+                    }
+                });
+            }
+        }
+        else{
+            auxDock.setVisibility(View.GONE);
+        }
+    }
+
     private void setAestheticLayout() {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN
                 , WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -1403,16 +1437,6 @@ public class CameraActivity extends AppCompatActivity {
             activity.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
             return displayMetrics.heightPixels;
         }
-    }
-
-    private boolean check_null_camiID(String id){
-        try {
-            CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-            CameraCharacteristics characteristics = manager.getCameraCharacteristics(id);
-            return !characteristics.getAvailableCaptureRequestKeys().isEmpty();
-        }
-        catch (IllegalArgumentException | CameraAccessException ignored){ }
-        return false;
     }
 
     private void display_latest_image_from_gallery() {

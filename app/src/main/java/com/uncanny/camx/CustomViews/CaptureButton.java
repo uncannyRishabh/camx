@@ -27,6 +27,7 @@ public class CaptureButton extends View {
     private RectF rectF;
     private Paint paint, nPaint, mPaint;
     private int cx,cy,screenWidth;
+    private final int RECT_PADDING = 68;
     private float icRadius;
     private CamState mState;
     private boolean drawSquare=false;
@@ -160,10 +161,10 @@ public class CaptureButton extends View {
         super.onDraw(canvas);
         cx = getWidth()/2;
         cy = getHeight()/2;
-        rectF.set(72,78,getWidth()-72,getHeight()-78);
+        rectF.set(RECT_PADDING, RECT_PADDING,getWidth()- RECT_PADDING,getHeight()- RECT_PADDING);
 
         if(drawSquare){
-            canvas.drawRoundRect(rectF,22,22,mPaint);
+            canvas.drawRoundRect(rectF,16,16,mPaint);
         }
         canvas.drawCircle(cx,cy,icRadius,paint); //INNER CIRCLE
         canvas.drawCircle(cx,cy,cy-10, nPaint); //OUTER CIRCLE
