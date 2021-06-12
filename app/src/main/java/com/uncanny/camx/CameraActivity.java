@@ -15,11 +15,11 @@ import android.graphics.ImageFormat;
 import android.graphics.Insets;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
-import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraConstrainedHighSpeedCaptureSession;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
@@ -27,9 +27,7 @@ import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
-import android.hardware.camera2.params.Face;
 import android.hardware.camera2.params.MeteringRectangle;
-import android.hardware.camera2.params.RecommendedStreamConfigurationMap;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.CamcorderProfile;
 import android.media.Image;
@@ -72,7 +70,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.core.app.ActivityCompat;
@@ -87,7 +84,6 @@ import com.uncanny.camx.CustomViews.GestureBar;
 import com.uncanny.camx.CustomViews.HorizontalPicker;
 import com.uncanny.camx.CustomViews.UncannyChronometer;
 import com.uncanny.camx.CustomViews.ViewFinder.AutoFitPreviewView;
-import com.uncanny.camx.CustomViews.ViewFinder.FaceMeteringRect;
 import com.uncanny.camx.CustomViews.ViewFinder.FocusCircle;
 import com.uncanny.camx.CustomViews.ViewFinder.Grids;
 import com.uncanny.camx.Data.LensData;
@@ -137,6 +133,7 @@ public class CameraActivity extends AppCompatActivity {
     private CameraCharacteristics characteristics = null;
     private CaptureRequest.Builder captureRequest = null;
     private CaptureRequest.Builder camDeviceCaptureRequest;
+    private CameraConstrainedHighSpeedCaptureSession highSpeedCaptureSession;
     private MediaRecorder mMediaRecorder;
     private SurfaceTexture stPreview;
 
@@ -148,6 +145,7 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     private Vector<Surface> surfaceList = new Vector<>();
+    private Vector<Surface> hfrSurfaceList = new Vector<>();
     private Handler mHandler = new Handler();
     private RelativeLayout appbar;
     private AutoFitPreviewView tvPreview;
@@ -182,6 +180,7 @@ public class CameraActivity extends AppCompatActivity {
     private Map<Integer, Size> hRes = new HashMap<>();
     private Map<Integer,Size> map43 = new HashMap<>();
     private Map<Integer, Size> map169 = new HashMap<>();
+    private Pair<Size,Range<Integer>> sloMoe;
     private List<Integer> cameraList;
     private List<Integer> auxCameraList;
 
@@ -207,12 +206,7 @@ public class CameraActivity extends AppCompatActivity {
         }
     };
 
-    private Runnable getSensorSize = new Runnable() {
-        @Override
-        public void run() {
-            getHighestResolution();
-        }
-    };
+    private Runnable getSensorSize = this::getHighestResolution;
 
     private Runnable hideFocusCircle = new Runnable() {
         @Override
@@ -278,9 +272,7 @@ public class CameraActivity extends AppCompatActivity {
         thumbPreview = findViewById(R.id.img_gal);
         tvPreview = findViewById(R.id.preview);
         shutter = findViewById(R.id.capture);
-//        ultra_wide_lens = findViewById(R.id.ultra_wide);
         wide_lens = findViewById(R.id.main_wide);
-//        macro_tele_lens = findViewById(R.id.macro_tele);
         front_switch = findViewById(R.id.front_back_switch);
         auxDock = findViewById(R.id.aux_cam_switch);
         aspectRatio = findViewById(R.id.aspectRatio_btn);
@@ -330,55 +322,57 @@ public class CameraActivity extends AppCompatActivity {
         super.onPostCreate(savedInstanceState);
         mModePicker.setValues(lensData.getAvailableModes(getCameraId()));
         mModePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        mModePicker.setOnItemSelectedListener(new HorizontalPicker.OnItemSelected() {
-            @Override
-            public void onItemSelected(int index) {
-                mModePicker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
-                switch (index){
-                    case 0:
-                        state = CamState.CAMERA;
-                        Log.e(TAG, "onItemSelected: CAMERA MODE");
-                        closeCamera();
-                        openCamera();
-                        new Handler(Looper.myLooper()).post(getSensorSize);
-                        shutter.colorInnerCircle(state);
-                        break;
-                    case 1:
-                        state = CamState.VIDEO;
-                        Log.e(TAG, "onItemSelected: VIDEO MODE");
-                        requestVideoPermissions();
-                        createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
-                        shutter.colorInnerCircle(state);
-                        break;
-                    case 2:
-                        state = (mModePicker.getValues()[2]=="Portrait" ? CamState.PORTRAIT:CamState.SLOMO);
-                        if(state == CamState.SLOMO){
-//                            for(Pair<Size,Range<Integer>> pair : lensData.getFpsResolutionPair("0")){
-//                                Log.e(TAG, "onCreate: "+pair.first+" , "+pair.second.getLower());
-//                            }
-                            requestVideoPermissions();
-                            createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
-                            shutter.colorInnerCircle(state);
+        mModePicker.setOnItemSelectedListener(index -> {
+            mModePicker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
+            switch (index){
+                case 0:
+                    state = CamState.CAMERA;
+                    Log.e(TAG, "onItemSelected: CAMERA MODE");
+                    closeCamera();
+                    openCamera();
+                    new Handler(Looper.myLooper()).post(getSensorSize);
+                    shutter.colorInnerCircle(state);
+                    break;
+                case 1:
+                    state = CamState.VIDEO;
+                    Log.e(TAG, "onItemSelected: VIDEO MODE");
+                    requestVideoPermissions();
+                    createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
+                    shutter.colorInnerCircle(state);
+                    break;
+                case 2:
+                    state = (mModePicker.getValues()[2]=="Portrait" ? CamState.PORTRAIT:CamState.SLOMO);
+                    if(state == CamState.SLOMO){
+                        int sFPS = 120;
+                        for(Pair<Size,Range<Integer>> pair : lensData.getFpsResolutionPair(getCameraId())){
+                            if(pair.second.getLower()+pair.second.getUpper() > sFPS) {
+                                sloMoe = pair;
+                            }
+                            sFPS = pair.second.getLower()+pair.second.getUpper();
+                            Log.e(TAG, "onCreate: "+pair.first+" , "+pair.second.getLower());
                         }
-                        Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[2]);
-                        break;
-                    case 3:
-                        state = (mModePicker.getValues()[3]=="Night" ? CamState.NIGHT:CamState.TIMEWARP);
-                        Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[3]);
-                        break;
-                    case 4:
-                        state = (mModePicker.getValues()[4]=="Pro" ? CamState.PRO:CamState.PORTRAIT);
-                        Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[4]);
-                        break;
-                    case 5:
-                        state = CamState.NIGHT;
-                        Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[5]);
-                        break;
-                    case 6:
-                        state = CamState.PRO;
-                        Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[6]);
-                        break;
-                }
+                        requestVideoPermissions();
+                        createSloMoePreview();
+                        shutter.colorInnerCircle(state);
+                    }
+                    Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[2]);
+                    break;
+                case 3:
+                    state = (mModePicker.getValues()[3]=="Night" ? CamState.NIGHT:CamState.TIMEWARP);
+                    Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[3]);
+                    break;
+                case 4:
+                    state = (mModePicker.getValues()[4]=="Pro" ? CamState.PRO:CamState.PORTRAIT);
+                    Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[4]);
+                    break;
+                case 5:
+                    state = CamState.NIGHT;
+                    Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[5]);
+                    break;
+                case 6:
+                    state = CamState.PRO;
+                    Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[6]);
+                    break;
             }
         });
 
@@ -505,7 +499,32 @@ public class CameraActivity extends AppCompatActivity {
                         }
                         break;
                     case SLOMO:
-                        setupMediaRecorder_SloMoe(lensData.getFpsResolutionPair(getCameraId()).get(0));
+                        if (isRecording) {
+                            isRecording = false;
+
+                            try {
+                                highSpeedCaptureSession.stopRepeating();
+                            } catch (CameraAccessException e) {
+                                e.printStackTrace();
+                            }
+
+                            chronometer.stop();
+                            chronometer.setVisibility(View.INVISIBLE);
+                            mModePicker.setVisibility(View.VISIBLE);
+                            mMediaRecorder.stop(); //TODO: handle stop before preview is generated
+                            mMediaRecorder.reset();
+                            shutter.resetStateVideo();
+                            createSloMoePreview();
+                        }
+                        else {
+                            startSloMoeRecording();
+                            mModePicker.setVisibility(View.INVISIBLE);
+                            chronometer.setBase(SystemClock.elapsedRealtime());
+                            chronometer.start();
+                            chronometer.setVisibility(View.VISIBLE);
+                            shutter.animateShutterButtonStateVideo();
+                            isRecording = true;
+                        }
                         break;
                     default:
                         break;
@@ -898,7 +917,7 @@ public class CameraActivity extends AppCompatActivity {
 //        }
 
         //cancel any existing AF trigger (repeated touches, etc.)
-        camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+        camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
         camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
         try {
             camSession.capture(camDeviceCaptureRequest.build(), captureCallbackHandler, mBackgroundHandler);
@@ -1034,7 +1053,7 @@ public class CameraActivity extends AppCompatActivity {
             return;
 
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-        imageSize = getVideoPreviewResolution(map.getOutputSizes(ImageFormat.JPEG)
+        imageSize = getPreviewResolution(map.getOutputSizes(ImageFormat.JPEG)
                 ,tvPreview.getHeight(),tvPreview.getWidth(),ASPECT_RATIO_43);
 
         tvPreview.measure(imageSize.getHeight(),imageSize.getWidth());
@@ -1118,9 +1137,9 @@ public class CameraActivity extends AppCompatActivity {
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         // Size[] mVideoSize = map.getHighResolutionOutputSizes(ImageFormat.JPEG); // HIGHRES MODE
         Log.e(TAG, "createVideoPreview: "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
-        mVideoSize = getVideoPreviewResolution(map.getOutputSizes(MediaRecorder.class),height,width,false);
+        mVideoSize = getPreviewResolution(map.getOutputSizes(MediaRecorder.class),height,width,false);
         Log.e(TAG, "createVideoPreview: mVideoSize : "+mVideoSize);
-        Log.e(TAG, "createVideoPreview: 720p test : "+getVideoPreviewResolution(
+        Log.e(TAG, "createVideoPreview: 720p test : "+ getPreviewResolution(
                 map.getOutputSizes(MediaRecorder.class),height,720,ASPECT_RATIO_43
         ));
         stPreview.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
@@ -1185,14 +1204,13 @@ public class CameraActivity extends AppCompatActivity {
                             Log.d(TAG, "onConfigureFailed: startRecord");
                         }
                     }, null);
-
         }
         catch (IOException |CameraAccessException e){
             e.printStackTrace();
         }
     }
 
-    private Size getVideoPreviewResolution(Size[] outputSizes, int height, int width, boolean aspectRatio43) {
+    private Size getPreviewResolution(Size[] outputSizes, int height, int width, boolean aspectRatio43) {
         ArrayList<Size> sizeArrayList = new ArrayList<>();
         for(Size size : outputSizes){
             float ar = (float) size.getWidth()/ size.getHeight();
@@ -1240,26 +1258,118 @@ public class CameraActivity extends AppCompatActivity {
         mMediaRecorder.prepare();
     }
 
+    /**
+     * Slow Motion Methods
+     */
+
+    private void createSloMoePreview(){
+        if (!resumed || !surface)
+            return;
+        if(sloMoe != null){
+            mVideoSize = sloMoe.first;
+        }
+
+        hfrSurfaceList.clear();
+        mMediaRecorder = new MediaRecorder();
+        stPreview.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
+        tvPreview.setAspectRatio(mVideoSize.getHeight(),mVideoSize.getWidth());
+        hfrSurfaceList.add(new Surface(stPreview));
+        Surface previewSurface = new Surface(stPreview);
+        try {
+            camDeviceCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            camDeviceCaptureRequest.addTarget(previewSurface);
+            camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,sloMoe.second);
+            camDevice.createCaptureSession(Collections.singletonList(previewSurface)
+                    , new CameraCaptureSession.StateCallback() {
+                        @Override
+                        public void onConfigured(@NonNull CameraCaptureSession session) {
+                            camSession = session;
+                            slPreview();
+                        }
+
+                        @Override
+                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+
+                        }
+                    },null);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void slPreview() {
+        try {
+            if(isRecording) {
+                camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, sloMoe.second);
+                camSession.setRepeatingBurst(
+                        highSpeedCaptureSession.createHighSpeedRequestList(camDeviceCaptureRequest.build())
+                        , null, mBackgroundHandler);
+            }
+            else{
+                camSession.setRepeatingRequest(camDeviceCaptureRequest.build(),null,mBackgroundHandler);
+            }
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void startSloMoeRecording(){
+        try {
+            isRecording = true;
+            setupMediaRecorder_SloMoe(sloMoe);
+
+            SurfaceTexture surfaceTexture = tvPreview.getSurfaceTexture();
+            surfaceTexture.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
+            Surface previewSurface = new Surface(surfaceTexture); //TODO : free surface with #release
+            Surface recordSurface = mMediaRecorder.getSurface();
+            camDeviceCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+            camDeviceCaptureRequest.addTarget(previewSurface);
+            camDeviceCaptureRequest.addTarget(recordSurface);
+            camDevice.createConstrainedHighSpeedCaptureSession(hfrSurfaceList,
+                    new CameraCaptureSession.StateCallback() {
+                        @Override
+                        public void onConfigured(CameraCaptureSession session) {
+                            camSession = session;
+                            highSpeedCaptureSession =(CameraConstrainedHighSpeedCaptureSession) session;
+                            slPreview();
+                        }
+                        @Override
+                        public void onConfigureFailed(CameraCaptureSession session) {
+                            Log.d(TAG, "onConfigureFailed: startRecord");
+                        }
+                    }, mBackgroundHandler);
+            mMediaRecorder.start();
+        }
+        catch (CameraAccessException e){
+            e.printStackTrace();
+        }
+    }
+
     private void setupMediaRecorder_SloMoe(Pair<Size,Range<Integer>> size) {
+        mVideoFileName = "CamX"+System.currentTimeMillis()+"_"+getCameraId()+".mp4";
         mMediaRecorder.reset();
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+//        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-        mMediaRecorder.setVideoFrameRate(size.second.getLower());
-        mMediaRecorder.setVideoSize(size.first.getWidth(), size.first.getHeight());
-        mMediaRecorder.setVideoEncodingBitRate((size.first.getWidth()*size.first.getHeight()*size.second.getLower()) / 15);
+//        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             mMediaRecorder.setOutputFile(new File("//storage//emulated//0//DCIM//Camera//"+mVideoFileName));
         }
         else {
             mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//"+mVideoFileName);
         }
+        mMediaRecorder.setVideoFrameRate(size.second.getLower());
+        mMediaRecorder.setVideoSize(size.first.getWidth(), size.first.getHeight());
+        Log.e(TAG, "setupMediaRecorder_SloMoe: VideoEncodingBitRate : "+(size.first.getWidth()*size.first.getHeight()*size.second.getLower()) / 15);
+        mMediaRecorder.setVideoEncodingBitRate((size.first.getWidth()*size.first.getHeight()*size.second.getLower()) / 15);
+        mMediaRecorder.setOrientationHint(90);
         try {
             mMediaRecorder.prepare();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        surfaceList.add(mMediaRecorder.getSurface());
+        hfrSurfaceList.add(mMediaRecorder.getSurface());
     }
 
     /**
@@ -1553,55 +1663,17 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.Q)
-    public Size getMaxSize(Size... sizes) {
-        CameraCharacteristics characteristics = getCameraCharacteristics();
-        RecommendedStreamConfigurationMap previewConfig =
-                characteristics.getRecommendedStreamConfigurationMap(
-                        RecommendedStreamConfigurationMap.USECASE_PREVIEW);
-        RecommendedStreamConfigurationMap snapshotConfig =
-                characteristics.getRecommendedStreamConfigurationMap(
-                        RecommendedStreamConfigurationMap.USECASE_SNAPSHOT);
-
-        if ((previewConfig != null) && (snapshotConfig != null)) {
-            Set snapshotSizeSet = snapshotConfig.getOutputSizes(
-                    ImageFormat.JPEG);
-            Size[] snapshotSizes = new Size[snapshotSizeSet.size()];
-            snapshotSizes = (Size[]) snapshotSizeSet.toArray(snapshotSizes);
-            Size suggestedMaxJpegSize = getMaxSize(snapshotSizes);
-
-            Set previewSizeSet = snapshotConfig.getOutputSizes(
-                    ImageFormat.PRIVATE);
-            Size[] previewSizes = new Size[previewSizeSet.size()];
-            previewSizes = (Size[]) previewSizeSet.toArray(previewSizes);
-            Size suggestedMaxPreviewSize = getMaxSize(previewSizes);
-        }
-
-        if (sizes == null || sizes.length == 0) {
-            throw new IllegalArgumentException("sizes was empty");
-        }
-
-        Size sz = sizes[0];
-        for (Size size : sizes) {
-            if (size.getWidth() * size.getHeight() > sz.getWidth() * sz.getHeight()) {
-                sz = size;
-            }
-        }
-
-        return sz;
-    }
-
-    private void drawFaceRect(Face[] faces) {
-        for(Face face : faces){
-            if(face.getScore() > 50){
-                Log.e(TAG, "drawFaceRect: faces =>> "+face);
-                FaceMeteringRect faceMeteringRect = findViewById(R.id.fm_rect);
-                faceMeteringRect.setMeteringRect(new RectF(face.getBounds().left,face.getBounds().top
-                        ,face.getBounds().right,face.getBounds().bottom));
-
-            }
-        }
-    }
+//    private void drawFaceRect(Face[] faces) {
+//        for(Face face : faces){
+//            if(face.getScore() > 50){
+//                Log.e(TAG, "drawFaceRect: faces =>> "+face);
+//                FaceMeteringRect faceMeteringRect = findViewById(R.id.fm_rect);
+//                faceMeteringRect.setMeteringRect(new RectF(face.getBounds().left,face.getBounds().top
+//                        ,face.getBounds().right,face.getBounds().bottom));
+//
+//            }
+//        }
+//    }
 
     /**
      * C A L L B A C K S

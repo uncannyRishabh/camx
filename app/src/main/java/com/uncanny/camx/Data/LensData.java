@@ -51,6 +51,10 @@ public class LensData {
             , CamcorderProfile.QUALITY_HIGH_SPEED_2160P
     };
 
+    int[] camcorderSM = {CamcorderProfile.QUALITY_HIGH_SPEED_LOW, CamcorderProfile.QUALITY_HIGH_SPEED_HIGH
+            , CamcorderProfile.QUALITY_HIGH_SPEED_480P, CamcorderProfile.QUALITY_HIGH_SPEED_720P, CamcorderProfile.QUALITY_HIGH_SPEED_1080P
+            , CamcorderProfile.QUALITY_HIGH_SPEED_2160P };
+
     /**
      * Constructor for this class.
      */
@@ -114,7 +118,6 @@ public class LensData {
         return logicalCameras;
     }
 
-
     /**
      * Returns boolean for Camera2api availability.
      */
@@ -167,29 +170,9 @@ public class LensData {
         return cameraModes.toArray(new String[0]);
     }
 
-    public Map<Range<Integer>, Size[]> getSlowMoeMap(String id){
-        StreamConfigurationMap map = getStreamConfigMap(id);
-        Range<Integer>[] smRange = map.getHighSpeedVideoFpsRanges();
-        for(Range<Integer> range : smRange){
-            slowMoeMap.put(range,map.getHighSpeedVideoSizesFor(range));
-        }
-        Log.e(TAG, "getSlowMoeMap: "+slowMoeMap);
-        return slowMoeMap;
-    }
-
-    public Range<Integer>[] getFPSRanges(String id){
-        StreamConfigurationMap map = getStreamConfigMap(id);
-        highFPSRanges = map.getHighSpeedVideoFpsRanges();
-        Log.e(TAG, "getFPSRanges: FPS ranges"+ Arrays.toString(highFPSRanges));
-        return highFPSRanges;
-    }
-
-    public Size[] getSizeForRange(String id,Range<Integer> range){
-        StreamConfigurationMap map = getStreamConfigMap(id);
-        Log.e(TAG, "getSizeForRange: "+ Arrays.toString(map.getHighResolutionOutputSizes(ImageFormat.JPEG)));
-        return map.getHighResolutionOutputSizes(ImageFormat.JPEG);
-    }
-
+    /**
+     * Returns Pair of Size and FPS ranges.
+     */
     public ArrayList<Pair<Size, Range<Integer>>> getFpsResolutionPair(String id){
         StreamConfigurationMap map = getStreamConfigMap(id);
         for(Range<Integer> range : map.getHighSpeedVideoFpsRanges()){
@@ -217,14 +200,31 @@ public class LensData {
      * returns a {@link CamcorderProfile} for camera ids [0,1] only..not recommended.
      * @param id the id for the camera.
      */
-    public CamcorderProfile getCamcorderProfile(int id){
-        for(int qualities : camcorderQualities) {
-            if (CamcorderProfile.hasProfile(id,qualities)) {
-                Log.e(TAG, "getCamcorderProfile: Qualities : cid : "+id+" w :"
-                        +CamcorderProfile.get(id,qualities).videoFrameWidth
-                        +" h : "+CamcorderProfile.get(id,qualities).videoFrameHeight);
-//                return CamcorderProfile.get(id,qualities);
-            }
+    public CamcorderProfile getCamcorderSMProfile(int id, Size size){
+        Log.e(TAG, "getCamcorderSMProfile: "+size);
+        if(size.getWidth() == 480){
+            Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_480P));
+            return CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_480P);
+        }
+        if(size.getWidth() == 720){
+            Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_720P));
+            return CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_720P);
+        }
+        if(size.getWidth() == 1080){
+            Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_1080P));
+            return CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_1080P);
+        }
+        if(CamcorderProfile.hasProfile(0,CamcorderProfile.QUALITY_HIGH_SPEED_2160P)){
+            Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_2160P));
+            return CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_2160P);
+        }
+        if(CamcorderProfile.hasProfile(0,CamcorderProfile.QUALITY_HIGH_SPEED_HIGH)){
+            Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_HIGH));
+            return CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_HIGH);
+        }
+        if(CamcorderProfile.hasProfile(0,CamcorderProfile.QUALITY_HIGH_SPEED_LOW)){
+            Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_LOW));
+            return CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_LOW);
         }
         return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH);
     }
