@@ -9,9 +9,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
-import android.view.animation.CycleInterpolator;
 
 import androidx.annotation.Nullable;
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
@@ -27,10 +25,11 @@ public class CaptureButton extends View {
     private RectF rectF;
     private Paint paint, nPaint, mPaint;
     private int cx,cy,screenWidth;
-    private final int RECT_PADDING = 68;
+    private final int RECT_PADDING = 72;
     private float icRadius;
     private CamState mState;
     private boolean drawSquare=false;
+    private boolean drawSlomo=false;
 
     public CaptureButton(Context context) {
         super(context);
@@ -73,68 +72,44 @@ public class CaptureButton extends View {
         mState = CamState.CAMERA;
     }
 
-    @Override
-    public void onWindowFocusChanged(boolean hasWindowFocus) {
-        super.onWindowFocusChanged(hasWindowFocus);
-        Log.e("CaptureButton", "onWindowFocusChanged: winH : "+getScreenHeight()+" winW : "+screenWidth);
-    }
-
-    public void setState(CamState state){
+    private void setState(CamState state){
         mState = state;
         switch (state){
             case CAMERA:
                 icRadius = screenWidth/12f;
+                nPaint.setStyle(Paint.Style.STROKE);
+                paint.setColor(Color.WHITE);
                 break;
             case VIDEO:
-                icRadius = screenWidth/24f;
+                icRadius = screenWidth/16f;
+                nPaint.setStyle(Paint.Style.STROKE);
+                paint.setColor(Color.RED);
                 break;
             case VIDEO_PROGRESSED:
+                nPaint.setStyle(Paint.Style.FILL);
+                paint.setColor(Color.RED);
                 break;
             case SLOMO:
+                icRadius = screenWidth/16f;
+                nPaint.setStyle(Paint.Style.FILL);
+                paint.setColor(Color.parseColor("#FDDDDC"));
                 break;
             default:
                 break;
         }
     }
 
+    /**
+     * Call this method to animate {@link CaptureButton#icRadius}.
+     * @param state current camera state{@link CamState}
+     */
     public void colorInnerCircle(CamState state){
         setState(state);
         sizeInnerCircle(.5f);
-        if(mState == CamState.VIDEO){
-            paint.setColor(Color.RED);
-        }
-        else if(mState == CamState.CAMERA){
-            icRadius = screenWidth/12f;
-            paint.setColor(Color.WHITE);
-        }
         invalidate();
     }
 
-    public void animateShutterButtonStateCamera(float multiplier) {
-        PropertyValuesHolder rPropertyValuesHolder = PropertyValuesHolder.ofFloat("radius"
-                                                        ,icRadius,icRadius*multiplier);
-        ValueAnimator valueAnimator = ValueAnimator.ofPropertyValuesHolder(rPropertyValuesHolder);
-        valueAnimator.setInterpolator(new CycleInterpolator(1));
-        valueAnimator.addUpdateListener(animation -> {
-            invalidate();
-            icRadius = (float) animation.getAnimatedValue();
-        });
-        valueAnimator.setDuration(520);
-        valueAnimator.start();
-        invalidate();
-    }
-
-    public void animateShutterButtonStateVideo(){
-        drawSquare = true;
-        invalidate();
-    }
-
-    public void resetStateVideo(){
-        drawSquare = false;
-        this.invalidate();
-    }
-
-    public void sizeInnerCircle(float multiplier) {
+    private void sizeInnerCircle(float multiplier) {
         PropertyValuesHolder rPropertyValuesHolder = PropertyValuesHolder.ofFloat("radius"
                 ,icRadius,icRadius*multiplier);
         ValueAnimator valueAnimator = ValueAnimator.ofPropertyValuesHolder(rPropertyValuesHolder);
@@ -148,11 +123,11 @@ public class CaptureButton extends View {
         invalidate();
     }
 
-    public static int getScreenWidth() {
+    private static int getScreenWidth() {
         return Resources.getSystem().getDisplayMetrics().widthPixels;
     }
 
-    public static int getScreenHeight() {
+    private static int getScreenHeight() {
         return Resources.getSystem().getDisplayMetrics().heightPixels;
     }
 
@@ -163,11 +138,21 @@ public class CaptureButton extends View {
         cy = getHeight()/2;
         rectF.set(RECT_PADDING, RECT_PADDING,getWidth()- RECT_PADDING,getHeight()- RECT_PADDING);
 
-        if(drawSquare){
-            canvas.drawRoundRect(rectF,16,16,mPaint);
-        }
-        canvas.drawCircle(cx,cy,icRadius,paint); //INNER CIRCLE
         canvas.drawCircle(cx,cy,cy-10, nPaint); //OUTER CIRCLE
+        switch(mState){
+            case CAMERA:
+                canvas.drawCircle(cx, cy, icRadius, paint); //INNER CIRCLE
+                break;
+            case VIDEO:
+                canvas.drawCircle(cx,cy,icRadius,mPaint);
+                break;
+            case VIDEO_PROGRESSED:
+                canvas.drawRoundRect(rectF,12,12,mPaint);
+                break;
+            case SLOMO:
+                canvas.drawCircle(cx-icRadius/2,cy,icRadius,paint);
+                canvas.drawCircle(cx+icRadius/2,cy,icRadius,mPaint);
+                break;
+        }
     }
-
 }

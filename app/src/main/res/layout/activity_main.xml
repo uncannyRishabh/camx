@@ -126,6 +126,7 @@
         android:id="@+id/relative_layout_button_dock"
         android:layout_width="match_parent"
         android:layout_height="154dp"
+        android:background="#00FFFFFF"
         android:minHeight="108dp"
         android:paddingTop="20dp"
         android:layout_above="@id/mode_picker_view"
