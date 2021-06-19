@@ -1,4 +1,4 @@
-package com.uncanny.camx;
+package com.uncanny.camx.Utility;
 
 import android.content.Context;
 import android.view.GestureDetector;

@@ -40,20 +40,6 @@ public class LensData {
     ArrayList<Pair<Size, Range<Integer>>> fpsResolutionPair = new ArrayList<>();
     Map<Range<Integer>, Size[]> slowMoeMap = new HashMap<>();
     LensResolutionData lensResolutionData = new LensResolutionData();
-    int[] camcorderQualities = {
-            CamcorderProfile.QUALITY_LOW, CamcorderProfile.QUALITY_HIGH, CamcorderProfile.QUALITY_QCIF
-            , CamcorderProfile.QUALITY_CIF, CamcorderProfile.QUALITY_480P, CamcorderProfile.QUALITY_720P
-            , CamcorderProfile.QUALITY_1080P, CamcorderProfile.QUALITY_2160P, CamcorderProfile.QUALITY_TIME_LAPSE_LOW
-            , CamcorderProfile.QUALITY_TIME_LAPSE_HIGH, CamcorderProfile.QUALITY_TIME_LAPSE_QCIF, CamcorderProfile.QUALITY_TIME_LAPSE_CIF
-            , CamcorderProfile.QUALITY_TIME_LAPSE_480P, CamcorderProfile.QUALITY_TIME_LAPSE_720P, CamcorderProfile.QUALITY_TIME_LAPSE_1080P
-            , CamcorderProfile.QUALITY_TIME_LAPSE_2160P, CamcorderProfile.QUALITY_HIGH_SPEED_LOW, CamcorderProfile.QUALITY_HIGH_SPEED_HIGH
-            , CamcorderProfile.QUALITY_HIGH_SPEED_480P, CamcorderProfile.QUALITY_HIGH_SPEED_720P, CamcorderProfile.QUALITY_HIGH_SPEED_1080P
-            , CamcorderProfile.QUALITY_HIGH_SPEED_2160P
-    };
-
-    int[] camcorderSM = {CamcorderProfile.QUALITY_HIGH_SPEED_LOW, CamcorderProfile.QUALITY_HIGH_SPEED_HIGH
-            , CamcorderProfile.QUALITY_HIGH_SPEED_480P, CamcorderProfile.QUALITY_HIGH_SPEED_720P, CamcorderProfile.QUALITY_HIGH_SPEED_1080P
-            , CamcorderProfile.QUALITY_HIGH_SPEED_2160P };
 
     /**
      * Constructor for this class.

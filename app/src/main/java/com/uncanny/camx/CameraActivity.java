@@ -3,11 +3,9 @@ package com.uncanny.camx;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -34,7 +32,6 @@ import android.media.Image;
 import android.media.ImageReader;
 import android.media.MediaActionSound;
 import android.media.MediaRecorder;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -178,7 +175,6 @@ public class CameraActivity extends AppCompatActivity {
     public float finger_spacing = 0;
     private int cachedHeight;
     private Rect zoom = new Rect();
-    //    private double ratioCoeff = 1.3333f;
 
     private Map<Integer, Size> hRes = new HashMap<>();
     private Map<Integer,Size> map43 = new HashMap<>();
@@ -443,10 +439,22 @@ public class CameraActivity extends AppCompatActivity {
                 if(mflash){
                     mflash = false;
                     flash.setImageResource(R.drawable.ic_flash_off);
+                    camDeviceCaptureRequest.set(CaptureRequest.FLASH_MODE,CaptureRequest.FLASH_MODE_OFF);
+                    try {
+                        camSession.setRepeatingRequest(camDeviceCaptureRequest.build(), null, null);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
                 }
                 else {
                     mflash = true;
                     flash.setImageResource(R.drawable.ic_flash_on);
+                    camDeviceCaptureRequest.set(CaptureRequest.FLASH_MODE,CaptureRequest.FLASH_MODE_TORCH);
+                    try {
+                        camSession.setRepeatingRequest(camDeviceCaptureRequest.build(), null, null);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
                 }
                 Log.e(TAG, "onClick: flash : "+mflash);
             }
@@ -482,7 +490,7 @@ public class CameraActivity extends AppCompatActivity {
 
                             thumbPreview.setImageDrawable(ResourcesCompat.getDrawable(getResources()
                                     ,R.drawable.ic_video_snapshot,null));
-                            thumbPreview.setOnClickListener(null);
+                            thumbPreview.setOnClickListener(captureSnapshot);
                             front_switch.setImageDrawable(ResourcesCompat.getDrawable(getResources()
                                     ,R.drawable.ic_video_pause,null));
                             front_switch.setOnClickListener(play_pauseVideo);
@@ -513,10 +521,12 @@ public class CameraActivity extends AppCompatActivity {
                             //restore UI state
                             shutter.colorInnerCircle(state);
                             thumbPreview.setImageDrawable(null);
+                            thumbPreview.setOnClickListener(openGallery);
                             display_latest_image_from_gallery();
                             front_switch.setImageDrawable(ResourcesCompat.getDrawable(getResources()
                                     ,R.drawable.ic_front_switch,null));
                             front_switch.setOnClickListener(switchFrontCamera);
+
                         }
                         if (isSLRecording) {
                             isSLRecording = false;
@@ -758,7 +768,18 @@ public class CameraActivity extends AppCompatActivity {
     private View.OnClickListener captureSnapshot = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-
+            try {
+                captureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_VIDEO_SNAPSHOT);
+                captureRequest.addTarget(snapshotImageReader.getSurface());
+                if(zoom_level!=1) {
+                    captureRequest.set(CaptureRequest.SCALER_CROP_REGION, zoom);
+                }
+                camSession.capture(captureRequest.build(), null, null);
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+            }
+            thumbPreview.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP
+                    ,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
         }
     };
 
@@ -1182,6 +1203,10 @@ public class CameraActivity extends AppCompatActivity {
             imgReader.close();
             imgReader = null;
         }
+        if(null != snapshotImageReader){
+            snapshotImageReader.close();
+            snapshotImageReader = null;
+        }
     }
 
     private boolean isMeteringAreaAESupported() {
@@ -1206,7 +1231,7 @@ public class CameraActivity extends AppCompatActivity {
         Log.e(TAG, "createVideoPreview: "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
         mVideoSize = getPreviewResolution(map.getOutputSizes(MediaRecorder.class),height,width,false);
         mVideoSnapshotSize = getPreviewResolution(map.getOutputSizes(ImageFormat.JPEG),height,width,false);
-        snapshotImageReader = ImageReader.newInstance(width,height,ImageFormat.JPEG,1);
+        snapshotImageReader = ImageReader.newInstance(width,height,ImageFormat.JPEG,10);
         snapshotImageReader.setOnImageAvailableListener(videoSnapshotCallback,mBackgroundHandler);
 
         Log.e(TAG, "createVideoPreview: mVideoSize : "+mVideoSize);
@@ -1219,7 +1244,7 @@ public class CameraActivity extends AppCompatActivity {
         try {
             camDeviceCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             camDeviceCaptureRequest.addTarget(previewSurface);
-            camDevice.createCaptureSession(Arrays.asList(previewSurface,imgReader.getSurface())
+            camDevice.createCaptureSession(Arrays.asList(previewSurface)
                     , new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(@NonNull CameraCaptureSession session) {
@@ -1257,7 +1282,7 @@ public class CameraActivity extends AppCompatActivity {
             camDeviceCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
             camDeviceCaptureRequest.addTarget(previewSurface);
             camDeviceCaptureRequest.addTarget(recordSurface);
-            camDevice.createCaptureSession(Arrays.asList(previewSurface, recordSurface, imgReader.getSurface()),
+            camDevice.createCaptureSession(Arrays.asList(previewSurface, recordSurface, snapshotImageReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(CameraCaptureSession session) {
@@ -1655,40 +1680,40 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
-    @NonNull
-    public static ArrayList<Uri> listOfAllImages(Context context) {
-        Uri uri;
-        Cursor cursor;
-        int column_index_data;
-        ArrayList<Uri> listOfAllImages = new ArrayList<>();
-        String absolutePathOfImage;
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            uri = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
-        } else {
-            uri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
-        }
-
-        String[] projection  = new String[]{MediaStore.Images.Thumbnails.DATA};
-
-        String orderBy = MediaStore.Video.Media.DATE_MODIFIED;
-        cursor = context.getContentResolver().query(uri, projection, null, null, orderBy + " DESC");
-
-        column_index_data = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA);
-
-        int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
-
-        while(cursor.moveToNext()) {
-//            absolutePathOfImage = cursor.getString(column_index_data);
-            long id = cursor.getLong(idColumn);
-            Uri contentUri = ContentUris.withAppendedId(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,id);
-//            listOfAllImages.add(new File(absolutePathOfImage));
-            listOfAllImages.add(contentUri);
-        }
-        cursor.close();
-        return listOfAllImages;
-    }
+//    @NonNull
+//    public static ArrayList<Uri> listOfAllImages(Context context) {
+//        Uri uri;
+//        Cursor cursor;
+//        int column_index_data;
+//        ArrayList<Uri> listOfAllImages = new ArrayList<>();
+//        String absolutePathOfImage;
+//
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+//            uri = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
+//        } else {
+//            uri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+//        }
+//
+//        String[] projection  = new String[]{MediaStore.Images.Thumbnails.DATA};
+//
+//        String orderBy = MediaStore.Video.Media.DATE_MODIFIED;
+//        cursor = context.getContentResolver().query(uri, projection, null, null, orderBy + " DESC");
+//
+//        column_index_data = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA);
+//
+//        int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
+//
+//        while(cursor.moveToNext()) {
+////            absolutePathOfImage = cursor.getString(column_index_data);
+//            long id = cursor.getLong(idColumn);
+//            Uri contentUri = ContentUris.withAppendedId(
+//                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,id);
+////            listOfAllImages.add(new File(absolutePathOfImage));
+//            listOfAllImages.add(contentUri);
+//        }
+//        cursor.close();
+//        return listOfAllImages;
+//    }
 
     private void requestVideoPermissions() {
         if (ActivityCompat.checkSelfPermission(CameraActivity.this
@@ -1752,15 +1777,13 @@ public class CameraActivity extends AppCompatActivity {
     ImageReader.OnImageAvailableListener snapshotImageCallback = imageReader -> {
         Log.e(TAG, "onImageAvailable: received snapshot image data");
         Image img = imageReader.acquireLatestImage();
-        //new ImageSaverThread(img,cameraId,getContentResolver())
         new Handler(Looper.getMainLooper()).post(new ImageSaverThread(img,cameraId,getContentResolver()));
     };
 
-    ImageReader.OnImageAvailableListener videoSnapshotCallback = new ImageReader.OnImageAvailableListener() {
-        @Override
-        public void onImageAvailable(ImageReader reader) {
-
-        }
+    ImageReader.OnImageAvailableListener videoSnapshotCallback = reader -> {
+        Log.e(TAG, "onImageAvailable: received video snapshot image data");
+        Image img = reader.acquireLatestImage();
+        new Handler(Looper.getMainLooper()).post(new ImageSaverThread(img,cameraId,getContentResolver()));
     };
 
     CameraDevice.StateCallback imageCaptureCallback = new CameraDevice.StateCallback() {
