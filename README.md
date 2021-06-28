@@ -1,5 +1,5 @@
 # camx
-Camera2 api with auxillary camera support, written in pure java (currently supports xiaomi/oppo/realme and devices running stock android), pushing progress bi-weekly. <br/>
+Camera2 api with auxiliary camera support, written in pure java (currently supports xiaomi/oppo/realme and devices running stock android), pushing progress bi-weekly. <br/>
 
 For queries,contribution,bug fixes... [mail me](mailto:rishabhrajgupta2000@gmail.com).
 ✌😉
