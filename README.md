@@ -12,4 +12,4 @@ For queries,contribution,bug fixes... [mail me](mailto:rishabhrajgupta2000@gmail
 ![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss5.jpg) <br /><br />
 
 ## Try now
-[Try out](https://github.com/uncannyRishabh/camx/blob/master/camx-debug.apk?raw=true)
+[Try out](https://github.com/uncannyRishabh/camx/blob/master/camx.apk?raw=true)
