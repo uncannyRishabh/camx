@@ -40,6 +40,7 @@ public class LensData {
     ArrayList<Pair<Size, Range<Integer>>> fpsResolutionPair = new ArrayList<>();
     Map<Range<Integer>, Size[]> slowMoeMap = new HashMap<>();
     LensResolutionData lensResolutionData = new LensResolutionData();
+    String camera2level;
 
     /**
      * Constructor for this class.
@@ -111,27 +112,39 @@ public class LensData {
         Integer c2api = getCameraCharacteristics("0").get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
         if(c2api!=null && c2api == CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED){
             Log.e(TAG, "hasCamera2api: HARDWARE_LEVEL_LIMITED");
+            camera2level = "LIMITED";
             return true;
         }
         else if(c2api!=null && c2api == CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL){
             Log.e(TAG, "hasCamera2api: HARDWARE_LEVEL_FULL");
+            camera2level = "FULL";
             return true;
         }
         else if(c2api!=null && c2api == CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY){
             Log.e(TAG, "hasCamera2api: HARDWARE_LEVEL_LEGACY");
+            camera2level = "LEGACY";
             return true;
         }
         else if(c2api!=null && c2api == CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_3){
             Log.e(TAG, "hasCamera2api: HARDWARE_LEVEL_3");
+            camera2level = "LEVEL 3";
             return true;
         }
         else if(c2api!=null && c2api == CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL){
             Log.e(TAG, "hasCamera2api: HARDWARE_LEVEL_EXTERNAL");
+            camera2level = "EXTERNAL";
             return true;
         }
         else{
             return false;
         }
+    }
+
+    /**
+     * @return camera2api level of support.
+     */
+    public String getCamera2level() {
+        return camera2level;
     }
 
     /**
@@ -178,8 +191,8 @@ public class LensData {
         StreamConfigurationMap map = getStreamConfigMap(id);
         CameraCharacteristics cc = getCameraCharacteristics(id);
         cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
-//        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoFpsRanges()));
-//        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoSizes()));
+        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoFpsRanges()));
+        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoSizes()));
     }
 
     /**

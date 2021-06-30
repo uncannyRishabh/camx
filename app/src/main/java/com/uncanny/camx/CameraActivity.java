@@ -1,106 +1,101 @@
-package com.uncanny.camx;
+ package com.uncanny.camx;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.graphics.ImageFormat;
-import android.graphics.Insets;
-import android.graphics.PorterDuff;
-import android.graphics.Rect;
-import android.graphics.SurfaceTexture;
-import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraCaptureSession;
-import android.hardware.camera2.CameraCharacteristics;
-import android.hardware.camera2.CameraConstrainedHighSpeedCaptureSession;
-import android.hardware.camera2.CameraDevice;
-import android.hardware.camera2.CameraManager;
-import android.hardware.camera2.CameraMetadata;
-import android.hardware.camera2.CaptureFailure;
-import android.hardware.camera2.CaptureRequest;
-import android.hardware.camera2.CaptureResult;
-import android.hardware.camera2.TotalCaptureResult;
-import android.hardware.camera2.params.MeteringRectangle;
-import android.hardware.camera2.params.StreamConfigurationMap;
-import android.media.CamcorderProfile;
-import android.media.Image;
-import android.media.ImageReader;
-import android.media.MediaActionSound;
-import android.media.MediaRecorder;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.Environment;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Looper;
-import android.os.SystemClock;
-import android.provider.MediaStore;
-import android.util.DisplayMetrics;
-import android.util.Log;
-import android.util.Pair;
-import android.util.Range;
-import android.util.Size;
-import android.util.SparseIntArray;
-import android.util.TypedValue;
-import android.view.Gravity;
-import android.view.HapticFeedbackConstants;
-import android.view.KeyEvent;
-import android.view.MotionEvent;
-import android.view.Surface;
-import android.view.TextureView;
-import android.view.View;
-import android.view.WindowInsets;
-import android.view.WindowManager;
-import android.view.WindowMetrics;
-import android.view.animation.CycleInterpolator;
-import android.view.animation.DecelerateInterpolator;
-import android.widget.ImageButton;
-import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
-import android.widget.TextView;
-import android.widget.Toast;
+ import android.Manifest;
+ import android.annotation.SuppressLint;
+ import android.content.Context;
+ import android.content.Intent;
+ import android.content.pm.PackageManager;
+ import android.graphics.Bitmap;
+ import android.graphics.BitmapFactory;
+ import android.graphics.Color;
+ import android.graphics.ImageFormat;
+ import android.graphics.PorterDuff;
+ import android.graphics.Rect;
+ import android.graphics.SurfaceTexture;
+ import android.hardware.camera2.CameraAccessException;
+ import android.hardware.camera2.CameraCaptureSession;
+ import android.hardware.camera2.CameraCharacteristics;
+ import android.hardware.camera2.CameraConstrainedHighSpeedCaptureSession;
+ import android.hardware.camera2.CameraDevice;
+ import android.hardware.camera2.CameraManager;
+ import android.hardware.camera2.CameraMetadata;
+ import android.hardware.camera2.CaptureFailure;
+ import android.hardware.camera2.CaptureRequest;
+ import android.hardware.camera2.CaptureResult;
+ import android.hardware.camera2.TotalCaptureResult;
+ import android.hardware.camera2.params.MeteringRectangle;
+ import android.hardware.camera2.params.StreamConfigurationMap;
+ import android.media.CamcorderProfile;
+ import android.media.Image;
+ import android.media.ImageReader;
+ import android.media.MediaActionSound;
+ import android.media.MediaRecorder;
+ import android.os.Build;
+ import android.os.Bundle;
+ import android.os.Environment;
+ import android.os.Handler;
+ import android.os.HandlerThread;
+ import android.os.Looper;
+ import android.os.SystemClock;
+ import android.provider.MediaStore;
+ import android.util.Log;
+ import android.util.Pair;
+ import android.util.Range;
+ import android.util.Size;
+ import android.util.SparseIntArray;
+ import android.util.TypedValue;
+ import android.view.Gravity;
+ import android.view.HapticFeedbackConstants;
+ import android.view.KeyEvent;
+ import android.view.MotionEvent;
+ import android.view.Surface;
+ import android.view.TextureView;
+ import android.view.View;
+ import android.view.WindowManager;
+ import android.view.animation.CycleInterpolator;
+ import android.view.animation.DecelerateInterpolator;
+ import android.widget.ImageButton;
+ import android.widget.LinearLayout;
+ import android.widget.RelativeLayout;
+ import android.widget.TextView;
+ import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.AppCompatImageButton;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.core.content.res.ResourcesCompat;
-import androidx.core.os.HandlerCompat;
+ import androidx.annotation.NonNull;
+ import androidx.annotation.Nullable;
+ import androidx.appcompat.app.AppCompatActivity;
+ import androidx.appcompat.widget.AppCompatImageButton;
+ import androidx.core.app.ActivityCompat;
+ import androidx.core.content.ContextCompat;
+ import androidx.core.content.res.ResourcesCompat;
+ import androidx.core.os.HandlerCompat;
 
-import com.google.android.material.imageview.ShapeableImageView;
-import com.google.android.material.slider.Slider;
-import com.google.android.material.textview.MaterialTextView;
-import com.uncanny.camx.CustomViews.CaptureButton;
-import com.uncanny.camx.CustomViews.GestureBar;
-import com.uncanny.camx.CustomViews.HorizontalPicker;
-import com.uncanny.camx.CustomViews.UncannyChronometer;
-import com.uncanny.camx.CustomViews.ViewFinder.AutoFitPreviewView;
-import com.uncanny.camx.CustomViews.ViewFinder.FocusCircle;
-import com.uncanny.camx.CustomViews.ViewFinder.Grids;
-import com.uncanny.camx.Data.LensData;
-import com.uncanny.camx.Utility.CompareSizeByArea;
-import com.uncanny.camx.Utility.ImageSaverThread;
+ import com.google.android.material.imageview.ShapeableImageView;
+ import com.google.android.material.slider.Slider;
+ import com.google.android.material.textview.MaterialTextView;
+ import com.uncanny.camx.CustomViews.CaptureButton;
+ import com.uncanny.camx.CustomViews.GestureBar;
+ import com.uncanny.camx.CustomViews.HorizontalPicker;
+ import com.uncanny.camx.CustomViews.UncannyChronometer;
+ import com.uncanny.camx.CustomViews.ViewFinder.AutoFitPreviewView;
+ import com.uncanny.camx.CustomViews.ViewFinder.FocusCircle;
+ import com.uncanny.camx.CustomViews.ViewFinder.Grids;
+ import com.uncanny.camx.Data.LensData;
+ import com.uncanny.camx.Utility.CompareSizeByArea;
+ import com.uncanny.camx.Utility.ImageSaverThread;
 
-import java.io.File;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Vector;
+ import java.io.File;
+ import java.io.FilenameFilter;
+ import java.io.IOException;
+ import java.math.BigDecimal;
+ import java.math.RoundingMode;
+ import java.util.ArrayList;
+ import java.util.Arrays;
+ import java.util.Collections;
+ import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Set;
+ import java.util.Vector;
 
 @SuppressWarnings({"FieldMayBeFinal",
         "FieldCanBeLocal"})
@@ -296,8 +291,8 @@ public class CameraActivity extends AppCompatActivity {
         modeMap.put(0,0);
         modeMap.put(1,1);
 
-        cachedScreenWidth  = getScreenWidth(this);
-        cachedScreenHeight = getScreenHeight(this);
+        cachedScreenWidth  = getScreenWidth();
+        cachedScreenHeight = getScreenHeight();
 
         lensData = new LensData(getApplicationContext());
         cameraList =  lensData.getPhysicalCameras();
@@ -464,6 +459,7 @@ public class CameraActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent settingsIntent = new Intent(CameraActivity.this,SettingsActivity.class);
+                settingsIntent.putExtra("c2api",lensData.getCamera2level());
                 startActivity(settingsIntent);
             }
         });
@@ -938,7 +934,7 @@ public class CameraActivity extends AppCompatActivity {
 
 //        focusCircle.animateInnerCircle();
         focusCircle.setVisibility(View.VISIBLE);
-        focusCircle.setPosition((int)h,(int)w,getScreenWidth(this));
+        focusCircle.setPosition((int)h,(int)w,getScreenWidth());
 //        focusCircle.setPivotX((int)h);
 //        focusCircle.setPivotY((int)w);
 //        focusCircle.animate().scaleX(1.2f).scaleY(1.2f).setDuration(2000).setInterpolator(new CycleInterpolator(1));
@@ -1613,35 +1609,19 @@ public class CameraActivity extends AppCompatActivity {
                 | View.SYSTEM_UI_FLAG_FULLSCREEN);
 
         if(Build.VERSION.SDK_INT < Build.VERSION_CODES.Q){
-            getWindow().getDecorView().setSystemUiVisibility(
+            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
                     View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
         }
     }
 
-    private static int getScreenWidth(@NonNull Activity activity) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            WindowMetrics windowMetrics = activity.getWindowManager().getCurrentWindowMetrics();
-            Insets insets = windowMetrics.getWindowInsets()
-                    .getInsetsIgnoringVisibility(WindowInsets.Type.systemBars());
-            return windowMetrics.getBounds().width() - insets.left - insets.right;
-        } else {
-            DisplayMetrics displayMetrics = new DisplayMetrics();
-            activity.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-            return displayMetrics.widthPixels;
-        }
+    private int getScreenWidth() {
+        Log.e(TAG, "getScreenWidth: "+getResources().getDisplayMetrics().widthPixels);
+        return getResources().getDisplayMetrics().widthPixels;
     }
 
-    private static int getScreenHeight(@NonNull Activity activity) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            WindowMetrics windowMetrics = activity.getWindowManager().getCurrentWindowMetrics();
-            Insets insets = windowMetrics.getWindowInsets()
-                    .getInsetsIgnoringVisibility(WindowInsets.Type.systemBars());
-            return windowMetrics.getBounds().height() - insets.top - insets.bottom;
-        } else {
-            DisplayMetrics displayMetrics = new DisplayMetrics();
-            activity.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-            return displayMetrics.heightPixels;
-        }
+    private int getScreenHeight() {
+        Log.e(TAG, "getScreenHeight: "+getResources().getDisplayMetrics().heightPixels);
+        return getResources().getDisplayMetrics().heightPixels;
     }
 
     private void display_latest_image_from_gallery() {
