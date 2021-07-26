@@ -69,6 +69,7 @@
  import androidx.core.content.res.ResourcesCompat;
  import androidx.core.os.HandlerCompat;
 
+ import com.google.android.material.chip.Chip;
  import com.google.android.material.imageview.ShapeableImageView;
  import com.google.android.material.slider.Slider;
  import com.google.android.material.textview.MaterialTextView;
@@ -132,9 +133,11 @@ public class CameraActivity extends AppCompatActivity {
 
     private static String cameraId = "0";
     private String mVideoFileName;
+    private int vFPS = 30;
+    private String chip_Text;
     private boolean resumed = false, surface = false, ready = false;
-    public enum CamState {
-        CAMERA,VIDEO,VIDEO_PROGRESSED,PORTRAIT,PRO,NIGHT,SLOMO,TIMEWARP
+    public enum CamState{
+        CAMERA,VIDEO,VIDEO_PROGRESSED,PORTRAIT,PRO,NIGHT,SLOMO,TIMEWARP;
     }
 
     private Vector<Surface> surfaceList = new Vector<>();
@@ -158,6 +161,7 @@ public class CameraActivity extends AppCompatActivity {
     private GestureBar gestureBar;
     private LinearLayout btn_grid1,btn_grid2;
     private UncannyChronometer chronometer;
+    private Chip vi_info;
 
     private int resultCode = 1;
     private long time;
@@ -179,6 +183,14 @@ public class CameraActivity extends AppCompatActivity {
     private List<Integer> auxCameraList;
 
     private int gridClick = 0;
+
+    public CamState getState() {
+        return state;
+    }
+
+    public void setState(CamState state) {
+        this.state = state;
+    }
 
     //    private boolean pinched = false;
 //    private boolean capturing = false;
@@ -320,6 +332,8 @@ public class CameraActivity extends AppCompatActivity {
         mModePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
         mModePicker.setOnItemSelectedListener(index -> {
             mModePicker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
+            vi_info = findViewById(R.id.vi_indicator);
+
             switch (index){
                 case 0:
                     state = CamState.CAMERA;
@@ -332,6 +346,7 @@ public class CameraActivity extends AppCompatActivity {
                 case 1:
                     state = CamState.VIDEO;
                     Log.e(TAG, "onItemSelected: VIDEO MODE");
+                    lensData.getFpsResolutionPair_video(getCameraId());
                     shutter.colorInnerCircle(state);
                     requestVideoPermissions();
                     createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
@@ -341,6 +356,7 @@ public class CameraActivity extends AppCompatActivity {
                     if(state == CamState.SLOMO){
                         int sFPS = 120;
                         auxDock.setVisibility(View.INVISIBLE);
+                        Log.e(TAG, "onPostCreate: "+lensData.getFpsResolutionPair(getCameraId()));
                         for(Pair<Size,Range<Integer>> pair : lensData.getFpsResolutionPair(getCameraId())){
                             if(pair.second.getLower()+pair.second.getUpper() > sFPS) {
                                 sloMoe = pair;
@@ -371,6 +387,12 @@ public class CameraActivity extends AppCompatActivity {
                     Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[6]);
                     break;
             }
+
+            /*
+             * For hiding and displaying fps info chip
+             */
+            vi_info.setVisibility(state == CamState.VIDEO || state == CamState.SLOMO || state == CamState.TIMEWARP ?
+                    View.VISIBLE : View.INVISIBLE);
         });
 
         aspectRatio.setOnClickListener(new View.OnClickListener() {
@@ -576,6 +598,9 @@ public class CameraActivity extends AppCompatActivity {
                     closeCamera();
                     setCameraId(camID[0]);
                     openCamera();
+                    for(int id : auxCameraList){
+                        auxDock.findViewById(id).setBackground(null);
+                    }
                     wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                     wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,14);
                 }
@@ -1223,23 +1248,23 @@ public class CameraActivity extends AppCompatActivity {
             return;
         mMediaRecorder = new MediaRecorder();
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-        // Size[] mVideoSize = map.getHighResolutionOutputSizes(ImageFormat.JPEG); // HIGHRES MODE
         Log.e(TAG, "createVideoPreview: "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
+
         mVideoSize = getPreviewResolution(map.getOutputSizes(MediaRecorder.class),height,width,false);
         mVideoSnapshotSize = getPreviewResolution(map.getOutputSizes(ImageFormat.JPEG),height,width,false);
         snapshotImageReader = ImageReader.newInstance(width,height,ImageFormat.JPEG,10);
         snapshotImageReader.setOnImageAvailableListener(videoSnapshotCallback,mBackgroundHandler);
 
+        update_chip_text(mVideoSize.getHeight()+"",vFPS+"");
+
         Log.e(TAG, "createVideoPreview: mVideoSize : "+mVideoSize);
-        Log.e(TAG, "createVideoPreview: 720p test : "+ getPreviewResolution(
-                map.getOutputSizes(MediaRecorder.class),height,720,ASPECT_RATIO_43
-        ));
         stPreview.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
         tvPreview.setAspectRatio(mVideoSize.getHeight(),mVideoSize.getWidth());
         Surface previewSurface = new Surface(stPreview);
         try {
             camDeviceCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             camDeviceCaptureRequest.addTarget(previewSurface);
+            camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,new Range<>(24,60));
             camDevice.createCaptureSession(Arrays.asList(previewSurface)
                     , new CameraCaptureSession.StateCallback() {
                         @Override
@@ -1335,7 +1360,7 @@ public class CameraActivity extends AppCompatActivity {
         mMediaRecorder.setAudioEncodingBitRate(camcorderProfile.audioBitRate);
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-        mMediaRecorder.setVideoFrameRate(30);
+        mMediaRecorder.setVideoFrameRate(vFPS);
         mMediaRecorder.setVideoEncodingBitRate(16400000);
         mMediaRecorder.setVideoSize(camcorderProfile.videoFrameWidth, camcorderProfile.videoFrameHeight);
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
@@ -1363,6 +1388,7 @@ public class CameraActivity extends AppCompatActivity {
 
         hfrSurfaceList.clear();
         mMediaRecorder = new MediaRecorder();
+        update_chip_text(sloMoe.first.getHeight()+"",sloMoe.second.getUpper()+"");
         stPreview.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
         tvPreview.setAspectRatio(mVideoSize.getHeight(),mVideoSize.getWidth());
         hfrSurfaceList.add(new Surface(stPreview));
@@ -1579,6 +1605,7 @@ public class CameraActivity extends AppCompatActivity {
                 MaterialTextView aux_btn = new MaterialTextView(this);
                 aux_btn.setLayoutParams(layoutParams);
                 aux_btn.setId(auxCameraList.get(i));
+                Log.e(TAG, "addAuxButtons: get aux id : "+aux_btn.getId());
                 aux_btn.setGravity(Gravity.CENTER);
                 aux_btn.setText(auxCameraList.get(i).toString());
                 auxDock.addView(aux_btn);
@@ -1590,6 +1617,17 @@ public class CameraActivity extends AppCompatActivity {
                         closeCamera();
                         setCameraId(aux_btn.getId()+"");
                         openCamera();
+                        Log.e(TAG, "aux_btn_halo_fix: "+cameraList);
+                        Log.e(TAG, "aux_btn_halo_fix: "+aux_btn.getId());
+
+                        wide_lens.setBackground(null);
+                        for(int id : auxCameraList){
+                            if((id + "").equals(getCameraId())){
+                                continue;
+                            }
+                            auxDock.findViewById(id).setBackground(null);
+                        }
+
                         aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP,14);
                         aux_btn.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                     }
@@ -1600,6 +1638,16 @@ public class CameraActivity extends AppCompatActivity {
             auxDock.setVisibility(View.GONE);
         }
     }
+
+//    private void aux_btn_halo_fix() {
+//        for(int id : cameraList){
+//
+////            if((id + "").equals(getCameraId())){
+////                continue;
+////            }
+//            aux_btn.setBackground(null);
+//        }
+//    }
 
     private void setAestheticLayout() {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN
@@ -1694,6 +1742,10 @@ public class CameraActivity extends AppCompatActivity {
 //        cursor.close();
 //        return listOfAllImages;
 //    }
+    private void update_chip_text(String size,String fps){
+        chip_Text = size+"p@"+fps+"fps";
+        vi_info.setText(chip_Text);
+    }
 
     private void requestVideoPermissions() {
         if (ActivityCompat.checkSelfPermission(CameraActivity.this

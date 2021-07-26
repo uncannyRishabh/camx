@@ -8,6 +8,7 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.CamcorderProfile;
+import android.media.MediaRecorder;
 import android.os.Build;
 import android.util.Log;
 import android.util.Pair;
@@ -38,9 +39,12 @@ public class LensData {
     List<Integer> auxiliaryCameras  = new ArrayList<>();
     Range<Integer>[] highFPSRanges;
     ArrayList<Pair<Size, Range<Integer>>> fpsResolutionPair = new ArrayList<>();
+    ArrayList<Pair<Size, Range<Integer>>> fpsResolutionPair_video = new ArrayList<>();
     Map<Range<Integer>, Size[]> slowMoeMap = new HashMap<>();
-    LensResolutionData lensResolutionData = new LensResolutionData();
     String camera2level;
+
+    private boolean isBayer;
+    private Size bayerPhotoSize;
 
     /**
      * Constructor for this class.
@@ -160,6 +164,11 @@ public class LensData {
             cameraModes.add("Slo Moe");
             cameraModes.add("TimeWarp");
         }
+
+        if(isBayerAvailable(id)){
+            cameraModes.add("HighRes");
+        }
+
         cameraModes.add("Portrait");
         cameraModes.add("Night");
         if(hasCamera2api()){
@@ -170,7 +179,7 @@ public class LensData {
     }
 
     /**
-     * Returns Pair of Size and FPS ranges.
+     * Returns Pair of Size and FPS ranges for Slow Motion recording.
      */
     public ArrayList<Pair<Size, Range<Integer>>> getFpsResolutionPair(String id){
         StreamConfigurationMap map = getStreamConfigMap(id);
@@ -182,6 +191,19 @@ public class LensData {
             }
         }
         return fpsResolutionPair;
+    }
+
+    /**
+     * Returns Pair of Size and FPS ranges for Media recording.
+     */
+    public ArrayList<Pair<Size, Range<Integer>>> getFpsResolutionPair_video(String id){
+        StreamConfigurationMap map = getStreamConfigMap(id);
+        Log.e(TAG, "getFpsResolutionPair_video: id : " + id + Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
+//        map.getOutputSizes(MediaRecorder.class);
+
+        // now get fps ranges
+
+        return fpsResolutionPair_video;
     }
 
     /**
@@ -256,21 +278,36 @@ public class LensData {
         Toast.makeText(activity, "Execution Completed cam_aux() Logical  ids "+logicalCameras , Toast.LENGTH_SHORT).show();
     }
 
-    private void BayerCheck(int id) {
-        StreamConfigurationMap map = getCameraCharacteristics(id+"")
+    /**
+     * Returns true if lens supports capturing higher resolution images.
+     */
+    private boolean isBayerAvailable(String id){
+        performBayerCheck(id);
+        return isBayer;
+    }
+
+    /**
+     * Returns the highest resolution a camera lens can capture image at.
+     */
+    public Size getBayerLensSize(){
+        return bayerPhotoSize;
+    }
+
+    private void performBayerCheck(String id) {
+        StreamConfigurationMap map = getCameraCharacteristics(id)
                 .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         if (map.getHighResolutionOutputSizes(ImageFormat.JPEG) != null) {
             Size[] size = (map.getHighResolutionOutputSizes(ImageFormat.JPEG).length > 0 ?
                     map.getHighResolutionOutputSizes(ImageFormat.JPEG) :
                     map.getHighResolutionOutputSizes(ImageFormat.RAW_SENSOR));
             if (size.length > 0) {
-                lensResolutionData.setBayer(true);
+                isBayer = true;
                 ArrayList<Size> sizeArrayList = new ArrayList<>(Arrays.asList(size));
                 Size mSize = Collections.max(sizeArrayList, new CompareSizeByArea());
-                lensResolutionData.setBayerPhotoSize(mSize);
+                bayerPhotoSize = mSize;
 //                Log.e(TAG, "BayerCheck: BAYER SENSOR SIZE : " + Arrays.toString(size) + " mSize : " + mSize);
             } else {
-                lensResolutionData.setBayer(false);
+                isBayer = false;
                 Log.e(TAG, "BayerCheck: NOT BAYER : ID : " + id);
             }
         }

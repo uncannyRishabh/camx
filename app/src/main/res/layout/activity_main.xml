@@ -6,6 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black"
+    android:animateLayoutChanges="true"
     tools:context=".CameraActivity">
 
     <androidx.fragment.app.FragmentContainerView
@@ -69,6 +70,19 @@
         android:visibility="gone"
         android:layout_alignTop="@id/preview"
         />
+
+    <com.google.android.material.chip.Chip
+        android:id="@+id/vi_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@id/preview"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="12dp"
+        android:layout_marginTop="2dp"
+        android:backgroundTint="#80000000"
+        android:text="1080p@30FPS"
+        android:textSize="10sp"
+        android:visibility="invisible" />
 
     <com.uncanny.camx.CustomViews.ViewFinder.FaceMeteringRect
         android:id="@+id/fm_rect"
