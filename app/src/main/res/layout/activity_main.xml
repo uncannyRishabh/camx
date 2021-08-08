@@ -21,8 +21,7 @@
         android:layout_height="52dp"
         android:layout_alignParentTop="true"
         android:background="@drawable/rounded_relative_layout"
-        android:elevation="4dp"
-        >
+        android:elevation="4dp">
 
         <include
             android:id="@+id/btn_group"
@@ -32,8 +31,7 @@
             android:id="@+id/gesture_bar"
             android:layout_width="match_parent"
             android:layout_height="18dp"
-            android:layout_alignParentBottom="true"
-            />
+            android:layout_alignParentBottom="true" />
     </RelativeLayout>
 
     <com.uncanny.camx.CustomViews.ViewFinder.AutoFitPreviewView
@@ -145,23 +143,23 @@
         android:paddingTop="20dp"
         android:layout_above="@id/mode_picker_view"
         >
+
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/img_gal"
             android:layout_width="54dp"
             android:layout_height="54dp"
-            app:srcCompat="@drawable/rami"
-            android:padding="1dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/white"
-            android:clickable="true"
-            android:focusable="true"
-            android:scaleType="centerCrop"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:layout_marginStart="38dp"
             android:adjustViewBounds="true"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="1dp"
+            android:scaleType="centerCrop"
             app:shapeAppearanceOverlay="@style/circularImageView"
-            />
+            app:srcCompat="@drawable/rami"
+            app:strokeColor="@color/white"
+            app:strokeWidth="1dp" />
 
         <com.uncanny.camx.CustomViews.CaptureButton
             android:id="@+id/capture"

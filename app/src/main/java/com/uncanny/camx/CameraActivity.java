@@ -137,7 +137,7 @@ public class CameraActivity extends AppCompatActivity {
     private String chip_Text;
     private boolean resumed = false, surface = false, ready = false;
     public enum CamState{
-        CAMERA,VIDEO,VIDEO_PROGRESSED,PORTRAIT,PRO,NIGHT,SLOMO,TIMEWARP;
+        CAMERA,VIDEO,VIDEO_PROGRESSED,PORTRAIT,PRO,NIGHT,SLOMO,TIMEWARP
     }
 
     private Vector<Surface> surfaceList = new Vector<>();
@@ -151,7 +151,8 @@ public class CameraActivity extends AppCompatActivity {
     private LinearLayout auxDock;
     private TextView zoomText;
     private ShapeableImageView thumbPreview;
-    private ImageButton aspectRatio, flash, grid, toolbar_inflate_btn,settings;
+    private ImageButton button1, button2, button3, button4, button5;
+    private ImageButton button21, button22, button23, button24, button25;
     private RelativeLayout dock;
     private ImageReader imgReader;
     private HorizontalPicker mModePicker;
@@ -167,7 +168,7 @@ public class CameraActivity extends AppCompatActivity {
     private long time;
     private Size imageSize;
     private Size mVideoSize;
-    private Size mVideoSnapshotSize;
+//    private Size mVideoSnapshotSize;
     private ImageReader snapshotImageReader;
     private float mZoom = 1.0f;
     public float zoom_level = 1;
@@ -265,6 +266,7 @@ public class CameraActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        setTheme(R.style.Theme_camX);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -283,20 +285,7 @@ public class CameraActivity extends AppCompatActivity {
         wide_lens = findViewById(R.id.main_wide);
         front_switch = findViewById(R.id.front_back_switch);
         auxDock = findViewById(R.id.aux_cam_switch);
-        aspectRatio = findViewById(R.id.aspectRatio_btn);
-        flash = findViewById(R.id.flash);
-        grid = findViewById(R.id.grid_btn);
-        toolbar_inflate_btn = findViewById(R.id.settings_btn);
-        dock = findViewById(R.id.relative_layout_button_dock);
-        mModePicker = findViewById(R.id.mode_picker_view);
-        zoomText = findViewById(R.id.zoom_text);
-        zSlider = findViewById(R.id.zoom_slider);
-        grids = findViewById(R.id.grid);
-        focusCircle = findViewById(R.id.focus_circle);
-        gestureBar = findViewById(R.id.gesture_bar);
-        btn_grid1 = findViewById(R.id.top_bar_0);
-        settings = findViewById(R.id.settings);
-        
+
         setAestheticLayout();
         new Handler(Looper.myLooper()).post(openingChores);
 
@@ -311,23 +300,33 @@ public class CameraActivity extends AppCompatActivity {
         auxCameraList = lensData.getAuxiliaryCameras();
 
         addAuxButtons();
-        /*
-        Caching Camera Modes for every camera id
-         */
-        if(lensData.isAuxCameraAvailable()){
-            for(int i=0;i<cameraList.size();i++){
-                CachedCameraModes[i] = lensData.getAvailableModes(cameraList.get(i)+"");
-            }
-        }
-        if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
-            display_latest_image_from_gallery();
-        }
+
     }
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onPostCreate(@Nullable Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
+
+        button1 = findViewById(R.id.btn_1);
+        button2 = findViewById(R.id.btn_2);
+        button3 = findViewById(R.id.btn3);
+        button4 = findViewById(R.id.btn4);
+        button5 = findViewById(R.id.btn5);
+        button21 = findViewById(R.id.btn_21);
+        button22 = findViewById(R.id.btn_22);
+        button23 = findViewById(R.id.btn_23);
+        button24 = findViewById(R.id.btn_24);
+        button25 = findViewById(R.id.btn_25);
+        grids = findViewById(R.id.grid);
+        dock = findViewById(R.id.relative_layout_button_dock);
+        mModePicker = findViewById(R.id.mode_picker_view);
+        zoomText = findViewById(R.id.zoom_text);
+        zSlider = findViewById(R.id.zoom_slider);
+        focusCircle = findViewById(R.id.focus_circle);
+        gestureBar = findViewById(R.id.gesture_bar);
+        btn_grid1 = findViewById(R.id.top_bar_0);
+
         mModePicker.setValues(lensData.getAvailableModes(getCameraId()));
         mModePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
         mModePicker.setOnItemSelectedListener(index -> {
@@ -347,6 +346,7 @@ public class CameraActivity extends AppCompatActivity {
                     state = CamState.VIDEO;
                     Log.e(TAG, "onItemSelected: VIDEO MODE");
                     lensData.getFpsResolutionPair_video(getCameraId());
+                    lensData.is4kCapable(getCameraId());
                     shutter.colorInnerCircle(state);
                     requestVideoPermissions();
                     createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
@@ -395,10 +395,10 @@ public class CameraActivity extends AppCompatActivity {
                     View.VISIBLE : View.INVISIBLE);
         });
 
-        aspectRatio.setOnClickListener(new View.OnClickListener() {
+        button1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                aspectRatio.setColorFilter(Color.WHITE);
+                button1.setColorFilter(Color.WHITE);
                 if (ASPECT_RATIO_43) {
                     ASPECT_RATIO_169 = true;
                     ASPECT_RATIO_43 = false;
@@ -408,7 +408,7 @@ public class CameraActivity extends AppCompatActivity {
                     closeCamera();
                     openCamera();
 
-                    aspectRatio.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.purple_200)
+                    button1.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.purple_200)
                             , PorterDuff.Mode.MULTIPLY);
                 } else if (ASPECT_RATIO_169) {
                     ASPECT_RATIO_43 = true;
@@ -420,24 +420,24 @@ public class CameraActivity extends AppCompatActivity {
                     tvPreview.measure(imageSize.getHeight(),imageSize.getWidth());
                     openCamera();
 
-                    aspectRatio.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.white)
+                    button1.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.white)
                             , PorterDuff.Mode.MULTIPLY);
                 }
             }
         });
 
-        grid.setOnClickListener(new View.OnClickListener() {
+        button2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 gridClick+=1;
 
                 if(grids.getVisibility()==View.VISIBLE && gridClick>2){
-                    grid.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.white)
+                    button2.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.white)
                             , PorterDuff.Mode.MULTIPLY);
                     grids.setVisibility(View.INVISIBLE);
                 }
                 else{
-                    grid.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.purple_200)
+                    button2.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.purple_200)
                             , PorterDuff.Mode.MULTIPLY);
                     grids.setLines((gridClick == 1 ? 3 : 4));
                     grids.setVisibility(View.VISIBLE);
@@ -450,12 +450,12 @@ public class CameraActivity extends AppCompatActivity {
             }
         });
 
-        flash.setOnClickListener(new View.OnClickListener(){
+        button4.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
                 if(mflash){
                     mflash = false;
-                    flash.setImageResource(R.drawable.ic_flash_off);
+                    button4.setImageResource(R.drawable.ic_flash_off);
                     camDeviceCaptureRequest.set(CaptureRequest.FLASH_MODE,CaptureRequest.FLASH_MODE_OFF);
                     try {
                         camSession.setRepeatingRequest(camDeviceCaptureRequest.build(), null, null);
@@ -465,7 +465,7 @@ public class CameraActivity extends AppCompatActivity {
                 }
                 else {
                     mflash = true;
-                    flash.setImageResource(R.drawable.ic_flash_on);
+                    button4.setImageResource(R.drawable.ic_flash_on);
                     camDeviceCaptureRequest.set(CaptureRequest.FLASH_MODE,CaptureRequest.FLASH_MODE_TORCH);
                     try {
                         camSession.setRepeatingRequest(camDeviceCaptureRequest.build(), null, null);
@@ -477,7 +477,7 @@ public class CameraActivity extends AppCompatActivity {
             }
         });
 
-        settings.setOnClickListener(new View.OnClickListener(){
+        button25.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
                 Intent settingsIntent = new Intent(CameraActivity.this,SettingsActivity.class);
@@ -611,7 +611,7 @@ public class CameraActivity extends AppCompatActivity {
 
         tvPreview.setOnTouchListener(touchListener);
 
-        toolbar_inflate_btn.setOnClickListener(new View.OnClickListener() {
+        button5.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 inflateButtonMenu();
@@ -663,6 +663,17 @@ public class CameraActivity extends AppCompatActivity {
             }
         });
 
+        /*
+        Caching Camera Modes for every camera id
+         */
+        if(lensData.isAuxCameraAvailable()){
+            for(int i=0;i<cameraList.size();i++){
+                CachedCameraModes[i] = lensData.getAvailableModes(cameraList.get(i)+"");
+            }
+        }
+        if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
+            display_latest_image_from_gallery();
+        }
     }
 
     @Override
@@ -700,7 +711,7 @@ public class CameraActivity extends AppCompatActivity {
                 @Override
                 public void onClick(View v) {
                     tvPreview.setOnTouchListener(touchListener);
-                    toolbar_inflate_btn.animate().rotation(0f);
+                    button5.animate().rotation(0f);
 
                     btn_grid1.animate().translationY(0f)
                             .setInterpolator(new DecelerateInterpolator());
@@ -711,7 +722,7 @@ public class CameraActivity extends AppCompatActivity {
                     appbar.setLayoutParams(layoutParams);
                 }
             });
-            toolbar_inflate_btn.animate().rotation(-90f).setInterpolator(new DecelerateInterpolator());
+            button5.animate().rotation(-90f).setInterpolator(new DecelerateInterpolator());
 
             btn_grid1.animate().translationY(28f)
                     .setInterpolator(new DecelerateInterpolator());
@@ -724,7 +735,7 @@ public class CameraActivity extends AppCompatActivity {
         }
         else {
             tvPreview.setOnTouchListener(touchListener);
-            toolbar_inflate_btn.animate().rotation(0f);
+            button5.animate().rotation(0f);
 
             btn_grid1.animate().translationY(0f)
                     .setInterpolator(new DecelerateInterpolator());
@@ -1251,7 +1262,7 @@ public class CameraActivity extends AppCompatActivity {
         Log.e(TAG, "createVideoPreview: "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
 
         mVideoSize = getPreviewResolution(map.getOutputSizes(MediaRecorder.class),height,width,false);
-        mVideoSnapshotSize = getPreviewResolution(map.getOutputSizes(ImageFormat.JPEG),height,width,false);
+//        mVideoSnapshotSize = getPreviewResolution(map.getOutputSizes(ImageFormat.JPEG),height,width,false);
         snapshotImageReader = ImageReader.newInstance(width,height,ImageFormat.JPEG,10);
         snapshotImageReader.setOnImageAvailableListener(videoSnapshotCallback,mBackgroundHandler);
 
@@ -1600,7 +1611,6 @@ public class CameraActivity extends AppCompatActivity {
                 modeMap.put(auxCameraList.get(i),2+i);
                 LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams((int) param
                         ,LinearLayout.LayoutParams.MATCH_PARENT);
-//                layoutParams.setMargins(6,0,6,0);
                 layoutParams.weight = 1.0f;
                 MaterialTextView aux_btn = new MaterialTextView(this);
                 aux_btn.setLayoutParams(layoutParams);
@@ -1617,8 +1627,6 @@ public class CameraActivity extends AppCompatActivity {
                         closeCamera();
                         setCameraId(aux_btn.getId()+"");
                         openCamera();
-                        Log.e(TAG, "aux_btn_halo_fix: "+cameraList);
-                        Log.e(TAG, "aux_btn_halo_fix: "+aux_btn.getId());
 
                         wide_lens.setBackground(null);
                         for(int id : auxCameraList){
@@ -1639,15 +1647,6 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
-//    private void aux_btn_halo_fix() {
-//        for(int id : cameraList){
-//
-////            if((id + "").equals(getCameraId())){
-////                continue;
-////            }
-//            aux_btn.setBackground(null);
-//        }
-//    }
 
     private void setAestheticLayout() {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN

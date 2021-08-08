@@ -15,6 +15,10 @@
         <item name="android:windowBackground">@drawable/splash</item>
     </style>
 
+    <style name="splash" parent="Theme.MaterialComponents.NoActionBar.Bridge">
+        <item name="android:windowBackground">@drawable/splash</item>
+    </style>
+
     <style name="circularImageView">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">50%</item>

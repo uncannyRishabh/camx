@@ -21,9 +21,7 @@ import com.uncanny.camx.Utility.CompareSizeByArea;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class LensData {
     private static final String TAG = "LensData";
@@ -37,10 +35,8 @@ public class LensData {
     List<Integer> physicalCameras = new ArrayList<>();
     List<Integer> logicalCameras  = new ArrayList<>();
     List<Integer> auxiliaryCameras  = new ArrayList<>();
-    Range<Integer>[] highFPSRanges;
     ArrayList<Pair<Size, Range<Integer>>> fpsResolutionPair = new ArrayList<>();
     ArrayList<Pair<Size, Range<Integer>>> fpsResolutionPair_video = new ArrayList<>();
-    Map<Range<Integer>, Size[]> slowMoeMap = new HashMap<>();
     String camera2level;
 
     private boolean isBayer;
@@ -213,8 +209,9 @@ public class LensData {
         StreamConfigurationMap map = getStreamConfigMap(id);
         CameraCharacteristics cc = getCameraCharacteristics(id);
         cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
-        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoFpsRanges()));
-        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoSizes()));
+//        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoFpsRanges()));
+//        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoSizes()));
+//        Log.e(TAG, "getCameraLensCharacteristics: CAMID : "+id+" resolutions : "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
     }
 
     /**
@@ -248,6 +245,36 @@ public class LensData {
             return CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_LOW);
         }
         return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH);
+    }
+
+    /**
+     * checks if 4k recording is possible
+     * @param id Camera id
+     * @return boolean
+     */
+    public boolean is4kCapable(String id){
+        Size [] sizes = getStreamConfigMap(id).getOutputSizes(MediaRecorder.class);
+        for(Size s : sizes){
+            if(s.getWidth()==3840 && s.getHeight()==2160){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * checks if 8k recording is possible
+     * @param id Camera id
+     * @return boolean
+     */
+    public boolean is8kCapable(String id){
+        Size [] sizes = getStreamConfigMap(id).getOutputSizes(MediaRecorder.class);
+        for(Size s : sizes){
+            if(s.getWidth()==7680 && s.getHeight()==4320){
+                return true;
+            }
+        }
+        return false;
     }
 
     private void getAuxCameras(){

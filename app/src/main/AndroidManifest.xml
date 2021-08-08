@@ -27,7 +27,7 @@
         android:requestLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.camX">
+        android:theme="@style/splash">
         <activity android:name=".SettingsActivity"
             android:theme="@style/EdgeToEdge"
             android:parentActivityName=".CameraActivity"/>
