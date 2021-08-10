@@ -310,9 +310,9 @@ public class CameraActivity extends AppCompatActivity {
 
         button1 = findViewById(R.id.btn_1);
         button2 = findViewById(R.id.btn_2);
-        button3 = findViewById(R.id.btn3);
-        button4 = findViewById(R.id.btn4);
-        button5 = findViewById(R.id.btn5);
+        button3 = findViewById(R.id.btn_3);
+        button4 = findViewById(R.id.btn_4);
+        button5 = findViewById(R.id.btn_5);
         button21 = findViewById(R.id.btn_21);
         button22 = findViewById(R.id.btn_22);
         button23 = findViewById(R.id.btn_23);
@@ -326,6 +326,7 @@ public class CameraActivity extends AppCompatActivity {
         focusCircle = findViewById(R.id.focus_circle);
         gestureBar = findViewById(R.id.gesture_bar);
         btn_grid1 = findViewById(R.id.top_bar_0);
+        btn_grid2 = findViewById(R.id.top_bar_1);
 
         mModePicker.setValues(lensData.getAvailableModes(getCameraId()));
         mModePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -341,6 +342,7 @@ public class CameraActivity extends AppCompatActivity {
                     closeCamera();
                     openCamera();
                     new Handler(Looper.myLooper()).post(getSensorSize);
+                    modifyMenuForPhoto();
                     break;
                 case 1:
                     state = CamState.VIDEO;
@@ -350,6 +352,7 @@ public class CameraActivity extends AppCompatActivity {
                     shutter.colorInnerCircle(state);
                     requestVideoPermissions();
                     createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
+                    modifyMenuForVideo();
                     break;
                 case 2:
                     state = (mModePicker.getValues()[2]=="Portrait" ? CamState.PORTRAIT:CamState.SLOMO);
@@ -367,23 +370,36 @@ public class CameraActivity extends AppCompatActivity {
                         requestVideoPermissions();
                         createSloMoePreview();
                         shutter.colorInnerCircle(state);
+                        modifyMenuForVideo();
+                    }
+                    else{
+                        modifyMenuForPhoto();
                     }
                     Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[2]);
                     break;
                 case 3:
                     state = (mModePicker.getValues()[3]=="Night" ? CamState.NIGHT:CamState.TIMEWARP);
+                    if(state == CamState.TIMEWARP){
+                        modifyMenuForVideo();
+                    }
+                    else {
+                        modifyMenuForPhoto();
+                    }
                     Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[3]);
                     break;
                 case 4:
                     state = (mModePicker.getValues()[4]=="Pro" ? CamState.PRO:CamState.PORTRAIT);
+                    modifyMenuForPhoto();
                     Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[4]);
                     break;
                 case 5:
                     state = CamState.NIGHT;
+                    modifyMenuForPhoto();
                     Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[5]);
                     break;
                 case 6:
                     state = CamState.PRO;
+                    modifyMenuForPhoto();
                     Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[6]);
                     break;
             }
@@ -701,9 +717,6 @@ public class CameraActivity extends AppCompatActivity {
      */
 
     private void inflateButtonMenu() {
-        btn_grid1 = findViewById(R.id.top_bar_0);
-        btn_grid2 = findViewById(R.id.top_bar_1);
-
         if (cachedHeight == appbar.getHeight()) {
             tvPreview.setOnTouchListener(null);
             tvPreview.setClickable(false);
@@ -761,6 +774,23 @@ public class CameraActivity extends AppCompatActivity {
                 +" calculatedH : "+height+"minHeight : "+dock.getMinimumHeight());
     }
 
+    private void modifyMenuForVideo(){
+        btn_grid1.findViewById(R.id.btn_1).setVisibility(View.GONE);
+        btn_grid1.findViewById(R.id.btn_3).setVisibility(View.GONE);
+        btn_grid2.findViewById(R.id.btn_21).setVisibility(View.GONE);
+        btn_grid2.findViewById(R.id.btn_22).setVisibility(View.GONE);
+        btn_grid2.findViewById(R.id.btn_23).setVisibility(View.GONE);
+        btn_grid2.findViewById(R.id.btn_24).setVisibility(View.GONE);
+    }
+
+    private void modifyMenuForPhoto(){
+        btn_grid1.findViewById(R.id.btn_1).setVisibility(View.VISIBLE);
+        btn_grid1.findViewById(R.id.btn_3).setVisibility(View.VISIBLE);
+        btn_grid2.findViewById(R.id.btn_21).setVisibility(View.VISIBLE);
+        btn_grid2.findViewById(R.id.btn_22).setVisibility(View.VISIBLE);
+        btn_grid2.findViewById(R.id.btn_23).setVisibility(View.VISIBLE);
+        btn_grid2.findViewById(R.id.btn_24).setVisibility(View.VISIBLE);
+    }
 
     /**
      * LISTENERS

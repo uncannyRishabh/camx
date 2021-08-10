@@ -278,7 +278,7 @@ public class LensData {
     }
 
     private void getAuxCameras(){
-        for(int i = 0; i<=64 ; i++){
+        for(int i = 0; i<=31 ; i++){       // FIXME: 8/11/2021 fix extra aux lens problem @_@
             try {
                 cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
                 CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(String.valueOf(i));
@@ -299,7 +299,9 @@ public class LensData {
                     }
                 }
             }
-            catch (IllegalArgumentException | CameraAccessException ignored){ }
+            catch (IllegalArgumentException | CameraAccessException ignored){
+                    Log.e(TAG, "getAuxCameras: EXCEPTION ON ID " + i);
+            }
         }
         Toast.makeText(activity, "Execution Completed cam_aux() Physical ids "+physicalCameras, Toast.LENGTH_SHORT).show();
         Toast.makeText(activity, "Execution Completed cam_aux() Logical  ids "+logicalCameras , Toast.LENGTH_SHORT).show();

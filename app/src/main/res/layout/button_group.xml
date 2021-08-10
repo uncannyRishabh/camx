@@ -26,7 +26,7 @@
             android:scaleType="fitCenter"
             android:src="@drawable/ic_grid_btn" />
         <ImageButton
-            android:id="@+id/btn3"
+            android:id="@+id/btn_3"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_weight="1"
@@ -35,7 +35,7 @@
             android:scaleType="fitCenter"
             android:src="@drawable/ic_hdr" />
         <ImageButton
-            android:id="@+id/btn4"
+            android:id="@+id/btn_4"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_weight="1"
@@ -44,7 +44,7 @@
             android:scaleType="fitCenter"
             android:src="@drawable/ic_flash_off" />
         <ImageButton
-            android:id="@+id/btn5"
+            android:id="@+id/btn_5"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_weight="1"
@@ -60,7 +60,15 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         android:layout_below="@id/top_bar_0"
+        android:gravity="center"
         android:orientation="horizontal">
+
+        <com.uncanny.camx.CustomViews.ResolutionSelector
+            android:layout_width="360dp"
+            android:layout_height="48dp"
+            android:padding="6dp"
+
+            />
         <ImageButton
             android:id="@+id/btn_21"
             android:layout_width="30dp"
