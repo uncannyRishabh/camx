@@ -76,6 +76,7 @@
  import com.uncanny.camx.CustomViews.CaptureButton;
  import com.uncanny.camx.CustomViews.GestureBar;
  import com.uncanny.camx.CustomViews.HorizontalPicker;
+ import com.uncanny.camx.CustomViews.ResolutionSelector;
  import com.uncanny.camx.CustomViews.UncannyChronometer;
  import com.uncanny.camx.CustomViews.ViewFinder.AutoFitPreviewView;
  import com.uncanny.camx.CustomViews.ViewFinder.FocusCircle;
@@ -163,6 +164,7 @@ public class CameraActivity extends AppCompatActivity {
     private LinearLayout btn_grid1,btn_grid2;
     private UncannyChronometer chronometer;
     private Chip vi_info;
+    private ResolutionSelector resolutionSelector;
 
     private int resultCode = 1;
     private long time;
@@ -327,6 +329,7 @@ public class CameraActivity extends AppCompatActivity {
         gestureBar = findViewById(R.id.gesture_bar);
         btn_grid1 = findViewById(R.id.top_bar_0);
         btn_grid2 = findViewById(R.id.top_bar_1);
+        resolutionSelector = findViewById(R.id.resolution_selector);
 
         mModePicker.setValues(lensData.getAvailableModes(getCameraId()));
         mModePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -724,15 +727,7 @@ public class CameraActivity extends AppCompatActivity {
                 @Override
                 public void onClick(View v) {
                     tvPreview.setOnTouchListener(touchListener);
-                    button5.animate().rotation(0f);
-
-                    btn_grid1.animate().translationY(0f)
-                            .setInterpolator(new DecelerateInterpolator());
-                    btn_grid2.animate().translationY(0f);
-
-                    RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
-                            appbar.getWidth(), cachedHeight);
-                    appbar.setLayoutParams(layoutParams);
+                    deflateButtonMenu();
                 }
             });
             button5.animate().rotation(-90f).setInterpolator(new DecelerateInterpolator());
@@ -748,16 +743,20 @@ public class CameraActivity extends AppCompatActivity {
         }
         else {
             tvPreview.setOnTouchListener(touchListener);
-            button5.animate().rotation(0f);
-
-            btn_grid1.animate().translationY(0f)
-                    .setInterpolator(new DecelerateInterpolator());
-            btn_grid2.animate().translationY(0f);
-
-            RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
-                    appbar.getWidth(), cachedHeight);
-            appbar.setLayoutParams(layoutParams);
+            deflateButtonMenu();
         }
+    }
+
+    private void deflateButtonMenu() {
+        button5.animate().rotation(0f);
+
+        btn_grid1.animate().translationY(0f)
+                .setInterpolator(new DecelerateInterpolator());
+        btn_grid2.animate().translationY(0f);
+
+        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
+                appbar.getWidth(), cachedHeight);
+        appbar.setLayoutParams(layoutParams);
     }
 
     private void setDockHeight() {
@@ -781,6 +780,7 @@ public class CameraActivity extends AppCompatActivity {
         btn_grid2.findViewById(R.id.btn_22).setVisibility(View.GONE);
         btn_grid2.findViewById(R.id.btn_23).setVisibility(View.GONE);
         btn_grid2.findViewById(R.id.btn_24).setVisibility(View.GONE);
+        btn_grid2.findViewById(R.id.resolution_selector).setVisibility(View.VISIBLE);
     }
 
     private void modifyMenuForPhoto(){
@@ -790,6 +790,7 @@ public class CameraActivity extends AppCompatActivity {
         btn_grid2.findViewById(R.id.btn_22).setVisibility(View.VISIBLE);
         btn_grid2.findViewById(R.id.btn_23).setVisibility(View.VISIBLE);
         btn_grid2.findViewById(R.id.btn_24).setVisibility(View.VISIBLE);
+        btn_grid2.findViewById(R.id.resolution_selector).setVisibility(View.GONE);
     }
 
     /**
