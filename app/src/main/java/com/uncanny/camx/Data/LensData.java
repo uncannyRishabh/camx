@@ -248,6 +248,21 @@ public class LensData {
     }
 
     /**
+     * checks if 1080p recording is possible
+     * @param id Camera id
+     * @return boolean
+     */
+    public boolean is1080pCapable(String id){
+        Size [] sizes = getStreamConfigMap(id).getOutputSizes(MediaRecorder.class);
+        for(Size s : sizes){
+            if(s.getWidth()==1920 && s.getHeight()==1080){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * checks if 4k recording is possible
      * @param id Camera id
      * @return boolean

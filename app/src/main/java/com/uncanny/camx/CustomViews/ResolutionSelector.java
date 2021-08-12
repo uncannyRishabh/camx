@@ -22,7 +22,7 @@ public class ResolutionSelector extends View {
     private Paint paint,tPaint,sPaint;
     private String selectedItem;
     private float headingTextSize = 32f;
-    private float subtitleTextSize = 26f;
+//    private float subtitleTextSize = 26f;
     private float index;
     private float divisions;
     private ArrayList<String> items = new ArrayList<>();
@@ -56,16 +56,14 @@ public class ResolutionSelector extends View {
         sPaint.setColor(Color.parseColor("#FFBA83FD"));
         sPaint.setStyle(Paint.Style.FILL);
         sPaint.setAntiAlias(true);
-
-        items.add("720p");
-        items.add("1080p");
-        items.add("4k");
-
-        selectedItem = items.get(0);
     }
 
     public void addItem(String item){
         items.add(item);
+    }
+
+    public void clearItems(){
+        items.clear();
     }
 
     public String getSelectedItem(){
@@ -74,6 +72,8 @@ public class ResolutionSelector extends View {
 
     public void setSelectedItem(String item){
         selectedItem = item;
+        index = items.indexOf(getSelectedItem())+1;
+        invalidate();
     }
 
     private int getDivisions(){
@@ -88,7 +88,6 @@ public class ResolutionSelector extends View {
                 break;
             }
         }
-        index = items.indexOf(getSelectedItem())+1;
         invalidate();
         Log.e("TAG", "onTouchEvent: "+items.indexOf(getSelectedItem()));
         return super.onTouchEvent(event);
@@ -110,9 +109,9 @@ public class ResolutionSelector extends View {
 
         //INNER RECT
         rectIn.set((getWidth()/divisions)*index - (getWidth()/divisions) + 16,
-                getPaddingTop()+6,
+                getPaddingTop()+12,
                 (getWidth()/divisions)*index -16,
-                getHeight()-getPaddingBottom()-6);
+                getHeight()-getPaddingBottom()-12);
 
         canvas.drawRoundRect(rectIn,48f,48f,sPaint);
 

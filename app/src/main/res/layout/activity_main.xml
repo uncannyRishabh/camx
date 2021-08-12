@@ -9,12 +9,6 @@
     android:animateLayoutChanges="true"
     tools:context=".CameraActivity">
 
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/settings_frag"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        />
-
     <RelativeLayout
         android:id="@+id/appbar"
         android:layout_width="match_parent"

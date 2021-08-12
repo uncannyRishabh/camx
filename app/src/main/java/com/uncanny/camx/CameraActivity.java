@@ -330,13 +330,13 @@ public class CameraActivity extends AppCompatActivity {
         btn_grid1 = findViewById(R.id.top_bar_0);
         btn_grid2 = findViewById(R.id.top_bar_1);
         resolutionSelector = findViewById(R.id.resolution_selector);
+        addCapableVideoResolutions();
 
         mModePicker.setValues(lensData.getAvailableModes(getCameraId()));
         mModePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
         mModePicker.setOnItemSelectedListener(index -> {
             mModePicker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
             vi_info = findViewById(R.id.vi_indicator);
-
             switch (index){
                 case 0:
                     state = CamState.CAMERA;
@@ -351,7 +351,6 @@ public class CameraActivity extends AppCompatActivity {
                     state = CamState.VIDEO;
                     Log.e(TAG, "onItemSelected: VIDEO MODE");
                     lensData.getFpsResolutionPair_video(getCameraId());
-                    lensData.is4kCapable(getCameraId());
                     shutter.colorInnerCircle(state);
                     requestVideoPermissions();
                     createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
@@ -502,6 +501,14 @@ public class CameraActivity extends AppCompatActivity {
                 Intent settingsIntent = new Intent(CameraActivity.this,SettingsActivity.class);
                 settingsIntent.putExtra("c2api",lensData.getCamera2level());
                 startActivity(settingsIntent);
+            }
+        });
+
+        resolutionSelector.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int width = translateResolution(resolutionSelector.getSelectedItem());
+                createVideoPreview(tvPreview.getHeight(),width);
             }
         });
 
@@ -740,6 +747,8 @@ public class CameraActivity extends AppCompatActivity {
             RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
                     appbar.getWidth(), cachedHeight * 3);
             appbar.setLayoutParams(layoutParams);
+
+            resolutionSelector.setSelectedItem(resolutionSelector.getSelectedItem());
         }
         else {
             tvPreview.setOnTouchListener(touchListener);
@@ -781,6 +790,7 @@ public class CameraActivity extends AppCompatActivity {
         btn_grid2.findViewById(R.id.btn_23).setVisibility(View.GONE);
         btn_grid2.findViewById(R.id.btn_24).setVisibility(View.GONE);
         btn_grid2.findViewById(R.id.resolution_selector).setVisibility(View.VISIBLE);
+        addCapableVideoResolutions();
     }
 
     private void modifyMenuForPhoto(){
@@ -816,6 +826,7 @@ public class CameraActivity extends AppCompatActivity {
                 openCamera();
                 auxDock.setVisibility(View.GONE);
                 front_switch.animate().rotation(180f).setDuration(600);
+                addCapableVideoResolutions();
             } else {
                 closeCamera();
                 setCameraId(camID[0]);
@@ -824,6 +835,7 @@ public class CameraActivity extends AppCompatActivity {
                 openCamera();
                 auxDock.setVisibility(View.VISIBLE);
                 front_switch.animate().rotation(-180f).setDuration(600);
+                addCapableVideoResolutions();
             }
         }
     };
@@ -865,7 +877,6 @@ public class CameraActivity extends AppCompatActivity {
             }
         }
     };
-
 
     private View.OnTouchListener touchListener = new View.OnTouchListener(){
         @Override
@@ -1293,7 +1304,6 @@ public class CameraActivity extends AppCompatActivity {
         Log.e(TAG, "createVideoPreview: "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
 
         mVideoSize = getPreviewResolution(map.getOutputSizes(MediaRecorder.class),height,width,false);
-//        mVideoSnapshotSize = getPreviewResolution(map.getOutputSizes(ImageFormat.JPEG),height,width,false);
         snapshotImageReader = ImageReader.newInstance(width,height,ImageFormat.JPEG,10);
         snapshotImageReader.setOnImageAvailableListener(videoSnapshotCallback,mBackgroundHandler);
 
@@ -1306,7 +1316,7 @@ public class CameraActivity extends AppCompatActivity {
         try {
             camDeviceCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             camDeviceCaptureRequest.addTarget(previewSurface);
-            camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,new Range<>(24,60));
+//            camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,new Range<>(24,60));
             camDevice.createCaptureSession(Arrays.asList(previewSurface)
                     , new CameraCaptureSession.StateCallback() {
                         @Override
@@ -1627,6 +1637,32 @@ public class CameraActivity extends AppCompatActivity {
         return characteristics;
     }
 
+    private int translateResolution(String selectedItem) {
+        switch (selectedItem) {
+            case "HD":
+                return 720;
+            case "FHD":
+                return 1080;
+            case "4k":
+                return 2160;
+            case "8k":
+                return 4320;
+        }
+        return 0;
+    }
+
+    private void addCapableVideoResolutions() {
+        resolutionSelector.clearItems();
+        resolutionSelector.addItem("HD");
+        if(lensData.is1080pCapable(getCameraId()))
+            resolutionSelector.addItem("FHD");
+        if(lensData.is4kCapable(getCameraId()))
+            resolutionSelector.addItem("4k");
+        if(lensData.is8kCapable(getCameraId()))
+            resolutionSelector.addItem("8k");
+        resolutionSelector.setSelectedItem("FHD");
+    }
+
     public String getCameraId() {
         return cameraId;
     }
@@ -1677,7 +1713,6 @@ public class CameraActivity extends AppCompatActivity {
             auxDock.setVisibility(View.GONE);
         }
     }
-
 
     private void setAestheticLayout() {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN
