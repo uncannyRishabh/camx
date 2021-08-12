@@ -46,14 +46,14 @@ public class ResolutionSelector extends View {
 
         paint.setAntiAlias(true);
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(Color.parseColor("#1E1E1E"));
+        paint.setColor(Color.parseColor("#252525"));
 
         tPaint.setColor(Color.WHITE);
         tPaint.setTextAlign(Paint.Align.CENTER);
         tPaint.setAntiAlias(true);
         tPaint.setTextSize(headingTextSize);
 
-        sPaint.setColor(Color.parseColor("#FFBA83FD"));
+        sPaint.setColor(Color.parseColor("#9883F0"));
         sPaint.setStyle(Paint.Style.FILL);
         sPaint.setAntiAlias(true);
     }
@@ -109,17 +109,16 @@ public class ResolutionSelector extends View {
 
         //INNER RECT
         rectIn.set((getWidth()/divisions)*index - (getWidth()/divisions) + 16,
-                getPaddingTop()+12,
+                getPaddingTop()+8,
                 (getWidth()/divisions)*index -16,
-                getHeight()-getPaddingBottom()-12);
+                getHeight()-getPaddingBottom()-8);
 
         canvas.drawRoundRect(rectIn,48f,48f,sPaint);
 
         //RECT TEXT
         for(int i=1; i<=items.size();i++){
             canvas.drawText(items.get(i-1)
-                    ,(((getWidth()/divisions)*i - (getWidth()/divisions) + getPaddingStart() +4)
-                            +((getWidth()/divisions)*i -getPaddingEnd() -4))/2
+                    ,((getWidth()/divisions)*(2*i - 1) + getPaddingStart() -getPaddingEnd())/2
                     ,(getHeight()+ headingTextSize)/2f-5
                     ,tPaint);
         }

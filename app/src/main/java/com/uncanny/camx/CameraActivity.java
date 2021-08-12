@@ -362,12 +362,13 @@ public class CameraActivity extends AppCompatActivity {
                         int sFPS = 120;
                         auxDock.setVisibility(View.INVISIBLE);
                         Log.e(TAG, "onPostCreate: "+lensData.getFpsResolutionPair(getCameraId()));
+//                        Log.e(TAG, "onPostCreate: "+lensData.getFpsResolutionPair(getCameraId()).size()); //14 instead 7
                         for(Pair<Size,Range<Integer>> pair : lensData.getFpsResolutionPair(getCameraId())){
                             if(pair.second.getLower()+pair.second.getUpper() > sFPS) {
                                 sloMoe = pair;
                             }
                             sFPS = pair.second.getLower()+pair.second.getUpper();
-                            Log.e(TAG, "onCreate: "+pair.first+" , "+pair.second.getLower());
+                            Log.e(TAG, "onPostCreate: "+pair.first+" , "+pair.second.getLower());
                         }
                         requestVideoPermissions();
                         createSloMoePreview();
@@ -507,8 +508,13 @@ public class CameraActivity extends AppCompatActivity {
         resolutionSelector.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                int width = translateResolution(resolutionSelector.getSelectedItem());
-                createVideoPreview(tvPreview.getHeight(),width);
+                if(state == CamState.VIDEO) {
+                    int width = translateResolution(resolutionSelector.getSelectedItem());
+                    createVideoPreview(tvPreview.getHeight(), width);
+                }
+                else if(state == CamState.SLOMO){
+
+                }
             }
         });
 
@@ -790,7 +796,12 @@ public class CameraActivity extends AppCompatActivity {
         btn_grid2.findViewById(R.id.btn_23).setVisibility(View.GONE);
         btn_grid2.findViewById(R.id.btn_24).setVisibility(View.GONE);
         btn_grid2.findViewById(R.id.resolution_selector).setVisibility(View.VISIBLE);
-        addCapableVideoResolutions();
+        if(state == CamState.VIDEO){
+            addCapableVideoResolutions();
+        }
+        else if(state == CamState.SLOMO){
+            addCapableSloMoResolutions();
+        }
     }
 
     private void modifyMenuForPhoto(){
@@ -1643,9 +1654,9 @@ public class CameraActivity extends AppCompatActivity {
                 return 720;
             case "FHD":
                 return 1080;
-            case "4k":
+            case "4K":
                 return 2160;
-            case "8k":
+            case "8K":
                 return 4320;
         }
         return 0;
@@ -1657,10 +1668,20 @@ public class CameraActivity extends AppCompatActivity {
         if(lensData.is1080pCapable(getCameraId()))
             resolutionSelector.addItem("FHD");
         if(lensData.is4kCapable(getCameraId()))
-            resolutionSelector.addItem("4k");
+            resolutionSelector.addItem("4K");
         if(lensData.is8kCapable(getCameraId()))
-            resolutionSelector.addItem("8k");
+            resolutionSelector.addItem("8K");
         resolutionSelector.setSelectedItem("FHD");
+    }
+
+    private void addCapableSloMoResolutions(){
+        resolutionSelector.clearItems();
+        for(Pair<Size,Range<Integer>> pair : lensData.getFpsResolutionPair(getCameraId())){
+            if(pair.first.getWidth()==1920 && pair.first.getHeight()==1080)
+                resolutionSelector.addItem(pair.first.getHeight()+"p@"+pair.second.getUpper());
+//            else if(pair.first.getWidth()==1280 && pair.first.getHeight()==720)
+//                resolutionSelector.addItem(pair.first.getHeight()+"p@"+pair.second.getUpper());
+        }
     }
 
     public String getCameraId() {

@@ -69,11 +69,13 @@
         android:layout_height="wrap_content"
         android:layout_alignTop="@id/preview"
         android:layout_alignParentEnd="true"
-        android:layout_marginEnd="12dp"
         android:layout_marginTop="2dp"
+        android:layout_marginEnd="12dp"
         android:backgroundTint="#80000000"
         android:text="1080p@30FPS"
         android:textSize="10sp"
+        android:clickable="false"
+        android:focusable="false"
         android:visibility="invisible" />
 
     <com.uncanny.camx.CustomViews.ViewFinder.FaceMeteringRect
