@@ -212,6 +212,7 @@ public class LensData {
 //        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoFpsRanges()));
 //        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoSizes()));
 //        Log.e(TAG, "getCameraLensCharacteristics: CAMID : "+id+" resolutions : "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
+
     }
 
     /**
@@ -315,7 +316,6 @@ public class LensData {
                 }
             }
             catch (IllegalArgumentException | CameraAccessException ignored){
-                    Log.e(TAG, "getAuxCameras: EXCEPTION ON ID " + i);
             }
         }
         Toast.makeText(activity, "Execution Completed cam_aux() Physical ids "+physicalCameras, Toast.LENGTH_SHORT).show();
@@ -340,19 +340,38 @@ public class LensData {
     private void performBayerCheck(String id) {
         StreamConfigurationMap map = getCameraCharacteristics(id)
                 .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-        if (map.getHighResolutionOutputSizes(ImageFormat.JPEG) != null) {
-            Size[] size = (map.getHighResolutionOutputSizes(ImageFormat.JPEG).length > 0 ?
+        Size[] sizes;
+        if (map.getHighResolutionOutputSizes(ImageFormat.JPEG).length !=0 ) {
+            sizes = (map.getHighResolutionOutputSizes(ImageFormat.JPEG).length > 0 ?
                     map.getHighResolutionOutputSizes(ImageFormat.JPEG) :
                     map.getHighResolutionOutputSizes(ImageFormat.RAW_SENSOR));
-            if (size.length > 0) {
+            if (sizes.length > 0) {
                 isBayer = true;
-                ArrayList<Size> sizeArrayList = new ArrayList<>(Arrays.asList(size));
-                Size mSize = Collections.max(sizeArrayList, new CompareSizeByArea());
-                bayerPhotoSize = mSize;
-//                Log.e(TAG, "BayerCheck: BAYER SENSOR SIZE : " + Arrays.toString(size) + " mSize : " + mSize);
-            } else {
+                ArrayList<Size> sizeArrayList = new ArrayList<>(Arrays.asList(sizes));
+                bayerPhotoSize = Collections.max(sizeArrayList, new CompareSizeByArea());
+//                Log.e(TAG, "BayerCheck: BAYER SENSOR SIZE : " + Arrays.toString(sizes) + " mSize : " + mSize);
+            }
+            else {
                 isBayer = false;
                 Log.e(TAG, "BayerCheck: NOT BAYER : ID : " + id);
+            }
+        }
+        else{
+            /*
+             * FOR OEMS WHICH DO NOT MENTION BAYER SENSOR SIZE IN getHighResolutionOutputSizes(ImageFormat.JPEG)
+             */
+            sizes = map.getOutputSizes(ImageFormat.JPEG);
+            for(Size size1 : sizes){
+                if(size1.getWidth()*size1.getHeight() > 17000000){
+                    isBayer = true;
+                    bayerPhotoSize = size1;
+                    Log.e(TAG, "performBayerCheck: "+bayerPhotoSize);
+                }
+                else{
+                    isBayer = false;
+                    Log.e(TAG, "BayerCheck: NOT BAYER(2) : ID : " + id);
+                }
+
             }
         }
     }

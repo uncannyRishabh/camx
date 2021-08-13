@@ -61,6 +61,9 @@ public class ResolutionSelector extends View {
     public void addItem(String item){
         items.add(item);
     }
+    public void addItem(ArrayList<String> i){
+        items = i;
+    }
 
     public void clearItems(){
         items.clear();

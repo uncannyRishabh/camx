@@ -138,7 +138,7 @@ public class CameraActivity extends AppCompatActivity {
     private String chip_Text;
     private boolean resumed = false, surface = false, ready = false;
     public enum CamState{
-        CAMERA,VIDEO,VIDEO_PROGRESSED,PORTRAIT,PRO,NIGHT,SLOMO,TIMEWARP
+        CAMERA,VIDEO,VIDEO_PROGRESSED,PORTRAIT,PRO,NIGHT,SLOMO,TIMEWARP,HIRES
     }
 
     private Vector<Surface> surfaceList = new Vector<>();
@@ -357,7 +357,8 @@ public class CameraActivity extends AppCompatActivity {
                     modifyMenuForVideo();
                     break;
                 case 2:
-                    state = (mModePicker.getValues()[2]=="Portrait" ? CamState.PORTRAIT:CamState.SLOMO);
+                    state = (mModePicker.getValues()[2]=="Slo Moe" ? CamState.SLOMO
+                            :(mModePicker.getValues()[2]=="HighRes") ? CamState.HIRES : CamState.PORTRAIT);
                     if(state == CamState.SLOMO){
                         int sFPS = 120;
                         auxDock.setVisibility(View.INVISIBLE);
@@ -375,35 +376,53 @@ public class CameraActivity extends AppCompatActivity {
                         shutter.colorInnerCircle(state);
                         modifyMenuForVideo();
                     }
-                    else{
+                    else if(state == CamState.HIRES){
                         modifyMenuForPhoto();
+                    }
+                    else{
+                        //PORTRAIT
                     }
                     Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[2]);
                     break;
                 case 3:
-                    state = (mModePicker.getValues()[3]=="Night" ? CamState.NIGHT:CamState.TIMEWARP);
+                    state = (mModePicker.getValues()[3]=="TimeWarp" ? CamState.TIMEWARP
+                            :(mModePicker.getValues()[3]=="Portrait") ? CamState.PORTRAIT : CamState.NIGHT);
                     if(state == CamState.TIMEWARP){
                         modifyMenuForVideo();
                     }
-                    else {
+                    else if(state == CamState.PORTRAIT){
                         modifyMenuForPhoto();
+                    }
+                    else{
+                        //NIGHT
                     }
                     Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[3]);
                     break;
                 case 4:
-                    state = (mModePicker.getValues()[4]=="Pro" ? CamState.PRO:CamState.PORTRAIT);
+                    state = (mModePicker.getValues()[4]=="HighRes" ? CamState.HIRES
+                            :(mModePicker.getValues()[4]=="Night") ? CamState.NIGHT : CamState.PRO);
                     modifyMenuForPhoto();
+//                    if(state == CamState.HIRES){ }
+//                    else { }
+
                     Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[4]);
                     break;
                 case 5:
-                    state = CamState.NIGHT;
+                    state = (mModePicker.getValues()[5]=="Portrait" ? CamState.PORTRAIT:CamState.PRO);
                     modifyMenuForPhoto();
+//                    if(state == CamState.PORTRAIT){ }
+//                    else{ }
                     Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[5]);
                     break;
                 case 6:
-                    state = CamState.PRO;
+                    state = CamState.NIGHT;
                     modifyMenuForPhoto();
                     Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[6]);
+                    break;
+                case 7:
+                    state = CamState.PRO;
+                    modifyMenuForPhoto();
+                    Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[7]);
                     break;
             }
 
@@ -831,22 +850,42 @@ public class CameraActivity extends AppCompatActivity {
         @Override
         public void onClick(View v) {
             if (characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_BACK) {
-                closeCamera();
                 setCameraId(camID[1]);
+                closeCamera();
                 mModePicker.setValues(CachedCameraModes[modeMap.get(Integer.parseInt(getCameraId()))]);
-                openCamera();
                 auxDock.setVisibility(View.GONE);
                 front_switch.animate().rotation(180f).setDuration(600);
-                addCapableVideoResolutions();
+                if(state == CamState.CAMERA){
+                    openCamera();
+                    modifyMenuForPhoto();
+                }
+                else if(state == CamState.VIDEO){
+                    openCamera();
+                    addCapableVideoResolutions();
+                }
+                else if(state == CamState.SLOMO){
+                    addCapableSloMoResolutions();
+                }
+
             } else {
-                closeCamera();
                 setCameraId(camID[0]);
                 mModePicker.setValues(CachedCameraModes[modeMap.get(Integer.parseInt(getCameraId()))]);
                 wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
                 openCamera();
                 auxDock.setVisibility(View.VISIBLE);
                 front_switch.animate().rotation(-180f).setDuration(600);
-                addCapableVideoResolutions();
+                if(state == CamState.CAMERA){
+                    closeCamera();
+                    modifyMenuForPhoto();
+
+                }
+                else if(state == CamState.VIDEO){
+                    addCapableVideoResolutions();
+                }
+                else if(state == CamState.SLOMO){
+                    addCapableSloMoResolutions();
+                }
+
             }
         }
     };
@@ -1676,12 +1715,16 @@ public class CameraActivity extends AppCompatActivity {
 
     private void addCapableSloMoResolutions(){
         resolutionSelector.clearItems();
+        ArrayList<String> sList = new ArrayList<>();
         for(Pair<Size,Range<Integer>> pair : lensData.getFpsResolutionPair(getCameraId())){
-            if(pair.first.getWidth()==1920 && pair.first.getHeight()==1080)
-                resolutionSelector.addItem(pair.first.getHeight()+"p@"+pair.second.getUpper());
-//            else if(pair.first.getWidth()==1280 && pair.first.getHeight()==720)
-//                resolutionSelector.addItem(pair.first.getHeight()+"p@"+pair.second.getUpper());
+            if((pair.first.getWidth()==3840 && pair.first.getHeight()==2160) ||
+              (pair.first.getWidth()==1920 && pair.first.getHeight()==1080) ||
+              (pair.first.getWidth()==1280 && pair.first.getHeight()==720)){
+                if(!sList.contains(pair.first.getHeight()+"p@"+pair.second.getUpper()))
+                    sList.add(pair.first.getHeight()+"p@"+pair.second.getUpper());
+            }
         }
+        resolutionSelector.addItem(sList);
     }
 
     public String getCameraId() {
