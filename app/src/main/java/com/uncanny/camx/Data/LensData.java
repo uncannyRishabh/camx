@@ -325,13 +325,14 @@ public class LensData {
     /**
      * Returns true if lens supports capturing higher resolution images.
      */
-    private boolean isBayerAvailable(String id){
+    public boolean isBayerAvailable(String id){
         performBayerCheck(id);
         return isBayer;
     }
 
     /**
      * Returns the highest resolution a camera lens can capture image at.
+     * [NOTE : first check if Bayer is available by calling {@link LensData#isBayerAvailable(String)}]
      */
     public Size getBayerLensSize(){
         return bayerPhotoSize;
@@ -349,7 +350,7 @@ public class LensData {
                 isBayer = true;
                 ArrayList<Size> sizeArrayList = new ArrayList<>(Arrays.asList(sizes));
                 bayerPhotoSize = Collections.max(sizeArrayList, new CompareSizeByArea());
-//                Log.e(TAG, "BayerCheck: BAYER SENSOR SIZE : " + Arrays.toString(sizes) + " mSize : " + mSize);
+                Log.e(TAG, "BayerCheck: BAYER SENSOR SIZE : " + bayerPhotoSize);
             }
             else {
                 isBayer = false;

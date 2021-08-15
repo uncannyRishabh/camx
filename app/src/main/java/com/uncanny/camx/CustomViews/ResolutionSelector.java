@@ -22,7 +22,7 @@ public class ResolutionSelector extends View {
     private Paint paint,tPaint,sPaint;
     private String selectedItem;
     private float headingTextSize = 32f;
-//    private float subtitleTextSize = 26f;
+    private float subtitleTextSize = 26f;
     private float index;
     private float divisions;
     private ArrayList<String> items = new ArrayList<>();
@@ -60,9 +60,12 @@ public class ResolutionSelector extends View {
 
     public void addItem(String item){
         items.add(item);
+        tPaint.setTextSize(items.size()>3 ? subtitleTextSize : headingTextSize);
     }
+
     public void addItem(ArrayList<String> i){
         items = i;
+        tPaint.setTextSize(items.size()>3 ? subtitleTextSize : headingTextSize);
     }
 
     public void clearItems(){

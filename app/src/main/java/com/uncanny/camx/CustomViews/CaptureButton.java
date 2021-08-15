@@ -103,7 +103,7 @@ public class CaptureButton extends View {
      * Call this method to animate {@link CaptureButton#icRadius}.
      * @param state current camera state {@link CamState}
      */
-    public void colorInnerCircle(CamState state){
+    public void animateInnerCircle(CamState state){
         setState(state);
         sizeInnerCircle(.5f);
         invalidate();

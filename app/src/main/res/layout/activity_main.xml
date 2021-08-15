@@ -120,15 +120,14 @@
         android:value="0"
         android:valueFrom="0"
         android:valueTo="10"
-        app:labelBehavior="gone"
+        android:visibility="invisible"
         app:haloRadius="0dp"
-        app:thumbRadius="12dp"
+        app:labelBehavior="gone"
         app:thumbColor="#C5C5C5"
+        app:thumbRadius="8dp"
         app:trackColorActive="@color/white"
         app:trackColorInactive="#CD535252"
-        app:trackHeight="4dp"
-        android:visibility="invisible"
-        />
+        app:trackHeight="4dp" />
 
     <RelativeLayout
         android:id="@+id/relative_layout_button_dock"
