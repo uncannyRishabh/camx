@@ -425,31 +425,7 @@ public class CameraActivity extends AppCompatActivity {
         button1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                button1.setColorFilter(Color.WHITE);
-                if (ASPECT_RATIO_43) {
-                    ASPECT_RATIO_169 = true;
-                    ASPECT_RATIO_43 = false;
 
-                    tvPreview.animate().alpha(0f)
-                            .setDuration(1200).setInterpolator(new CycleInterpolator(1));
-                    closeCamera();
-                    openCamera();
-
-                    button1.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.purple_200)
-                            , PorterDuff.Mode.MULTIPLY);
-                } else if (ASPECT_RATIO_169) {
-                    ASPECT_RATIO_43 = true;
-                    ASPECT_RATIO_169 = false;
-
-                    tvPreview.animate().alpha(0f)
-                            .setDuration(1200).setInterpolator(new CycleInterpolator(1));
-                    closeCamera();
-                    tvPreview.measure(imageSize.getHeight(),imageSize.getWidth());
-                    openCamera();
-
-                    button1.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.white)
-                            , PorterDuff.Mode.MULTIPLY);
-                }
             }
         });
 
@@ -501,6 +477,37 @@ public class CameraActivity extends AppCompatActivity {
                     }
                 }
                 Log.e(TAG, "onClick: flash : "+mflash);
+            }
+        });
+
+        button23.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                button1.setColorFilter(Color.WHITE);
+                if (ASPECT_RATIO_43) {
+                    ASPECT_RATIO_169 = true;
+                    ASPECT_RATIO_43 = false;
+
+                    tvPreview.animate().alpha(0f)
+                            .setDuration(1200).setInterpolator(new CycleInterpolator(1));
+                    closeCamera();
+                    openCamera();
+
+                    button23.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.purple_200)
+                            , PorterDuff.Mode.MULTIPLY);
+                } else if (ASPECT_RATIO_169) {
+                    ASPECT_RATIO_43 = true;
+                    ASPECT_RATIO_169 = false;
+
+                    tvPreview.animate().alpha(0f)
+                            .setDuration(1200).setInterpolator(new CycleInterpolator(1));
+                    closeCamera();
+                    tvPreview.measure(imageSize.getHeight(),imageSize.getWidth());
+                    openCamera();
+
+                    button23.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.white)
+                            , PorterDuff.Mode.MULTIPLY);
+                }
             }
         });
 
@@ -857,7 +864,6 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     private void modifyMenuForVideo(){
-        btn_grid1.findViewById(R.id.btn_1).setVisibility(View.GONE);
         btn_grid1.findViewById(R.id.btn_3).setVisibility(View.GONE);
         btn_grid2.findViewById(R.id.btn_21).setVisibility(View.GONE);
         btn_grid2.findViewById(R.id.btn_22).setVisibility(View.GONE);
@@ -873,7 +879,6 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     private void modifyMenuForPhoto(){
-        btn_grid1.findViewById(R.id.btn_1).setVisibility(View.VISIBLE);
         btn_grid1.findViewById(R.id.btn_3).setVisibility(View.VISIBLE);
         btn_grid2.findViewById(R.id.btn_21).setVisibility(View.VISIBLE);
         btn_grid2.findViewById(R.id.btn_22).setVisibility(View.VISIBLE);

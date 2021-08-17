@@ -17,7 +17,7 @@
             android:background="#00000000"
             android:padding="3dp"
             android:scaleType="fitCenter"
-            android:src="@drawable/ic_aspect_ratio" />
+            android:src="@drawable/ic_timer_btn" />
         <ImageButton
             android:id="@+id/btn_2"
             android:layout_width="30dp"
@@ -111,7 +111,7 @@
             android:padding="3dp"
             android:scaleType="fitCenter"
             android:layout_gravity="center_vertical"
-            android:src="@drawable/ic_timer_btn" />
+            android:src="@drawable/ic_aspect_ratio" />
 
         <ImageButton
             android:id="@+id/btn_24"
