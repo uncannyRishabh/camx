@@ -148,6 +148,14 @@ public class LensData {
     }
 
     /**
+     * Returns true if given camera id has HSV capabilities
+     */
+    public boolean hasSloMoCapabilities(String id){
+        capabilities = getCameraCharacteristics(id).get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
+        return findHSVCapability(capabilities);
+    }
+
+    /**
      * Use preference key to save modes.
      */
     public String[] getAvailableModes(String id){
@@ -347,10 +355,18 @@ public class LensData {
                     map.getHighResolutionOutputSizes(ImageFormat.JPEG) :
                     map.getHighResolutionOutputSizes(ImageFormat.RAW_SENSOR));
             if (sizes.length > 0) {
-                isBayer = true;
-                ArrayList<Size> sizeArrayList = new ArrayList<>(Arrays.asList(sizes));
-                bayerPhotoSize = Collections.max(sizeArrayList, new CompareSizeByArea());
-                Log.e(TAG, "BayerCheck: BAYER SENSOR SIZE : " + bayerPhotoSize);
+                for(Size size1 : sizes) {
+                    if (size1.getWidth() * size1.getHeight() > 17000000){
+                        isBayer = true;
+                        ArrayList<Size> sizeArrayList = new ArrayList<>(Arrays.asList(sizes));
+                        bayerPhotoSize = Collections.max(sizeArrayList, new CompareSizeByArea());
+                    }
+                    else{
+                        isBayer = false;
+                        Log.e(TAG, "BayerCheck: NOT BAYER : ID : " + id);
+                    }
+                }
+                Log.e(TAG, "BayerCheck: BAYER SENSOR SIZE : "+id+" size : "+ bayerPhotoSize);
             }
             else {
                 isBayer = false;
@@ -366,7 +382,7 @@ public class LensData {
                 if(size1.getWidth()*size1.getHeight() > 17000000){
                     isBayer = true;
                     bayerPhotoSize = size1;
-                    Log.e(TAG, "performBayerCheck: "+bayerPhotoSize);
+                    Log.e(TAG, "performBayerCheck: ID : "+id+" size : "+bayerPhotoSize);
                 }
                 else{
                     isBayer = false;

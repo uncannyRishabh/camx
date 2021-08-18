@@ -645,6 +645,9 @@ public class CameraActivity extends AppCompatActivity {
                     closeCamera();
                     setCameraId(camID[0]);
                     openCamera();
+                    if(state==CamState.VIDEO) addCapableVideoResolutions();
+                    else if(state==CamState.SLOMO) addCapableSloMoResolutions();
+
                     for(int id : auxCameraList){
                         auxDock.findViewById(id).setBackground(null);
                     }
@@ -752,6 +755,7 @@ public class CameraActivity extends AppCompatActivity {
         openCamera();
         new Handler(Looper.myLooper()).post(getSensorSize);
         modifyMenuForPhoto();
+        if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
     }
 
     public void modeVideo(){
@@ -760,6 +764,7 @@ public class CameraActivity extends AppCompatActivity {
         requestVideoPermissions();
         createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
         modifyMenuForVideo();
+        if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
     }
 
     public void modeSloMo(){
@@ -778,28 +783,34 @@ public class CameraActivity extends AppCompatActivity {
         createSloMoePreview();
         shutter.animateInnerCircle(state);
         modifyMenuForVideo();
+        front_switch.setVisibility(lensData.hasSloMoCapabilities("1") ? View.VISIBLE : View.INVISIBLE);
     }
 
     public void modeTimeWarp(){
         modifyMenuForVideo();
+        if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
     }
 
     public void modeHiRes(){
         if(lensData.isBayerAvailable(getCameraId()))
             Log.e(TAG, "modeHiRes: "+lensData.getBayerLensSize());
         modifyMenuForPhoto();
+        if(!lensData.isBayerAvailable("1")){
+            front_switch.setVisibility(View.INVISIBLE);
+        }
     }
 
     public void modePortrait(){
         modifyMenuForPhoto();
+        if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
     }
 
     public void modeNight(){
-
+        if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
     }
 
     public void modePro(){
-
+        front_switch.setVisibility(lensData.hasCamera2api() ? View.VISIBLE : View.INVISIBLE);
     }
 
 
@@ -1814,6 +1825,8 @@ public class CameraActivity extends AppCompatActivity {
                         closeCamera();
                         setCameraId(aux_btn.getId()+"");
                         openCamera();
+                        if(state == CamState.VIDEO) addCapableVideoResolutions();
+                        else if(state == CamState.SLOMO) addCapableSloMoResolutions();
 
                         wide_lens.setBackground(null);
                         for(int id : auxCameraList){

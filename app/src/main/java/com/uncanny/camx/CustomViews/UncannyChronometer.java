@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 public class UncannyChronometer extends View {
     private RectF rectF;
     private Paint paint,tPaint;
-    private String drawTime="00:00:00";
+    private String drawTime="00:00";
     private long inputTimeInMillis;
     private long pauseDuration;
     private boolean isRunning = false;
@@ -75,7 +75,7 @@ public class UncannyChronometer extends View {
         tPaint.setColor(Color.WHITE);
         tPaint.setTextAlign(Paint.Align.CENTER);
         tPaint.setAntiAlias(true);
-        tPaint.setTextSize(36f);
+        tPaint.setTextSize(38f);
     }
 
     private void updateDrawText(){
@@ -89,7 +89,7 @@ public class UncannyChronometer extends View {
         mMinutes = (minutes>60 ? (minutes%60<10 ? "0"+minutes%60:minutes%60+"" ) : (minutes<10 ? "0"+minutes: minutes+""));
         mHours   = (hours>60   ? (hours%60<10 ? "0"+hours%60:hours%60+"" )       : (hours<10   ? "0"+hours: hours+""));
 
-        drawTime = mHours+":"+mMinutes+":"+mSeconds;
+        drawTime = (hours>0 ? mHours+":" : "" )+mMinutes+":"+mSeconds;
         this.invalidate();
     }
 
