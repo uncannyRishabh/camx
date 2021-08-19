@@ -1329,7 +1329,7 @@ public class CameraActivity extends AppCompatActivity {
 
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         imageSize = getPreviewResolution(map.getOutputSizes(ImageFormat.JPEG)
-                ,tvPreview.getHeight(),tvPreview.getWidth(),ASPECT_RATIO_43);
+                ,tvPreview.getWidth(),ASPECT_RATIO_43);
 
         tvPreview.measure(imageSize.getHeight(),imageSize.getWidth());
         stPreview.setDefaultBufferSize(imageSize.getWidth(),imageSize.getHeight());
@@ -1416,7 +1416,9 @@ public class CameraActivity extends AppCompatActivity {
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         Log.e(TAG, "createVideoPreview: "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
 
-        mVideoSize = getPreviewResolution(map.getOutputSizes(MediaRecorder.class),height,width,false);
+        mVideoSize = getPreviewResolution(map.getOutputSizes(MediaRecorder.class),
+                (lensData.is1080pCapable(getCameraId()) ? 1080 : 720),false);
+
         snapshotImageReader = ImageReader.newInstance(width,height,ImageFormat.JPEG,10);
         snapshotImageReader.setOnImageAvailableListener(videoSnapshotCallback,mBackgroundHandler);
 
@@ -1492,17 +1494,18 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
-    private Size getPreviewResolution(Size[] outputSizes, int height, int width, boolean aspectRatio43) {
+    private Size getPreviewResolution(Size[] outputSizes, int resolution, boolean aspectRatio43) {
         ArrayList<Size> sizeArrayList = new ArrayList<>();
         for(Size size : outputSizes){
             float ar = (float) size.getWidth()/ size.getHeight();
+            Log.e(TAG, "getPreviewResolution: h:"+size.getHeight()+"  w: "+size.getWidth()+" ratio: "+ar);
             if(aspectRatio43) {
-                if (size.getHeight() == width && ar > 1.2f) {
+                if (size.getHeight() == resolution && ar > 1.2f) {
                     sizeArrayList.add(size);
                 }
             }
             else {
-                if (size.getHeight() == width && ar > 1.6f) {
+                if (size.getHeight() == resolution && ar > 1.6f) {
                     sizeArrayList.add(size);
                 }
             }
@@ -1510,7 +1513,10 @@ public class CameraActivity extends AppCompatActivity {
         if(sizeArrayList.size() > 0){
             return Collections.min(sizeArrayList,new CompareSizeByArea());
         }
-        else return outputSizes[0];
+        else{
+            Log.e(TAG, "getPreviewResolution: OTHER WAY ROUND");
+            return outputSizes[0];
+        }
     }
 
     private void setupMediaRecorder(CamcorderProfile camcorderProfile) throws IOException {
@@ -1537,7 +1543,7 @@ public class CameraActivity extends AppCompatActivity {
         else {
             mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//"+mVideoFileName);
         }
-        mMediaRecorder.prepare();
+        mMediaRecorder.prepare();           //FIXME : prepare fails on emulator(sdk24)
     }
 
     /**
@@ -1777,7 +1783,8 @@ public class CameraActivity extends AppCompatActivity {
             resolutionSelector.addItem("4K");
         if(lensData.is8kCapable(getCameraId()))
             resolutionSelector.addItem("8K");
-        resolutionSelector.setSelectedItem("FHD");
+
+        resolutionSelector.setSelectedItem(lensData.is1080pCapable(getCameraId()) ? "FHD":"HD");
     }
 
     private void addCapableSloMoResolutions(){
@@ -1792,6 +1799,7 @@ public class CameraActivity extends AppCompatActivity {
             }
         }
         resolutionSelector.addItem(sList);
+        resolutionSelector.setSelectedItem(sloMoe.first.getHeight()+"p@"+sloMoe.second.getUpper());
     }
 
     public String getCameraId() {

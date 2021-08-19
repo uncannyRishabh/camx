@@ -338,6 +338,7 @@ public class LensData {
         return isBayer;
     }
 
+
     /**
      * Returns the highest resolution a camera lens can capture image at.
      * [NOTE : first check if Bayer is available by calling {@link LensData#isBayerAvailable(String)}]
@@ -350,7 +351,8 @@ public class LensData {
         StreamConfigurationMap map = getCameraCharacteristics(id)
                 .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         Size[] sizes;
-        if (map.getHighResolutionOutputSizes(ImageFormat.JPEG).length !=0 ) {
+        if (map.getHighResolutionOutputSizes(ImageFormat.JPEG)!=null &&
+                map.getHighResolutionOutputSizes(ImageFormat.JPEG).length !=0 ) {
             sizes = (map.getHighResolutionOutputSizes(ImageFormat.JPEG).length > 0 ?
                     map.getHighResolutionOutputSizes(ImageFormat.JPEG) :
                     map.getHighResolutionOutputSizes(ImageFormat.RAW_SENSOR));
