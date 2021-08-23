@@ -29,17 +29,23 @@ An Open Source android camera with ability to utilize auxiliary cameras to its e
 For queries,contribution,bug fixes... [contact](mailto:rishabhrajgupta2000@gmail.com).
 ✌😉
 
-<h2>Screenshots</h2> <br /><br />
+<h2>Preview</h2> <br /><br />
 
-<img src="https://imgur.com/gallery/j2BTFfl" width="100" height="220" />
+<p align="center">
+  <img align="center" src="https://github.com/uncannyRishabh/camx/blob/master/screenshots/preview_compressed.gif"/>
+</p>
 
-![app preview](https://imgur.com/gallery/j2BTFfl) <br /><br />
 
-![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss1.jpg) <br /><br />
+<h2>Libraries Used</h2>
+
+* [MaterialComponents](https://github.com/material-components/material-components-android)
+* [HorizontalPicker](https://github.com/blazsolar/HorizontalPicker)
+
+<!-- ![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss1.jpg) <br /><br />
 ![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss2.jpg) <br /><br />
 ![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss3.jpg) <br /><br />
 ![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss4.jpg) <br /><br />
-![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss5.jpg) <br /><br />
+![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss5.jpg) <br /><br /> -->
 
 <h2>Try Out</h2>
 
