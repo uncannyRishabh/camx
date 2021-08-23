@@ -31,6 +31,10 @@ For queries,contribution,bug fixes... [contact](mailto:rishabhrajgupta2000@gmail
 
 <h2>Screenshots</h2> <br /><br />
 
+<img src="https://github.com/uncannyRishabh/camx/blob/master/screenshots/app%20preview.gif" width="100" height="220" />
+
+![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/app%20preview.gif) <br /><br />
+
 ![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss1.jpg) <br /><br />
 ![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss2.jpg) <br /><br />
 ![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss3.jpg) <br /><br />
