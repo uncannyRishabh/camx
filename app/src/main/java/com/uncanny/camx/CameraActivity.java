@@ -580,7 +580,8 @@ public class CameraActivity extends AppCompatActivity {
                             mMediaRecorder.stop(); //TODO: handle stop before preview is generated
                             mMediaRecorder.reset();
                             state = CamState.VIDEO;
-                            createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
+                            createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId())
+                                    ? 1080 : tvPreview.getWidth()));
 //                            Intent mediaStoreUpdateIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
 
                             //restore UI state
@@ -762,7 +763,7 @@ public class CameraActivity extends AppCompatActivity {
         lensData.getFpsResolutionPair_video(getCameraId());
         shutter.animateInnerCircle(state);
         requestVideoPermissions();
-        createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
+        createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId()) ? 1080 : tvPreview.getWidth()));
         modifyMenuForVideo();
         if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
     }
@@ -1416,8 +1417,7 @@ public class CameraActivity extends AppCompatActivity {
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         Log.e(TAG, "createVideoPreview: "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
 
-        mVideoSize = getPreviewResolution(map.getOutputSizes(MediaRecorder.class),
-                (lensData.is1080pCapable(getCameraId()) ? 1080 : 720),false);
+        mVideoSize = getPreviewResolution(map.getOutputSizes(MediaRecorder.class),width,false);
 
         snapshotImageReader = ImageReader.newInstance(width,height,ImageFormat.JPEG,10);
         snapshotImageReader.setOnImageAvailableListener(videoSnapshotCallback,mBackgroundHandler);
@@ -1498,7 +1498,7 @@ public class CameraActivity extends AppCompatActivity {
         ArrayList<Size> sizeArrayList = new ArrayList<>();
         for(Size size : outputSizes){
             float ar = (float) size.getWidth()/ size.getHeight();
-            Log.e(TAG, "getPreviewResolution: h:"+size.getHeight()+"  w: "+size.getWidth()+" ratio: "+ar);
+//            Log.e(TAG, "getPreviewResolution: h:"+size.getHeight()+"  w: "+size.getWidth()+" ratio: "+ar);
             if(aspectRatio43) {
                 if (size.getHeight() == resolution && ar > 1.2f) {
                     sizeArrayList.add(size);
@@ -1514,7 +1514,7 @@ public class CameraActivity extends AppCompatActivity {
             return Collections.min(sizeArrayList,new CompareSizeByArea());
         }
         else{
-            Log.e(TAG, "getPreviewResolution: OTHER WAY ROUND");
+//            Log.e(TAG, "getPreviewResolution: OTHER WAY ROUND");
             return outputSizes[0];
         }
     }
@@ -1951,6 +1951,7 @@ public class CameraActivity extends AppCompatActivity {
     private void update_chip_text(String size,String fps){
         chip_Text = size+"p@"+fps+"fps";
         vi_info.setText(chip_Text);
+        Log.e(TAG, "update_chip_text: CHIP UPDATED | "+chip_Text);
     }
 
     private void requestVideoPermissions() {
@@ -2030,7 +2031,8 @@ public class CameraActivity extends AppCompatActivity {
             camDevice = cameraDevice;
             try {
                 if(state == CamState.VIDEO){
-                    createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
+                    createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId())
+                            ? 1080 : tvPreview.getWidth()));
                     return;
                 }
                 if(state == CamState.SLOMO){
@@ -2152,7 +2154,8 @@ public class CameraActivity extends AppCompatActivity {
         if(state == CamState.CAMERA)
             openCamera();
         else if(state == CamState.VIDEO){
-            createVideoPreview(tvPreview.getHeight(),tvPreview.getWidth());
+            createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId()) ? 1080
+                    : tvPreview.getWidth()));
         }
     }
 
