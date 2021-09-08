@@ -31,6 +31,7 @@ public class LensData {
     Context activity;
     CameraCharacteristics characteristics;
     int[] capabilities;
+    Size imageSize;
     CameraManager cameraManager;
     List<Integer> physicalCameras = new ArrayList<>();
     List<Integer> logicalCameras  = new ArrayList<>();
@@ -338,13 +339,28 @@ public class LensData {
         return isBayer;
     }
 
-
     /**
      * Returns the highest resolution a camera lens can capture image at.
      * [NOTE : first check if Bayer is available by calling {@link LensData#isBayerAvailable(String)}]
      */
     public Size getBayerLensSize(){
         return bayerPhotoSize;
+    }
+
+    public Size getHighestResolution(String id){
+        ArrayList<Size> sizeArrayList = new ArrayList<>();
+        ArrayList<Integer> image_formats = new ArrayList<>();
+        image_formats.add(ImageFormat.JPEG);
+        image_formats.add(ImageFormat.RAW_SENSOR);
+        for(Integer i:image_formats){
+            sizeArrayList.addAll(Arrays.asList(getStreamConfigMap(id).getOutputSizes(i)));
+            sizeArrayList.addAll(Arrays.asList(getStreamConfigMap(id).getHighResolutionOutputSizes(i)));
+        }
+        if(isBayerAvailable(id)) sizeArrayList.remove(bayerPhotoSize);
+
+        imageSize = Collections.max(sizeArrayList, new CompareSizeByArea());
+        Log.e(TAG, "getHighestResolution: id : "+id + " size : "+imageSize);
+        return imageSize;
     }
 
     private void performBayerCheck(String id) {

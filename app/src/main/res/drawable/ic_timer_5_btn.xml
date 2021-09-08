@@ -1,25 +1,49 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="77.537dp"
-    android:height="82dp"
     android:viewportWidth="77.537"
-    android:viewportHeight="82">
-  <path
-      android:pathData="M35,47m-31,0a31,31 0,1 1,62 0a31,31 0,1 1,-62 0"
-      android:strokeLineJoin="round"
-      android:strokeWidth="8"
-      android:fillColor="#00000000"
-      android:strokeColor="#fff"
-      android:strokeLineCap="round"/>
-  <path
-      android:pathData="M18.344,4.5L51.657,4.5"
-      android:strokeWidth="9"
-      android:fillColor="#00000000"
-      android:strokeColor="#fff"
-      android:strokeLineCap="round"/>
-  <path
-      android:pathData="M65.5,31.5L71.5,28.5"
-      android:strokeWidth="9"
-      android:fillColor="#00000000"
-      android:strokeColor="#fff"
-      android:strokeLineCap="round"/>
+    android:viewportHeight="82"
+    android:width="77.537dp"
+    android:height="82dp">
+  <group
+      android:translateY="4.5">
+    <group
+        android:translateY="7.5">
+      <path
+          android:pathData="M66 35A31 31 0 0 1 4 35A31 31 0 0 1 66 35Z"
+          android:strokeColor="#FFFFFF"
+          android:strokeWidth="8"
+          android:strokeLineCap="round"
+          android:strokeLineJoin="round" />
+    </group>
+    <group
+        android:translateX="18.344">
+      <path
+          android:pathData="M0 0L33.313 0"
+          android:strokeColor="#FFFFFF"
+          android:strokeWidth="9"
+          android:strokeLineCap="round" />
+    </group>
+    <group
+        android:translateX="65.5"
+        android:translateY="24">
+      <path
+          android:pathData="M0 3L6 0"
+          android:strokeColor="#FFFFFF"
+          android:strokeWidth="9"
+          android:strokeLineCap="round" />
+    </group>
+    <group
+        android:translateX="25.5"
+        android:translateY="52.2">
+      <path
+          android:pathData="M7.814941 -12.63281L7.814941 -12.63281Q11.55322 -12.63281 13.38208 -11.10205Q15.21094 -9.571289 15.21094 -6.429199L15.21094 -6.429199Q15.21094 -3.174316 13.229 -1.426025Q11.24707 0.3222656 7.557129 0.3222656L7.557129 0.3222656Q4.495605 0.3222656 2.094727 -0.3706055L2.094727 -0.3706055L1.91748 -4.914551L2.980957 -4.914551L3.706055 -1.885254Q4.415039 -1.498535 5.406006 -1.256836Q6.396973 -1.015137 7.299316 -1.015137L7.299316 -1.015137Q9.845215 -1.015137 11.04565 -2.215576Q12.24609 -3.416016 12.24609 -6.268066L12.24609 -6.268066Q12.24609 -8.266113 11.73047 -9.289307Q11.21484 -10.3125 10.08691 -10.7959Q8.958984 -11.2793 7.057617 -11.2793L7.057617 -11.2793Q5.591309 -11.2793 4.189453 -10.89258L4.189453 -10.89258L2.642578 -10.89258L2.642578 -21.60791L13.59961 -21.60791L13.59961 -19.14258L4.092773 -19.14258L4.092773 -12.24609Q5.833008 -12.63281 7.814941 -12.63281Z"
+          android:fillColor="#FFFFFF"
+          android:strokeColor="#FFFFFF"
+          android:strokeWidth="2.5"
+          android:strokeLineCap="round"
+          android:strokeLineJoin="round" />
+
+    </group>
+  </group>
 </vector>
+
+

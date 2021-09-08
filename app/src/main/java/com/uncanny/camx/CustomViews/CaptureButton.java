@@ -76,6 +76,7 @@ public class CaptureButton extends View {
         mState = state;
         switch (state){
             case CAMERA:
+            case HIRES:
                 icRadius = screenWidth/12f;
                 nPaint.setStyle(Paint.Style.STROKE);
                 paint.setColor(Color.WHITE);
@@ -141,6 +142,7 @@ public class CaptureButton extends View {
         canvas.drawCircle(cx,cy,cy-10, nPaint); //OUTER CIRCLE
         switch(mState){
             case CAMERA:
+            case HIRES:
                 canvas.drawCircle(cx, cy, icRadius, paint); //INNER CIRCLE
                 break;
             case VIDEO:
