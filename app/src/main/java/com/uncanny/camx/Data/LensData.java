@@ -31,7 +31,7 @@ public class LensData {
     Context activity;
     CameraCharacteristics characteristics;
     int[] capabilities;
-    Size imageSize;
+    Size imageSize,imageSize169;
     CameraManager cameraManager;
     List<Integer> physicalCameras = new ArrayList<>();
     List<Integer> logicalCameras  = new ArrayList<>();
@@ -363,6 +363,24 @@ public class LensData {
         return imageSize;
     }
 
+    public Size getHighestResolution169(String id){
+        ArrayList<Size> sizeArrayList = new ArrayList<>();
+        ArrayList<Integer> image_formats = new ArrayList<>();
+        image_formats.add(ImageFormat.JPEG);
+        image_formats.add(ImageFormat.RAW_SENSOR);
+        for(Integer i:image_formats){
+            for(Size size : getStreamConfigMap(id).getOutputSizes(i)){
+                float ar = (float) size.getWidth()/ size.getHeight();
+                if(ar > 1.6f && ar < 1.8f){
+                    sizeArrayList.add(size);
+                }
+            }
+        }
+        Log.e(TAG, "getHighestResolution169: "+sizeArrayList);
+        imageSize169 = Collections.max(sizeArrayList, new CompareSizeByArea());
+        return imageSize169;
+    }
+
     private void performBayerCheck(String id) {
         StreamConfigurationMap map = getCameraCharacteristics(id)
                 .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
@@ -381,14 +399,14 @@ public class LensData {
                     }
                     else{
                         isBayer = false;
-                        Log.e(TAG, "BayerCheck: NOT BAYER : ID : " + id);
+//                        Log.e(TAG, "BayerCheck: NOT BAYER : ID : " + id);
                     }
                 }
-                Log.e(TAG, "BayerCheck: BAYER SENSOR SIZE : "+id+" size : "+ bayerPhotoSize);
+//                Log.e(TAG, "BayerCheck: BAYER SENSOR SIZE : "+id+" size : "+ bayerPhotoSize);
             }
             else {
                 isBayer = false;
-                Log.e(TAG, "BayerCheck: NOT BAYER : ID : " + id);
+//                Log.e(TAG, "BayerCheck: NOT BAYER : ID : " + id);
             }
         }
         else{
@@ -400,11 +418,11 @@ public class LensData {
                 if(size1.getWidth()*size1.getHeight() > 17000000){
                     isBayer = true;
                     bayerPhotoSize = size1;
-                    Log.e(TAG, "performBayerCheck: ID : "+id+" size : "+bayerPhotoSize);
+//                    Log.e(TAG, "performBayerCheck: ID : "+id+" size : "+bayerPhotoSize);
                 }
                 else{
                     isBayer = false;
-                    Log.e(TAG, "BayerCheck: NOT BAYER(2) : ID : " + id);
+//                    Log.e(TAG, "BayerCheck: NOT BAYER(2) : ID : " + id);
                 }
 
             }

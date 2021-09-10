@@ -294,17 +294,16 @@ public class CameraActivity extends AppCompatActivity {
         auxDock = findViewById(R.id.aux_cam_switch);
 
         setAestheticLayout();
-//        new Handler(Looper.myLooper()).post(getSensorSize);
+
+        lensData = new LensData(getApplicationContext());
+        cameraList =  lensData.getPhysicalCameras();
+        auxCameraList = lensData.getAuxiliaryCameras();
 
         modeMap.put(0,0);
         modeMap.put(1,1);
 
         cachedScreenWidth  = getScreenWidth();
         cachedScreenHeight = getScreenHeight();
-
-        lensData = new LensData(getApplicationContext());
-        cameraList =  lensData.getPhysicalCameras();
-        auxCameraList = lensData.getAuxiliaryCameras();
 
         addAuxButtons();
 
@@ -605,7 +604,7 @@ public class CameraActivity extends AppCompatActivity {
                             mMediaRecorder.reset();
                             setState(CamState.VIDEO);
                             createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId())
-                                    ? 1080 : tvPreview.getWidth()));
+                                    ? 1080 : 720));
 //                            Intent mediaStoreUpdateIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
 
                             //restore UI state
@@ -787,7 +786,7 @@ public class CameraActivity extends AppCompatActivity {
         lensData.getFpsResolutionPair_video(getCameraId());
         shutter.animateInnerCircle(getState());
         requestVideoPermissions();
-        createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId()) ? 1080 : tvPreview.getWidth()));
+        createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId()) ? 1080 : 720));
         modifyMenuForVideo();
         if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
     }
@@ -1356,7 +1355,8 @@ public class CameraActivity extends AppCompatActivity {
             return;
 
         if(getState() == CamState.CAMERA){
-            imageSize = lensData.getHighestResolution(getCameraId());
+            imageSize = (ASPECT_RATIO_43 ? lensData.getHighestResolution(getCameraId()) :
+                    lensData.getHighestResolution169(getCameraId()));
         }
         else if(getState() == CamState.HIRES){
             imageSize = lensData.getBayerLensSize();
@@ -1364,7 +1364,8 @@ public class CameraActivity extends AppCompatActivity {
 
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         previewSize = getPreviewResolution(map.getOutputSizes(ImageFormat.JPEG)
-                ,tvPreview.getWidth(),ASPECT_RATIO_43);
+                ,(lensData.is1080pCapable(getCameraId())
+                        ? 1080 : 720),ASPECT_RATIO_43);
 
         tvPreview.measure(previewSize.getHeight(), previewSize.getWidth());
         stPreview.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
@@ -1375,7 +1376,8 @@ public class CameraActivity extends AppCompatActivity {
         imgReader = ImageReader.newInstance(imageSize.getWidth(), imageSize.getHeight(), ImageFormat.JPEG, 5);
         imgReader.setOnImageAvailableListener(snapshotImageCallback, mBackgroundHandler);
         surfaceList.add(imgReader.getSurface());
-        Log.e(TAG, "openCamera: snapshot into ImageReader at " + previewSize.getWidth() + "x" + previewSize.getHeight());
+        Log.e(TAG, "openCamera: ImageReader preview size " + previewSize.getWidth() + "x" + previewSize.getHeight());
+        Log.e(TAG, "openCamera: ImageReader capture size " + imageSize.getWidth() + "x" + imageSize.getHeight());
 
         try {
             if (ActivityCompat.checkSelfPermission(CameraActivity.this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -1529,13 +1531,14 @@ public class CameraActivity extends AppCompatActivity {
         ArrayList<Size> sizeArrayList = new ArrayList<>();
         for(Size size : outputSizes){
             float ar = (float) size.getWidth()/ size.getHeight();
-//            Log.e(TAG, "getPreviewResolution: h:"+size.getHeight()+"  w: "+size.getWidth()+" ratio: "+ar);
             if(aspectRatio43) {
+                Log.e(TAG, "getPreviewResolution: AR43 resolution : "+resolution);
                 if (size.getHeight() == resolution && ar > 1.2f) {
                     sizeArrayList.add(size);
                 }
             }
             else {
+                Log.e(TAG, "getPreviewResolution: AR169 resolution : "+resolution);
                 if (size.getHeight() == resolution && ar > 1.6f) {
                     sizeArrayList.add(size);
                 }
@@ -1981,7 +1984,7 @@ public class CameraActivity extends AppCompatActivity {
             try {
                 if(getState() == CamState.VIDEO){
                     createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId())
-                            ? 1080 : tvPreview.getWidth()));
+                            ? 1080 : 720));
                     return;
                 }
                 if(getState() == CamState.SLOMO){
@@ -2104,7 +2107,7 @@ public class CameraActivity extends AppCompatActivity {
             openCamera();
         else if(getState() == CamState.VIDEO){
             createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId()) ? 1080
-                    : tvPreview.getWidth()));
+                    : 720));
         }
     }
 

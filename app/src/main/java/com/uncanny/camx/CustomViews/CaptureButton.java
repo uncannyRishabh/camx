@@ -26,10 +26,9 @@ public class CaptureButton extends View {
     private Paint paint, nPaint, mPaint;
     private int cx,cy,screenWidth;
     private final int RECT_PADDING = 72;
+
     private float icRadius;
     private CamState mState;
-    private boolean drawSquare=false;
-    private boolean drawSlomo=false;
 
     public CaptureButton(Context context) {
         super(context);
