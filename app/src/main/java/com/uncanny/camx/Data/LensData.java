@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class LensData {
     private static final String TAG = "LensData";
@@ -188,6 +189,7 @@ public class LensData {
      */
     public ArrayList<Pair<Size, Range<Integer>>> getFpsResolutionPair(String id){
         StreamConfigurationMap map = getStreamConfigMap(id);
+        fpsResolutionPair.clear();
         for(Range<Integer> range : map.getHighSpeedVideoFpsRanges()){
             if(range.getLower().equals(range.getUpper())) {
                 for (Size size : map.getHighSpeedVideoSizesFor(range)) {
@@ -353,13 +355,16 @@ public class LensData {
         image_formats.add(ImageFormat.JPEG);
         image_formats.add(ImageFormat.RAW_SENSOR);
         for(Integer i:image_formats){
-            sizeArrayList.addAll(Arrays.asList(getStreamConfigMap(id).getOutputSizes(i)));
-            sizeArrayList.addAll(Arrays.asList(getStreamConfigMap(id).getHighResolutionOutputSizes(i)));
+            if(!Objects.equals(getStreamConfigMap(id).getOutputSizes(i),null)){
+                sizeArrayList.addAll(Arrays.asList(getStreamConfigMap(id).getOutputSizes(i)));
+            }
+            if(!Objects.equals(getStreamConfigMap(id).getHighResolutionOutputSizes(i),null)){
+                sizeArrayList.addAll(Arrays.asList(getStreamConfigMap(id).getHighResolutionOutputSizes(i)));
+            }
         }
         if(isBayerAvailable(id)) sizeArrayList.remove(bayerPhotoSize);
 
         imageSize = Collections.max(sizeArrayList, new CompareSizeByArea());
-        Log.e(TAG, "getHighestResolution: id : "+id + " size : "+imageSize);
         return imageSize;
     }
 
@@ -376,7 +381,6 @@ public class LensData {
                 }
             }
         }
-        Log.e(TAG, "getHighestResolution169: "+sizeArrayList);
         imageSize169 = Collections.max(sizeArrayList, new CompareSizeByArea());
         return imageSize169;
     }
@@ -392,7 +396,7 @@ public class LensData {
                     map.getHighResolutionOutputSizes(ImageFormat.RAW_SENSOR));
             if (sizes.length > 0) {
                 for(Size size1 : sizes) {
-                    if (size1.getWidth() * size1.getHeight() > 17000000){
+                    if (size1.getWidth() * size1.getHeight() > 21000000){
                         isBayer = true;
                         ArrayList<Size> sizeArrayList = new ArrayList<>(Arrays.asList(sizes));
                         bayerPhotoSize = Collections.max(sizeArrayList, new CompareSizeByArea());

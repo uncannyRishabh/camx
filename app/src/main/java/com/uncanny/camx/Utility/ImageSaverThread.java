@@ -2,11 +2,18 @@ package com.uncanny.camx.Utility;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.Image;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.renderscript.Allocation;
+import android.renderscript.RenderScript;
+
+import com.uncanny.camx.ScriptC_filter;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -26,10 +33,24 @@ public class ImageSaverThread implements Runnable {
     private Uri uri;
     Path jpgPath;
 
+    private RenderScript rs;
+    private Allocation allocIn,allocOut;
+    private Bitmap op;
+    private ScriptC_filter filter;
+
     public ImageSaverThread(Image image, String cameraId, ContentResolver contentResolver) {
         this.mImage = image;
         this.cameraId = cameraId;
         this.contentResolver = contentResolver;
+    }
+
+    public ImageSaverThread(Context context, Image image, String cameraId, ContentResolver contentResolver) {
+        this.mImage = image;
+        this.cameraId = cameraId;
+        this.contentResolver = contentResolver;
+
+        rs = RenderScript.create(context);
+        filter = new ScriptC_filter(rs);
     }
 
     @Override
@@ -69,18 +90,19 @@ public class ImageSaverThread implements Runnable {
         try {
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 OutputStream outputStream = contentResolver.openOutputStream(uri);
+//                applyfilter(bytes).compress(Bitmap.CompressFormat.JPEG,100,outputStream);
+//                BitmapFactory.decodeByteArray(bytes,0,bytes.length)
+//                        .compress(Bitmap.CompressFormat.JPEG,100,outputStream);
                 outputStream.write(bytes);
                 outputStream.close();
             }
             else {
-                if (Build.VERSION.SDK_INT >=Build.VERSION_CODES.N){
-                    try{
-                        FileOutputStream fos = new FileOutputStream(img);
-                        fos.write(bytes);
-                        fos.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                try{
+                    FileOutputStream fos = new FileOutputStream(img);
+                    fos.write(bytes);
+                    fos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         } catch (IOException e) {
@@ -89,6 +111,19 @@ public class ImageSaverThread implements Runnable {
         finally {
             mImage.close();
         }
+    }
+
+    private Bitmap applyfilter(byte[] bytes) {
+        //add allocation hacks
+        Bitmap in = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+
+        allocIn = Allocation.createFromBitmap(rs,in);
+        allocOut = Allocation.createFromBitmap(rs,in);
+        op = Bitmap.createBitmap(in.getWidth(),in.getHeight(),in.getConfig());
+        allocIn.copyFrom(in);
+        filter.forEach_root(allocIn,allocOut);
+        allocOut.copyTo(op);
+        return op;
     }
 
 }

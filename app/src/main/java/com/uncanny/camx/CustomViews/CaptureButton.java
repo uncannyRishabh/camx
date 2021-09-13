@@ -6,7 +6,9 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.CornerPathEffect;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
@@ -23,7 +25,7 @@ import com.uncanny.camx.CameraActivity.CamState;
 
 public class CaptureButton extends View {
     private RectF rectF;
-    private Paint paint, nPaint, mPaint;
+    private Paint paint, nPaint, mPaint, tPaint;
     private int cx,cy,screenWidth;
     private final int RECT_PADDING = 72;
 
@@ -50,6 +52,7 @@ public class CaptureButton extends View {
         paint = new Paint();
         nPaint = new Paint();
         mPaint = new Paint();
+        tPaint = new Paint();
 
         paint.setColor(Color.WHITE);
         paint.setAntiAlias(true);
@@ -65,6 +68,14 @@ public class CaptureButton extends View {
         mPaint.setAntiAlias(true);
         mPaint.setStrokeWidth(10f);
         mPaint.setStyle(Paint.Style.FILL_AND_STROKE);
+
+        tPaint.setColor(Color.RED);
+        tPaint.setAntiAlias(true);
+        tPaint.setStrokeWidth(2f);
+        tPaint.setStrokeJoin(Paint.Join.ROUND);
+        tPaint.setStrokeCap(Paint.Cap.ROUND);
+
+        tPaint.setStyle(Paint.Style.FILL_AND_STROKE);
 
         screenWidth = getScreenWidth();
         icRadius = screenWidth/12f;
@@ -90,8 +101,13 @@ public class CaptureButton extends View {
                 paint.setColor(Color.RED);
                 break;
             case SLOMO:
+            case TIMEWARP:
                 icRadius = screenWidth/16f;
                 nPaint.setStyle(Paint.Style.FILL);
+                tPaint.setPathEffect(new CornerPathEffect(14f));
+                paint.setStrokeWidth(2f);
+                paint.setPathEffect(new CornerPathEffect(14f));
+                paint.setStrokeJoin(Paint.Join.ROUND);
                 paint.setColor(Color.parseColor("#FDDDDC"));
                 break;
             default:
@@ -131,6 +147,27 @@ public class CaptureButton extends View {
         return Resources.getSystem().getDisplayMetrics().heightPixels;
     }
 
+    private void drawTriangle(Canvas canvas, int side){
+        int halfWidth = side / 2;
+        float padding = side / 3f;
+
+        Path path = new Path();
+        path.moveTo(padding                , (side-halfWidth)*.62f); // Top
+        path.lineTo(padding                , side - (side-halfWidth)*.62f); // Bottom
+        path.lineTo(padding + padding*.7f,side/2f); // Center
+        path.lineTo(padding                , (side-halfWidth)*.62f); // Back to Top
+
+        canvas.drawPath(path, paint);
+
+        Path path1 = new Path();
+        path1.moveTo(halfWidth               , (side-halfWidth)*.62f); // Top
+        path1.lineTo(halfWidth               , side - (side-halfWidth)*.62f); // Bottom
+        path1.lineTo(halfWidth + padding*.7f,side/2f); // Center
+        path1.lineTo(halfWidth               , (side-halfWidth)*.62f); // Back to Top
+
+        canvas.drawPath(path1, tPaint);
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -153,6 +190,9 @@ public class CaptureButton extends View {
             case SLOMO:
                 canvas.drawCircle(cx-icRadius/2,cy,icRadius,paint);
                 canvas.drawCircle(cx+icRadius/2,cy,icRadius,mPaint);
+                break;
+            case TIMEWARP:
+                drawTriangle(canvas,getHeight());
                 break;
         }
     }

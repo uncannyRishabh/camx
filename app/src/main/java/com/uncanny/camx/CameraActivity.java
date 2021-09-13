@@ -7,8 +7,12 @@
  import android.content.pm.PackageManager;
  import android.graphics.Bitmap;
  import android.graphics.BitmapFactory;
+ import android.graphics.Canvas;
  import android.graphics.Color;
+ import android.graphics.ColorMatrix;
+ import android.graphics.ColorMatrixColorFilter;
  import android.graphics.ImageFormat;
+ import android.graphics.Paint;
  import android.graphics.PorterDuff;
  import android.graphics.Rect;
  import android.graphics.SurfaceTexture;
@@ -39,6 +43,8 @@
  import android.os.Looper;
  import android.os.SystemClock;
  import android.provider.MediaStore;
+ import android.renderscript.Allocation;
+ import android.renderscript.RenderScript;
  import android.util.Log;
  import android.util.Pair;
  import android.util.Range;
@@ -91,6 +97,7 @@
  import java.io.IOException;
  import java.math.BigDecimal;
  import java.math.RoundingMode;
+ import java.nio.ByteBuffer;
  import java.util.ArrayList;
  import java.util.Arrays;
  import java.util.Collections;
@@ -171,7 +178,7 @@ public class CameraActivity extends AppCompatActivity {
     private Size previewSize;
     private Size imageSize;
     private Size mVideoSize;
-//    private Size mVideoSnapshotSize;
+
     private ImageReader snapshotImageReader;
     private float mZoom = 1.0f;
     public float zoom_level = 1;
@@ -179,9 +186,6 @@ public class CameraActivity extends AppCompatActivity {
     private int cachedHeight;
     private Rect zoom = new Rect();
 
-    private Map<Integer, Size> hRes = new HashMap<>();
-    private Map<Integer,Size> map43 = new HashMap<>();
-    private Map<Integer, Size> map169 = new HashMap<>();
     private Pair<Size,Range<Integer>> sloMoe;
     private List<Integer> cameraList;
     private List<Integer> auxCameraList;
@@ -209,20 +213,6 @@ public class CameraActivity extends AppCompatActivity {
 
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
-
-//    private Runnable openingChores = new Runnable() {
-//        @Override
-//        public void run() {
-//            new Handler(Looper.myLooper()).post(getSensorSize);
-//        }
-//    };
-
-//    private Runnable getSensorSize = new Runnable() {
-//        @Override
-//        public void run() {
-//            imageSize = lensData.getHighestResolution(getCameraId());
-//        }
-//    };
 
     private Runnable hideFocusCircle = new Runnable() {
         @Override
@@ -271,6 +261,9 @@ public class CameraActivity extends AppCompatActivity {
     private Map<Integer,Integer> modeMap = new HashMap<>(); //cameraId,modeIndex
     private String[][] CachedCameraModes = new String[10][];
 
+    private RenderScript rs;
+    private Allocation alloc;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         setTheme(R.style.Theme_camX);
@@ -307,6 +300,7 @@ public class CameraActivity extends AppCompatActivity {
 
         addAuxButtons();
 
+        rs = RenderScript.create(this);
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -813,6 +807,7 @@ public class CameraActivity extends AppCompatActivity {
     public void modeTimeWarp(){
         modifyMenuForVideo();
         if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
+        shutter.animateInnerCircle(getState());
     }
 
     public void modeHiRes(){
@@ -1397,6 +1392,11 @@ public class CameraActivity extends AppCompatActivity {
         try {
             //check for ZSL support then only add ZSL request
             captureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            captureRequest.set(CaptureRequest.JPEG_QUALITY,(byte) 100);
+            captureRequest.set(CaptureRequest.EDGE_MODE
+                    ,CaptureRequest.EDGE_MODE_HIGH_QUALITY);
+            captureRequest.set(CaptureRequest.JPEG_ORIENTATION,getJpegOrientation());
+
             captureRequest.addTarget(surfaceList.get(0));
             captureRequest.addTarget(surfaceList.get(1));
             if(mflash) {
@@ -1713,6 +1713,30 @@ public class CameraActivity extends AppCompatActivity {
         return characteristics;
     }
 
+    private int getJpegOrientation() {
+        int deviceOrientation = getWindowManager().getDefaultDisplay().getRotation();
+
+        if (deviceOrientation == android.view.OrientationEventListener.ORIENTATION_UNKNOWN) return 0;
+        CameraCharacteristics c = getCameraCharacteristics();
+        int sensorOrientation =  c.get(CameraCharacteristics.SENSOR_ORIENTATION);
+        int surfaceRotation = ORIENTATIONS.get(deviceOrientation);
+
+
+//        // Round device orientation to a multiple of 90
+//        deviceOrientation = (deviceOrientation + 45) / 90 * 90;
+//
+//        // Reverse device orientation for front-facing cameras
+//        boolean facingFront = c.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT;
+//        if (facingFront) deviceOrientation = -deviceOrientation;
+//
+//        // Calculate desired JPEG orientation relative to camera orientation to make
+//        // the image upright relative to the device orientation
+//
+//        return (sensorOrientation + deviceOrientation + 360) % 360;
+
+        return (surfaceRotation + sensorOrientation + 270) % 360;
+    }
+
     private int translateResolution(String selectedItem) {
         switch (selectedItem) {
             case "HD":
@@ -1866,40 +1890,6 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
-//    @NonNull
-//    public static ArrayList<Uri> listOfAllImages(Context context) {
-//        Uri uri;
-//        Cursor cursor;
-//        int column_index_data;
-//        ArrayList<Uri> listOfAllImages = new ArrayList<>();
-//        String absolutePathOfImage;
-//
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-//            uri = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
-//        } else {
-//            uri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
-//        }
-//
-//        String[] projection  = new String[]{MediaStore.Images.Thumbnails.DATA};
-//
-//        String orderBy = MediaStore.Video.Media.DATE_MODIFIED;
-//        cursor = context.getContentResolver().query(uri, projection, null, null, orderBy + " DESC");
-//
-//        column_index_data = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA);
-//
-//        int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
-//
-//        while(cursor.moveToNext()) {
-////            absolutePathOfImage = cursor.getString(column_index_data);
-//            long id = cursor.getLong(idColumn);
-//            Uri contentUri = ContentUris.withAppendedId(
-//                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,id);
-////            listOfAllImages.add(new File(absolutePathOfImage));
-//            listOfAllImages.add(contentUri);
-//        }
-//        cursor.close();
-//        return listOfAllImages;
-//    }
     private void update_chip_text(String size,String fps){
         chip_Text = size+"p@"+fps+"fps";
         vi_info.setText(chip_Text);
@@ -1966,9 +1956,36 @@ public class CameraActivity extends AppCompatActivity {
      */
 
     ImageReader.OnImageAvailableListener snapshotImageCallback = imageReader -> {
+        Image image =  imageReader.acquireNextImage();
+        if (image != null) {
+            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+            byte[] bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+            Bitmap preview = BitmapFactory.decodeByteArray(bytes, 0, buffer.capacity());
+            image.close();
+            if (preview != null) {
+                // This gets the canvas for the same mTextureView we would have connected to the
+                // Camera2 preview directly above.
+                Canvas canvas = tvPreview.lockCanvas();
+                if (canvas != null) {
+                    float[] colorTransform = {
+                            0, 0, 0, 0, 0,
+                            .35f, .45f, .25f, 0, 0,
+                            0, 0, 0, 0, 0,
+                            0, 0, 0, 1, 0};
+                    ColorMatrix colorMatrix = new ColorMatrix();
+                    colorMatrix.set(colorTransform); //Apply the monochrome green
+                    ColorMatrixColorFilter colorFilter = new ColorMatrixColorFilter(colorMatrix);
+                    Paint paint = new Paint();
+                    paint.setColorFilter(colorFilter);
+                    canvas.drawBitmap(preview, 0, 0, paint);
+                    tvPreview.unlockCanvasAndPost(canvas);
+                }
+            }
+        }
         Log.e(TAG, "onImageAvailable: received snapshot image data");
         Image img = imageReader.acquireLatestImage();
-        new Handler(Looper.getMainLooper()).post(new ImageSaverThread(img,cameraId,getContentResolver()));
+        new Handler(Looper.getMainLooper()).post(new ImageSaverThread(this,img,cameraId,getContentResolver()));
     };
 
     ImageReader.OnImageAvailableListener videoSnapshotCallback = reader -> {
@@ -2023,10 +2040,6 @@ public class CameraActivity extends AppCompatActivity {
             try {
                 camDeviceCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
                 camDeviceCaptureRequest.addTarget(surfaceList.get(0));
-                camDeviceCaptureRequest.set(CaptureRequest.JPEG_QUALITY,(byte) 100);
-
-                camDeviceCaptureRequest.set(CaptureRequest.EDGE_MODE
-                        ,CaptureRequest.EDGE_MODE_HIGH_QUALITY);
 //                camDeviceCaptureRequest.set(CaptureRequest.STATISTICS_FACE_DETECT_MODE
 //                        ,CaptureRequest.STATISTICS_FACE_DETECT_MODE_SIMPLE);
 
@@ -2127,6 +2140,12 @@ public class CameraActivity extends AppCompatActivity {
                 mMediaRecorder.reset();
             }
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        rs.destroy();
     }
 
     @Override
