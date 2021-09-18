@@ -7,12 +7,8 @@
  import android.content.pm.PackageManager;
  import android.graphics.Bitmap;
  import android.graphics.BitmapFactory;
- import android.graphics.Canvas;
  import android.graphics.Color;
- import android.graphics.ColorMatrix;
- import android.graphics.ColorMatrixColorFilter;
  import android.graphics.ImageFormat;
- import android.graphics.Paint;
  import android.graphics.PorterDuff;
  import android.graphics.Rect;
  import android.graphics.SurfaceTexture;
@@ -97,7 +93,6 @@
  import java.io.IOException;
  import java.math.BigDecimal;
  import java.math.RoundingMode;
- import java.nio.ByteBuffer;
  import java.util.ArrayList;
  import java.util.Arrays;
  import java.util.Collections;
@@ -134,7 +129,7 @@ public class CameraActivity extends AppCompatActivity {
     private CameraCaptureSession camSession = null;
     private CameraCharacteristics characteristics = null;
     private CaptureRequest.Builder captureRequest = null;
-    private CaptureRequest.Builder camDeviceCaptureRequest;
+    private CaptureRequest.Builder previewCaptureRequest = null;
     private CameraConstrainedHighSpeedCaptureSession highSpeedCaptureSession;
     private MediaRecorder mMediaRecorder;
     private SurfaceTexture stPreview;
@@ -142,6 +137,7 @@ public class CameraActivity extends AppCompatActivity {
     private static String cameraId = "0";
     private String mVideoFileName;
     private int vFPS = 30;
+    private int sFPS = 120;
     private String chip_Text;
     private boolean resumed = false, surface = false, ready = false;
     public enum CamState{
@@ -300,7 +296,7 @@ public class CameraActivity extends AppCompatActivity {
 
         addAuxButtons();
 
-        rs = RenderScript.create(this);
+        rs = RenderScript.create(CameraActivity.this);
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -473,9 +469,9 @@ public class CameraActivity extends AppCompatActivity {
                 if(mflash){
                     mflash = false;
                     button4.setImageResource(R.drawable.ic_flash_off);
-                    camDeviceCaptureRequest.set(CaptureRequest.FLASH_MODE,CaptureRequest.FLASH_MODE_OFF);
+                    previewCaptureRequest.set(CaptureRequest.FLASH_MODE,CaptureRequest.FLASH_MODE_OFF);
                     try {
-                        camSession.setRepeatingRequest(camDeviceCaptureRequest.build(), null, null);
+                        camSession.setRepeatingRequest(previewCaptureRequest.build(), null, null);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     }
@@ -483,9 +479,9 @@ public class CameraActivity extends AppCompatActivity {
                 else {
                     mflash = true;
                     button4.setImageResource(R.drawable.ic_flash_on);
-                    camDeviceCaptureRequest.set(CaptureRequest.FLASH_MODE,CaptureRequest.FLASH_MODE_TORCH);
+                    previewCaptureRequest.set(CaptureRequest.FLASH_MODE,CaptureRequest.FLASH_MODE_TORCH);
                     try {
-                        camSession.setRepeatingRequest(camDeviceCaptureRequest.build(), null, null);
+                        camSession.setRepeatingRequest(previewCaptureRequest.build(), null, null);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     }
@@ -544,7 +540,10 @@ public class CameraActivity extends AppCompatActivity {
                     createVideoPreview(tvPreview.getHeight(), width);
                 }
                 else if(getState() == CamState.SLOMO){
-
+                    int width = translateResolution(resolutionSelector.getSelectedItem().split("p@")[0]);
+                    sFPS = Integer.parseInt(resolutionSelector.getSelectedItem().split("p@")[1]);
+                    Log.e(TAG, "onClick: A A A A A A   FPS : "+sFPS);
+                    createSloMoePreview(correspondingHeight(width),width);
                 }
             }
         });
@@ -623,12 +622,12 @@ public class CameraActivity extends AppCompatActivity {
                             chronometer.stop();
                             chronometer.setVisibility(View.INVISIBLE);
                             mModePicker.setVisibility(View.VISIBLE);
-                            mMediaRecorder.stop(); //TODO: handle stop before preview is generated
+                            mMediaRecorder.stop(); //FIXME: handle stop before preview is generated | stop failed.
                             mMediaRecorder.reset();
 
                             thumbPreview.setVisibility(View.VISIBLE);
                             front_switch.setVisibility(View.VISIBLE);
-                            createSloMoePreview();
+                            createSloMoePreview(sloMoe.first.getWidth(),sloMoe.first.getHeight());
                         }
                         break;
                     case SLOMO:
@@ -744,6 +743,13 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
+    private int correspondingHeight(int width) {
+        if(width == 720) return 1280;
+        if(width == 1080) return 1920;
+        if(width == 3840) return 2160;
+        return 0;
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
@@ -786,19 +792,20 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     public void modeSloMo(){
-        int sFPS = 120;
+        int tFPS = 120;
         auxDock.setVisibility(View.INVISIBLE);
 //        Log.e(TAG, "modeSloMo: "+lensData.getFpsResolutionPair(getCameraId()));
 //                        Log.e(TAG, "modeSloMo: "+lensData.getFpsResolutionPair(getCameraId()).size()); //14 instead 7
         for(Pair<Size,Range<Integer>> pair : lensData.getFpsResolutionPair(getCameraId())){
-            if(pair.second.getLower()+pair.second.getUpper() > sFPS) {
+            if(pair.second.getLower()+pair.second.getUpper() > tFPS) {
                 sloMoe = pair;
             }
-            sFPS = pair.second.getLower()+pair.second.getUpper();
-            Log.e(TAG, "modeSloMo: "+pair.first+" , "+pair.second.getLower());
+            tFPS = pair.second.getLower()+pair.second.getUpper();
+//            Log.e(TAG, "modeSloMo: "+pair.first+" , "+pair.second.getLower());
         }
+        sFPS = sloMoe.second.getUpper();
         requestVideoPermissions();
-        createSloMoePreview();
+        createSloMoePreview(sloMoe.first.getWidth(),sloMoe.first.getHeight());
         shutter.animateInnerCircle(getState());
         modifyMenuForVideo();
         front_switch.setVisibility(lensData.hasSloMoCapabilities("1") ? View.VISIBLE : View.INVISIBLE);
@@ -1190,9 +1197,9 @@ public class CameraActivity extends AppCompatActivity {
                 if (request.getTag() == "FOCUS_TAG") {
                     //the focus trigger is complete -
                     //resume repeating (preview surface will get frames), clear AF trigger
-                    camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, null);
+                    previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, null);
                     try {
-                        camSession.setRepeatingRequest(camDeviceCaptureRequest.build(), null, null);
+                        camSession.setRepeatingRequest(previewCaptureRequest.build(), null, null);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     }
@@ -1214,31 +1221,31 @@ public class CameraActivity extends AppCompatActivity {
 //        }
 
         //cancel any existing AF trigger (repeated touches, etc.)
-        camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
-        camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
         try {
-            camSession.capture(camDeviceCaptureRequest.build(), captureCallbackHandler, mBackgroundHandler);
+            camSession.capture(previewCaptureRequest.build(), captureCallbackHandler, mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
 
         //Now add a new AF trigger with focus region
         if (isMeteringAreaAFSupported()) {
-            camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AF_REGIONS, new MeteringRectangle[]{focusAreaTouch});
+            previewCaptureRequest.set(CaptureRequest.CONTROL_AF_REGIONS, new MeteringRectangle[]{focusAreaTouch});
         }
 
         //TODO:FIX METERING AE
 //        if(isMeteringAreaAESupported()){
 //            camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_REGIONS, new MeteringRectangle[]{focusAreaTouch});
 //        }
-        camDeviceCaptureRequest.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-        camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
-        camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
-        camDeviceCaptureRequest.setTag("FOCUS_TAG"); //we'll capture this later for resuming the preview
+        previewCaptureRequest.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
+        previewCaptureRequest.setTag("FOCUS_TAG"); //we'll capture this later for resuming the preview
 
         //then we ask for a single request (not repeating!)
         try {
-            camSession.capture(camDeviceCaptureRequest.build(), captureCallbackHandler, mBackgroundHandler);
+            camSession.capture(previewCaptureRequest.build(), captureCallbackHandler, mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -1314,10 +1321,10 @@ public class CameraActivity extends AppCompatActivity {
             zoomText.postDelayed(()-> zoomText.setVisibility(View.INVISIBLE),1800);
         }
 
-        camDeviceCaptureRequest.set(CaptureRequest.SCALER_CROP_REGION, zoom);
+        previewCaptureRequest.set(CaptureRequest.SCALER_CROP_REGION, zoom);
         try {
             camSession
-                    .setRepeatingRequest(camDeviceCaptureRequest.build(), null, null);
+                    .setRepeatingRequest(previewCaptureRequest.build(), null, null);
         } catch (CameraAccessException | NullPointerException e) {
             e.printStackTrace();
         }
@@ -1462,8 +1469,8 @@ public class CameraActivity extends AppCompatActivity {
         tvPreview.setAspectRatio(mVideoSize.getHeight(),mVideoSize.getWidth());
         Surface previewSurface = new Surface(stPreview);
         try {
-            camDeviceCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            camDeviceCaptureRequest.addTarget(previewSurface);
+            previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            previewCaptureRequest.addTarget(previewSurface);
 //            camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,new Range<>(24,60));
             camDevice.createCaptureSession(Arrays.asList(previewSurface)
                     , new CameraCaptureSession.StateCallback() {
@@ -1471,7 +1478,7 @@ public class CameraActivity extends AppCompatActivity {
                         public void onConfigured(@NonNull CameraCaptureSession session) {
                             camSession = session;
                             try {
-                                camSession.setRepeatingRequest(camDeviceCaptureRequest.build(), null,mBackgroundHandler);
+                                camSession.setRepeatingRequest(previewCaptureRequest.build(), null,mBackgroundHandler);
                             } catch (CameraAccessException e) {
                                 e.printStackTrace();
                             }
@@ -1500,9 +1507,9 @@ public class CameraActivity extends AppCompatActivity {
             surfaceTexture.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
             Surface previewSurface = new Surface(surfaceTexture); //TODO : free surface with #release
             Surface recordSurface = mMediaRecorder.getSurface();
-            camDeviceCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-            camDeviceCaptureRequest.addTarget(previewSurface);
-            camDeviceCaptureRequest.addTarget(recordSurface);
+            previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+            previewCaptureRequest.addTarget(previewSurface);
+            previewCaptureRequest.addTarget(recordSurface);
             camDevice.createCaptureSession(Arrays.asList(previewSurface, recordSurface, snapshotImageReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
                         @Override
@@ -1510,7 +1517,7 @@ public class CameraActivity extends AppCompatActivity {
                             camSession = session;
                             try {
                                 camSession.setRepeatingRequest(
-                                        camDeviceCaptureRequest.build(),null, null
+                                        previewCaptureRequest.build(),null, null
                                 );
                             } catch (CameraAccessException e) {
                                 e.printStackTrace();
@@ -1584,11 +1591,11 @@ public class CameraActivity extends AppCompatActivity {
      * Slow Motion Methods
      */
 
-    private void createSloMoePreview(){
+    private void createSloMoePreview(int height,int width){
         if (!resumed || !surface)
             return;
         if(sloMoe != null){
-            mVideoSize = sloMoe.first;
+            mVideoSize = new Size(height,width);
         }
         if(camDevice==null){
             openCamera();
@@ -1596,21 +1603,21 @@ public class CameraActivity extends AppCompatActivity {
         else {
             hfrSurfaceList.clear();
             mMediaRecorder = new MediaRecorder();
-            update_chip_text(sloMoe.first.getHeight() + "", sloMoe.second.getUpper() + "");
+            update_chip_text(width + "", sFPS + "");
             stPreview.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
             tvPreview.setAspectRatio(mVideoSize.getHeight(), mVideoSize.getWidth());
             hfrSurfaceList.add(new Surface(stPreview));
             Surface previewSurface = new Surface(stPreview);
             try {
-                camDeviceCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-                camDeviceCaptureRequest.addTarget(previewSurface);
-                camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, sloMoe.second);
+                previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+                previewCaptureRequest.addTarget(previewSurface);
+                previewCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, sloMoe.second);
                 camDevice.createCaptureSession(Collections.singletonList(previewSurface)
                         , new CameraCaptureSession.StateCallback() {
                             @Override
                             public void onConfigured(@NonNull CameraCaptureSession session) {
                                 camSession = session;
-                                slPreview();
+                                smPreview();
                             }
 
                             @Override
@@ -1618,22 +1625,22 @@ public class CameraActivity extends AppCompatActivity {
 
                             }
                         }, null);
-            } catch (CameraAccessException e) {
+            } catch (CameraAccessException | IllegalStateException e) {
                 e.printStackTrace();
             }
         }
     }
 
-    private void slPreview() {
+    private void smPreview() {
         try {
             if(isSLRecording) {
-                camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, sloMoe.second);
+                previewCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, new Range<>(sFPS,sFPS));
                 camSession.setRepeatingBurst(
-                        highSpeedCaptureSession.createHighSpeedRequestList(camDeviceCaptureRequest.build())
+                        highSpeedCaptureSession.createHighSpeedRequestList(previewCaptureRequest.build())
                         , null, mBackgroundHandler);
             }
             else{
-                camSession.setRepeatingRequest(camDeviceCaptureRequest.build(),null,mBackgroundHandler);
+                camSession.setRepeatingRequest(previewCaptureRequest.build(),null,mBackgroundHandler);
             }
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -1649,16 +1656,16 @@ public class CameraActivity extends AppCompatActivity {
             surfaceTexture.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
             Surface previewSurface = new Surface(surfaceTexture); //TODO : free surface with #release
             Surface recordSurface = mMediaRecorder.getSurface();
-            camDeviceCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-            camDeviceCaptureRequest.addTarget(previewSurface);
-            camDeviceCaptureRequest.addTarget(recordSurface);
+            previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+            previewCaptureRequest.addTarget(previewSurface);
+            previewCaptureRequest.addTarget(recordSurface);
             camDevice.createConstrainedHighSpeedCaptureSession(hfrSurfaceList,
                     new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(CameraCaptureSession session) {
                             camSession = session;
                             highSpeedCaptureSession =(CameraConstrainedHighSpeedCaptureSession) session;
-                            slPreview();
+                            smPreview();
                         }
                         @Override
                         public void onConfigureFailed(CameraCaptureSession session) {
@@ -1686,11 +1693,11 @@ public class CameraActivity extends AppCompatActivity {
         else {
             mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//"+mVideoFileName);
         }
-        mMediaRecorder.setVideoFrameRate(size.second.getLower());
-        mMediaRecorder.setVideoSize(size.first.getWidth(), size.first.getHeight());
+        mMediaRecorder.setVideoFrameRate(sFPS);
+        mMediaRecorder.setVideoSize(mVideoSize.getWidth(), mVideoSize.getHeight());
         Log.e(TAG, "setupMediaRecorder_SloMoe: VideoEncodingBitRate : "+(size.first.getWidth()*size.first.getHeight()*size.second.getLower()) / 15);
         mMediaRecorder.setVideoEncodingBitRate((size.first.getWidth()*size.first.getHeight()*size.second.getLower()) / 15);
-        mMediaRecorder.setOrientationHint(90);
+        mMediaRecorder.setOrientationHint(getJpegOrientation());
         try {
             mMediaRecorder.prepare();
         } catch (IOException e) {
@@ -1740,10 +1747,13 @@ public class CameraActivity extends AppCompatActivity {
     private int translateResolution(String selectedItem) {
         switch (selectedItem) {
             case "HD":
+            case "720":
                 return 720;
             case "FHD":
+            case "1080":
                 return 1080;
             case "4K":
+            case "2160":
                 return 2160;
             case "8K":
                 return 4320;
@@ -1956,33 +1966,33 @@ public class CameraActivity extends AppCompatActivity {
      */
 
     ImageReader.OnImageAvailableListener snapshotImageCallback = imageReader -> {
-        Image image =  imageReader.acquireNextImage();
-        if (image != null) {
-            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-            byte[] bytes = new byte[buffer.remaining()];
-            buffer.get(bytes);
-            Bitmap preview = BitmapFactory.decodeByteArray(bytes, 0, buffer.capacity());
-            image.close();
-            if (preview != null) {
-                // This gets the canvas for the same mTextureView we would have connected to the
-                // Camera2 preview directly above.
-                Canvas canvas = tvPreview.lockCanvas();
-                if (canvas != null) {
-                    float[] colorTransform = {
-                            0, 0, 0, 0, 0,
-                            .35f, .45f, .25f, 0, 0,
-                            0, 0, 0, 0, 0,
-                            0, 0, 0, 1, 0};
-                    ColorMatrix colorMatrix = new ColorMatrix();
-                    colorMatrix.set(colorTransform); //Apply the monochrome green
-                    ColorMatrixColorFilter colorFilter = new ColorMatrixColorFilter(colorMatrix);
-                    Paint paint = new Paint();
-                    paint.setColorFilter(colorFilter);
-                    canvas.drawBitmap(preview, 0, 0, paint);
-                    tvPreview.unlockCanvasAndPost(canvas);
-                }
-            }
-        }
+//        Image image =  imageReader.acquireNextImage();
+//        if (image != null) {
+//            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+//            byte[] bytes = new byte[buffer.remaining()];
+//            buffer.get(bytes);
+//            Bitmap preview = BitmapFactory.decodeByteArray(bytes, 0, buffer.capacity());
+//            image.close();
+//            if (preview != null) {
+//                // This gets the canvas for the same mTextureView we would have connected to the
+//                // Camera2 preview directly above.
+//                Canvas canvas = tvPreview.lockCanvas();
+//                if (canvas != null) {
+//                    float[] colorTransform = {
+//                            0, 0, 0, 0, 0,
+//                            .35f, .45f, .25f, 0, 0,
+//                            0, 0, 0, 0, 0,
+//                            0, 0, 0, 1, 0};
+//                    ColorMatrix colorMatrix = new ColorMatrix();
+//                    colorMatrix.set(colorTransform); //Apply the monochrome green
+//                    ColorMatrixColorFilter colorFilter = new ColorMatrixColorFilter(colorMatrix);
+//                    Paint paint = new Paint();
+//                    paint.setColorFilter(colorFilter);
+//                    canvas.drawBitmap(preview, 0, 0, paint);
+//                    tvPreview.unlockCanvasAndPost(canvas);
+//                }
+//            }
+//        }
         Log.e(TAG, "onImageAvailable: received snapshot image data");
         Image img = imageReader.acquireLatestImage();
         new Handler(Looper.getMainLooper()).post(new ImageSaverThread(this,img,cameraId,getContentResolver()));
@@ -2005,7 +2015,7 @@ public class CameraActivity extends AppCompatActivity {
                     return;
                 }
                 if(getState() == CamState.SLOMO){
-                    createSloMoePreview();
+                    createSloMoePreview(sloMoe.first.getWidth(),sloMoe.first.getHeight());
                     return;
                 }
                 camDevice.createCaptureSession(surfaceList,stateCallback, mBackgroundHandler);
@@ -2037,20 +2047,23 @@ public class CameraActivity extends AppCompatActivity {
         @Override
         public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
             camSession = cameraCaptureSession;
+//            ImageWriter iwReprocess = ImageWriter.newInstance(cameraCaptureSession.getInputSurface(), 2);
+//            iwReprocess.dequeueInputImage();
+
             try {
-                camDeviceCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-                camDeviceCaptureRequest.addTarget(surfaceList.get(0));
+                previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+                previewCaptureRequest.addTarget(surfaceList.get(0));
 //                camDeviceCaptureRequest.set(CaptureRequest.STATISTICS_FACE_DETECT_MODE
 //                        ,CaptureRequest.STATISTICS_FACE_DETECT_MODE_SIMPLE);
 
                 //FRONT CAMERA INVERSION FIX
                 if(characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_FRONT){
-                    camDeviceCaptureRequest.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(Surface.ROTATION_180));
+                    previewCaptureRequest.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(Surface.ROTATION_180));
                 }
                 else {
-                    camDeviceCaptureRequest.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(0));
+                    previewCaptureRequest.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(0));
                 }
-                camSession.setRepeatingRequest(camDeviceCaptureRequest.build(), previewCallback, null);
+                camSession.setRepeatingRequest(previewCaptureRequest.build(), previewCallback, null);
                 ready = true;
             } catch (Exception e) {
                 Log.e(TAG, "IMAGE CAPTURE CALLBACK: onConfigured: create preview failed: " + e.getMessage());
