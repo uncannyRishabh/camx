@@ -33,6 +33,7 @@
  import android.media.ThumbnailUtils;
  import android.os.Build;
  import android.os.Bundle;
+ import android.os.CancellationSignal;
  import android.os.Environment;
  import android.os.Handler;
  import android.os.HandlerThread;
@@ -108,7 +109,8 @@ public class CameraActivity extends AppCompatActivity {
     private static final int REQUEST_PERMISSIONS = 200;
     private static final String[] PERMISSION_STRING = {Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE
             , Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
-    private static final List<String> ACCEPTED_FILES_EXTENSIONS = Arrays.asList("JPG", "JPEG", "DNG");
+    private static final List<String> ACCEPTED_FILES_EXTENSIONS = Arrays.asList("JPG", "JPEG", "DNG","MP4");
+    private static final List<String> IMAGE_FILES_EXTENSIONS = Arrays.asList("JPG", "JPEG", "DNG");
     private static final FilenameFilter FILENAME_FILTER = (dir, name) -> {
         int index = name.lastIndexOf(46);
         return ACCEPTED_FILES_EXTENSIONS.contains(-1 == index ? "" : name.substring(index + 1).toUpperCase()) && new File(dir, name).length() > 0;
@@ -536,13 +538,13 @@ public class CameraActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if(getState() == CamState.VIDEO) {
-                    int width = translateResolution(resolutionSelector.getSelectedItem());
+                    int width = translateResolution(resolutionSelector.getHeaderText());
                     createVideoPreview(tvPreview.getHeight(), width);
                 }
                 else if(getState() == CamState.SLOMO){
-                    int width = translateResolution(resolutionSelector.getSelectedItem().split("p@")[0]);
-                    sFPS = Integer.parseInt(resolutionSelector.getSelectedItem().split("p@")[1]);
-                    Log.e(TAG, "onClick: A A A A A A   FPS : "+sFPS);
+                    int width = translateResolution(resolutionSelector.getHeaderAndFooterText().split("P")[0]);
+                    sFPS = Integer.parseInt(resolutionSelector.getHeaderAndFooterText()
+                            .split("_")[1].split("FPS")[0]);
                     createSloMoePreview(correspondingHeight(width),width);
                 }
             }
@@ -743,13 +745,6 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
-    private int correspondingHeight(int width) {
-        if(width == 720) return 1280;
-        if(width == 1080) return 1920;
-        if(width == 3840) return 2160;
-        return 0;
-    }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
@@ -869,7 +864,10 @@ public class CameraActivity extends AppCompatActivity {
                     appbar.getWidth(), cachedHeight * 3);
             appbar.setLayoutParams(layoutParams);
 
-            resolutionSelector.setSelectedItem(resolutionSelector.getSelectedItem());
+            if(getState() == CamState.VIDEO)
+                resolutionSelector.setHaloByHeaderText(resolutionSelector.getHeaderText());
+            else
+                resolutionSelector.setHaloByHeaderAndFooterText(resolutionSelector.getHeaderAndFooterText());
         }
         else {
             tvPreview.setOnTouchListener(touchListener);
@@ -1761,32 +1759,43 @@ public class CameraActivity extends AppCompatActivity {
         return 0;
     }
 
-    private void addCapableVideoResolutions() {
-        resolutionSelector.clearItems();
-        resolutionSelector.addItem("HD");
-        if(lensData.is1080pCapable(getCameraId()))
-            resolutionSelector.addItem("FHD");
-        if(lensData.is4kCapable(getCameraId()))
-            resolutionSelector.addItem("4K");
-        if(lensData.is8kCapable(getCameraId()))
-            resolutionSelector.addItem("8K");
+    private int correspondingHeight(int width) {
+        if(width == 720) return 1280;
+        if(width == 1080) return 1920;
+        if(width == 3840) return 2160;
+        return 0;
+    }
 
-        resolutionSelector.setSelectedItem(lensData.is1080pCapable(getCameraId()) ? "FHD":"HD");
+    private void addCapableVideoResolutions() {
+        resolutionSelector.clearHeaderItems();
+        resolutionSelector.clearHeaderAndFooterItems();
+        resolutionSelector.setHeader("HD");
+        if(lensData.is1080pCapable(getCameraId()))
+            resolutionSelector.setHeader("FHD");
+        if(lensData.is4kCapable(getCameraId()))
+            resolutionSelector.setHeader("4K");
+        if(lensData.is8kCapable(getCameraId()))
+            resolutionSelector.setHeader("8K");
+
+        resolutionSelector.setHaloByHeaderText(lensData.is1080pCapable(getCameraId()) ? "FHD":"HD");
     }
 
     private void addCapableSloMoResolutions(){
-        resolutionSelector.clearItems();
-        ArrayList<String> sList = new ArrayList<>();
+        resolutionSelector.clearHeaderItems();
+        resolutionSelector.clearHeaderAndFooterItems();
+
+        ArrayList<String> pairList = new ArrayList<>();
         for(Pair<Size,Range<Integer>> pair : lensData.getFpsResolutionPair(getCameraId())){
             if((pair.first.getWidth()==3840 && pair.first.getHeight()==2160) ||
               (pair.first.getWidth()==1920 && pair.first.getHeight()==1080) ||
               (pair.first.getWidth()==1280 && pair.first.getHeight()==720)){
-                if(!sList.contains(pair.first.getHeight()+"p@"+pair.second.getUpper()))
-                    sList.add(pair.first.getHeight()+"p@"+pair.second.getUpper());
+                if(!pairList.contains(pair.first.getHeight()+"P"+pair.second.getUpper()+"FPS")) {
+                    pairList.add(pair.first.getHeight()+"P_"+pair.second.getUpper()+"FPS");
+                }
             }
         }
-        resolutionSelector.addItem(sList);
-        resolutionSelector.setSelectedItem(sloMoe.first.getHeight()+"p@"+sloMoe.second.getUpper());
+        resolutionSelector.setHeaderAndFooterItems(pairList);
+        resolutionSelector.setHaloByHeaderAndFooterText(sloMoe.first.getHeight()+"P_"+sloMoe.second.getUpper()+"FPS");
     }
 
     public String getCameraId() {
@@ -1875,8 +1884,16 @@ public class CameraActivity extends AppCompatActivity {
                 filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
                 File lastImage = filesList.get(0);
 
-                Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
-                thumbPreview.setImageBitmap(ThumbnailUtils.extractThumbnail(bmp,100,100));
+
+                if(fileIsImage(String.valueOf(lastImage))){
+                    Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
+                    thumbPreview.setImageBitmap(ThumbnailUtils.extractThumbnail(bmp,100,100));
+                }
+                else {
+                    thumbPreview.setImageBitmap(ThumbnailUtils.createVideoThumbnail(String.valueOf(lastImage)
+                            ,MediaStore.Images.Thumbnails.MINI_KIND));
+                }
+
             } else {
                 Log.e(TAG, "display_latest_image_from_gallery(): Could not find any Image Files [1]");
             }
@@ -1890,14 +1907,31 @@ public class CameraActivity extends AppCompatActivity {
                     filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
                     File lastImage = filesList.get(0);
 
-                    Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
-                    thumbPreview.setImageBitmap(ThumbnailUtils.extractThumbnail(bmp,100,100));
+                    Log.e(TAG, "display_latest_image_from_gallery: latest : "+lastImage);
+
+                    if(fileIsImage(String.valueOf(lastImage))){
+                        Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
+                        thumbPreview.setImageBitmap(ThumbnailUtils.extractThumbnail(bmp,100,100));
+                    }
+                    else {
+                        try {
+                            thumbPreview.setImageBitmap(ThumbnailUtils.createVideoThumbnail(lastImage
+                                    , new Size(96, 96), new CancellationSignal()));
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
                 } else {
                     Log.e(TAG, "getAllImageFiles(): Could not find any Image Files");
                 }
 
             });
         }
+    }
+
+    private boolean fileIsImage(String file) {
+        return IMAGE_FILES_EXTENSIONS.contains(file.split("\\.")[1].toUpperCase());
     }
 
     private void update_chip_text(String size,String fps){

@@ -6,7 +6,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -17,15 +16,18 @@ import java.util.ArrayList;
 /**
  * @author uncannyRishabh (11/07/2021)
  */
+@SuppressWarnings({"FieldMayBeFinal","FieldCanBeLocal"})
 public class ResolutionSelector extends View {
     private RectF rectF,rectIn;
-    private Paint paint,tPaint,sPaint;
-    private String selectedItem;
-    private float headingTextSize = 32f;
-    private float subtitleTextSize = 26f;
+    private Paint paint, headerPaint,footerPaint,sPaint;
+    private String headerText;
+    private String headerAndFooterText;
+    private float headingTextSize = 30f;
+    private float footerTextSize = 24f;
     private float index;
     private float divisions;
-    private ArrayList<String> items = new ArrayList<>();
+    private ArrayList<String> headerItems = new ArrayList<>(8);
+    private ArrayList<String> headerAndFooterItems = new ArrayList<>(8);
 
     public ResolutionSelector(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -41,61 +43,93 @@ public class ResolutionSelector extends View {
         rectF = new RectF();
         rectIn = new RectF();
         paint = new Paint();
-        tPaint = new Paint();
+        headerPaint = new Paint();
+        footerPaint = new Paint();
         sPaint = new Paint();
 
         paint.setAntiAlias(true);
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.parseColor("#252525"));
 
-        tPaint.setColor(Color.WHITE);
-        tPaint.setTextAlign(Paint.Align.CENTER);
-        tPaint.setAntiAlias(true);
-        tPaint.setTextSize(headingTextSize);
+        headerPaint.setColor(Color.WHITE);
+        headerPaint.setTextAlign(Paint.Align.CENTER);
+        headerPaint.setAntiAlias(true);
+        headerPaint.setTextSize(headingTextSize);
+
+        footerPaint.setColor(Color.WHITE);
+        footerPaint.setTextAlign(Paint.Align.CENTER);
+        footerPaint.setAntiAlias(true);
+        footerPaint.setTextSize(footerTextSize);
 
         sPaint.setColor(Color.parseColor("#9883F0"));
         sPaint.setStyle(Paint.Style.FILL);
         sPaint.setAntiAlias(true);
     }
 
-    public void addItem(String item){
-        items.add(item);
-        tPaint.setTextSize(items.size()>3 ? subtitleTextSize : headingTextSize);
-    }
-
-    public void addItem(ArrayList<String> i){
-        items = i;
-        tPaint.setTextSize(items.size()>3 ? subtitleTextSize : headingTextSize);
-    }
-
-    public void clearItems(){
-        items.clear();
-    }
-
-    public String getSelectedItem(){
-        return selectedItem;
-    }
-
-    public void setSelectedItem(String item){
-        selectedItem = item;
-        index = items.indexOf(getSelectedItem())+1;
+    public void setHaloByHeaderText(String item){
+        headerText = item;
+        index = headerItems.indexOf(item)+1;
         invalidate();
     }
 
+    public void setHaloByHeaderAndFooterText(String item){
+        headerAndFooterText = item;
+        index = headerAndFooterItems.indexOf(item)+1;
+        invalidate();
+    }
+
+    public void clearHeaderItems(){
+        headerItems.clear();
+    }
+
+    public void clearHeaderAndFooterItems(){
+        headerAndFooterItems.clear();
+    }
+
+    /**
+     * Getter & Setter for HeaderText
+     */
+    public String getHeaderText(){
+        return headerText;
+    }
+
+    public void setHeader(String item){
+        headerItems.add(item);
+        headerPaint.setTextSize(headerItems.size()>4 ? footerTextSize : headingTextSize);
+    }
+
+    public void setHeader(ArrayList<String> i){
+        headerItems = i;
+        headerPaint.setTextSize(headerItems.size()>4 ? footerTextSize : headingTextSize);
+    }
+
+
+    /**
+     * Getter & Setter for HeaderAndFooterText
+     */
+    public String getHeaderAndFooterText(){
+        return headerAndFooterText;
+    }
+
+    public void setHeaderAndFooterItems(ArrayList<String> i){
+        headerAndFooterItems = i;
+    }
+
     private int getDivisions(){
-        return items.size();
+        return (headerItems.isEmpty() ? headerAndFooterItems.size() : headerItems.size());
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         for(int i=1; i<=getDivisions();i++){
             if(event.getX() < (getWidth()/(float) getDivisions())*i){
-                setSelectedItem(items.get(i-1));
+                if(headerAndFooterItems.isEmpty())
+                    setHaloByHeaderText(headerItems.get(i-1));
+                else
+                    setHaloByHeaderAndFooterText(headerAndFooterItems.get(i-1));
                 break;
             }
         }
-        invalidate();
-        Log.e("TAG", "onTouchEvent: "+items.indexOf(getSelectedItem()));
         return super.onTouchEvent(event);
     }
 
@@ -121,13 +155,43 @@ public class ResolutionSelector extends View {
 
         canvas.drawRoundRect(rectIn,48f,48f,sPaint);
 
-        //RECT TEXT
-        for(int i=1; i<=items.size();i++){
-            canvas.drawText(items.get(i-1)
-                    ,((getWidth()/divisions)*(2*i - 1) + getPaddingStart() -getPaddingEnd())/2
-                    ,(getHeight()+ headingTextSize)/2f-5
-                    ,tPaint);
+
+        if(headerAndFooterItems.isEmpty()){
+            //HEADER TEXT
+            headerPaint.setFakeBoldText(false);
+            for(int i = 1; i<= headerItems.size(); i++){
+                canvas.drawText(headerItems.get(i-1)
+                        ,((getWidth()/divisions)*(2*i - 1) + getPaddingStart() -getPaddingEnd())/2
+                        ,(getHeight()+ headingTextSize)/2f-5
+                        , headerPaint);
+            }
         }
+        else{
+            //HEADER TEXT
+            headerPaint.setFakeBoldText(true);
+            for(int i = 1; i<= headerAndFooterItems.size(); i++){
+                canvas.drawText(getHeader(headerAndFooterItems.get(i-1))
+                        ,((getWidth()/divisions)*(2*i - 1) + getPaddingStart() -getPaddingEnd())/2
+                        ,getHeight()/2f
+                        , headerPaint);
+            }
+
+            //FOOTER TEXT
+            for(int i = 1; i<= headerAndFooterItems.size(); i++){
+                canvas.drawText(getFooter(headerAndFooterItems.get(i-1))
+                        ,((getWidth()/divisions)*(2*i - 1) + getPaddingStart() -getPaddingEnd())/2
+                        ,(getHeight()/2f) + headingTextSize
+                        , footerPaint);
+            }
+        }
+
     }
 
+    private String getHeader(String s) {
+        return s.split("_")[0];
+    }
+
+    private String getFooter(String s) {
+        return s.split("_")[1];
+    }
 }
