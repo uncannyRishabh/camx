@@ -97,6 +97,7 @@ public class CaptureButton extends View {
                 paint.setColor(Color.RED);
                 break;
             case VIDEO_PROGRESSED:
+            case HSVIDEO_PROGRESSED:
                 nPaint.setStyle(Paint.Style.FILL);
                 paint.setColor(Color.RED);
                 break;
@@ -185,6 +186,7 @@ public class CaptureButton extends View {
                 canvas.drawCircle(cx,cy,icRadius,mPaint);
                 break;
             case VIDEO_PROGRESSED:
+            case HSVIDEO_PROGRESSED:
                 canvas.drawRoundRect(rectF,12,12,mPaint);
                 break;
             case SLOMO:

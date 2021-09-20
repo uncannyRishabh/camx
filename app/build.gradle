@@ -3,13 +3,13 @@ plugins {
 }
 
 android {
-    compileSdkVersion 31
+    compileSdkVersion 30
     buildToolsVersion "30.0.3"
 
     defaultConfig {
         applicationId "com.example.camx"
         minSdkVersion 24
-        targetSdkVersion 31
+        targetSdkVersion 30
         versionCode 1
         versionName "dirk-diggler.v1"
 
@@ -31,7 +31,13 @@ android {
     }
 }
 
+
+
 dependencies {
+
+    configurations.all {
+        resolutionStrategy { force 'androidx.core:core:1.6.0' }
+    }
 
     implementation 'androidx.appcompat:appcompat:1.3.1'
     implementation 'com.google.android.material:material:1.4.0'
@@ -42,6 +48,6 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
-    implementation "androidx.core:core:1.7.0-alpha02"
+    implementation "androidx.core:core:1.7.0-beta01"
 
 }

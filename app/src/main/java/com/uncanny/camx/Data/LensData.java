@@ -304,35 +304,6 @@ public class LensData {
         return false;
     }
 
-    private void getAuxCameras(){
-        for(int i = 0; i<=31 ; i++){       // FIXME: 8/11/2021 fix extra aux lens problem @_@
-            try {
-                cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
-                CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(String.valueOf(i));
-                if (characteristics!=null ) {
-                    Log.e(TAG, "check_aux: value of array at " + i + " : " + i);
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        if(characteristics.getPhysicalCameraIds().size() > 0){
-                            LOGICAL_ID = i;
-                            Toast.makeText(activity, "Execution Completed cam_aux() Logical_ID "
-                                            +i, Toast.LENGTH_LONG).show();
-                        }
-                    }
-                    if(LOGICAL_ID != 0 && i >= LOGICAL_ID){
-                        logicalCameras.add(i);
-                    }
-                    else  {
-                        physicalCameras.add(i);
-                    }
-                }
-            }
-            catch (IllegalArgumentException | CameraAccessException ignored){
-            }
-        }
-        Toast.makeText(activity, "Execution Completed cam_aux() Physical ids "+physicalCameras, Toast.LENGTH_SHORT).show();
-        Toast.makeText(activity, "Execution Completed cam_aux() Logical  ids "+logicalCameras , Toast.LENGTH_SHORT).show();
-    }
-
     /**
      * Returns true if lens supports capturing higher resolution images.
      */
@@ -383,6 +354,37 @@ public class LensData {
         }
         imageSize169 = Collections.max(sizeArrayList, new CompareSizeByArea());
         return imageSize169;
+    }
+
+
+    /**
+     * Init
+     */
+    private void getAuxCameras(){
+        for(int i = 0; i<=31 ; i++){       // FIXME: 8/11/2021 fix extra aux lens problem @_@
+            try {
+                cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+                CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(String.valueOf(i));
+                if (characteristics!=null ) {
+                    Log.e(TAG, "check_aux: value of array at " + i + " : " + i);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        if(characteristics.getPhysicalCameraIds().size() > 0){
+                            LOGICAL_ID = i;
+                        }
+                    }
+                    if(LOGICAL_ID != 0 && i >= LOGICAL_ID){
+                        logicalCameras.add(i);
+                    }
+                    else  {
+                        physicalCameras.add(i);
+                    }
+                }
+            }
+            catch (IllegalArgumentException | CameraAccessException ignored){
+            }
+        }
+        Toast.makeText(activity, "Execution Completed cam_aux() Physical ids "+physicalCameras, Toast.LENGTH_SHORT).show();
+        Toast.makeText(activity, "Execution Completed cam_aux() Logical  ids "+logicalCameras , Toast.LENGTH_SHORT).show();
     }
 
     private void performBayerCheck(String id) {
