@@ -5,8 +5,6 @@
  import android.content.Context;
  import android.content.Intent;
  import android.content.pm.PackageManager;
- import android.graphics.Bitmap;
- import android.graphics.BitmapFactory;
  import android.graphics.Color;
  import android.graphics.ImageFormat;
  import android.graphics.PorterDuff;
@@ -30,11 +28,8 @@
  import android.media.ImageReader;
  import android.media.MediaActionSound;
  import android.media.MediaRecorder;
- import android.media.ThumbnailUtils;
  import android.os.Build;
  import android.os.Bundle;
- import android.os.CancellationSignal;
- import android.os.Environment;
  import android.os.Handler;
  import android.os.HandlerThread;
  import android.os.Looper;
@@ -87,6 +82,7 @@
  import com.uncanny.camx.CustomViews.ViewFinder.Grids;
  import com.uncanny.camx.Data.LensData;
  import com.uncanny.camx.Utility.CompareSizeByArea;
+ import com.uncanny.camx.Utility.ImageDecoderThread;
  import com.uncanny.camx.Utility.ImageSaverThread;
 
  import java.io.File;
@@ -106,6 +102,8 @@
         "FieldCanBeLocal"})
 public class CameraActivity extends AppCompatActivity {
     private static final String TAG = "CameraActivity";
+    private final String BACK_CAMERA_ID = "0";
+    private final String FRONT_CAMERA_ID = "1";
     private static final int REQUEST_PERMISSIONS = 200;
     private static final String[] PERMISSION_STRING = {Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE
             , Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
@@ -123,6 +121,7 @@ public class CameraActivity extends AppCompatActivity {
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
     private LensData lensData;
+
     private final String [] camID= {"0","1","20","21","22","2","6","3"}; //0,1,2,3,4,5,6,7 in realme and stock android
                                   // 0   1   2    3    4    5   6   7
 
@@ -190,11 +189,11 @@ public class CameraActivity extends AppCompatActivity {
 
     private int gridClick = 0;
 
-    public CamState getState() {
+    private CamState getState() {
         return state;
     }
 
-    public void setState(CamState state) {
+    private void setState(CamState state) {
         this.state = state;
     }
 
@@ -242,15 +241,18 @@ public class CameraActivity extends AppCompatActivity {
     private Runnable hideAuxDock = new Runnable() {
         @Override
         public void run() {
-            if(auxDock.getVisibility()==View.INVISIBLE){
-                if(characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_FRONT) {
+            if(characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_BACK){
+                if(getState() == CamState.SLOMO
+                        || getState() == CamState.HIRES || getState() == CamState.VIDEO_PROGRESSED){
+                    auxDock.setVisibility(View.INVISIBLE);
+                }
+                else{
                     auxDock.setVisibility(View.VISIBLE);
                 }
             }
-            else {
-                auxDock.setVisibility(View.GONE);
+            else{                                       //FIXME: HANDLE FOR MULTIPLE FRONT CAMERA
+                auxDock.setVisibility(View.INVISIBLE);
             }
-//            auxDock.setVisibility((auxDock.getVisibility()==View.VISIBLE) ? View.GONE : View.VISIBLE);
         }
     };
 
@@ -334,6 +336,7 @@ public class CameraActivity extends AppCompatActivity {
         mModePicker.setOnItemSelectedListener(index -> {
             mModePicker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
             vi_info = findViewById(R.id.vi_indicator);
+            auxDock.post(hideAuxDock);
             switch (index){
                 case 0:
                     setState(CamState.CAMERA);
@@ -590,7 +593,7 @@ public class CameraActivity extends AppCompatActivity {
                             front_switch.setOnClickListener(play_pauseVideo);
                             shutter.animateInnerCircle(getState());
 
-                            auxDock.setVisibility(View.INVISIBLE);
+                            auxDock.post(hideAuxDock);
                             mModePicker.setVisibility(View.INVISIBLE);
                             chronometer.setBase(SystemClock.elapsedRealtime());
                             mMediaRecorder.start();
@@ -604,7 +607,7 @@ public class CameraActivity extends AppCompatActivity {
                             isVRecording = false;
                             chronometer.stop();
                             chronometer.setVisibility(View.INVISIBLE);
-                            auxDock.setVisibility(View.VISIBLE);
+                            auxDock.post(hideAuxDock);
                             mModePicker.setVisibility(View.VISIBLE);
                             mMediaRecorder.stop(); //TODO: handle stop before preview is generated
                             mMediaRecorder.reset();
@@ -673,9 +676,9 @@ public class CameraActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 mModePicker.setValues(CachedCameraModes[0]);
-                if (!getCameraId().equals(camID[0])) {
+                if (!getCameraId().equals(BACK_CAMERA_ID)) {
                     closeCamera();
-                    setCameraId(camID[0]);
+                    setCameraId(BACK_CAMERA_ID);
                     openCamera();
                     if(getState()==CamState.VIDEO) addCapableVideoResolutions();
                     else if(getState()==CamState.SLOMO) addCapableSloMoResolutions();
@@ -781,7 +784,7 @@ public class CameraActivity extends AppCompatActivity {
     /**
      * MODES
      */
-    public void modeCamera(){
+    private void modeCamera(){
         shutter.animateInnerCircle(getState());
         closeCamera();
         openCamera();
@@ -790,7 +793,7 @@ public class CameraActivity extends AppCompatActivity {
         if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
     }
 
-    public void modeVideo(){
+    private void modeVideo(){
         lensData.getFpsResolutionPair_video(getCameraId());
         shutter.animateInnerCircle(getState());
         requestVideoPermissions();
@@ -799,9 +802,8 @@ public class CameraActivity extends AppCompatActivity {
         if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
     }
 
-    public void modeSloMo(){
+    private void modeSloMo(){
         int tFPS = 120;
-        auxDock.setVisibility(View.INVISIBLE);
 //        Log.e(TAG, "modeSloMo: "+lensData.getFpsResolutionPair(getCameraId()));
 //                        Log.e(TAG, "modeSloMo: "+lensData.getFpsResolutionPair(getCameraId()).size()); //14 instead 7
         for(Pair<Size,Range<Integer>> pair : lensData.getFpsResolutionPair(getCameraId())){
@@ -819,14 +821,15 @@ public class CameraActivity extends AppCompatActivity {
         front_switch.setVisibility(lensData.hasSloMoCapabilities("1") ? View.VISIBLE : View.INVISIBLE);
     }
 
-    public void modeTimeWarp(){
+    private void modeTimeWarp(){
         modifyMenuForVideo();
         if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
         shutter.animateInnerCircle(getState());
     }
 
-    public void modeHiRes(){
+    private void modeHiRes(){
         shutter.animateInnerCircle(getState());
+        ASPECT_RATIO_43 = true;
         closeCamera();
         openCamera();
         modifyMenuForPhoto();
@@ -837,16 +840,16 @@ public class CameraActivity extends AppCompatActivity {
 
     }
 
-    public void modePortrait(){
+    private void modePortrait(){
         modifyMenuForPhoto();
         if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
     }
 
-    public void modeNight(){
+    private void modeNight(){
         if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
     }
 
-    public void modePro(){
+    private void modePro(){
         front_switch.setVisibility(lensData.hasCamera2api() ? View.VISIBLE : View.INVISIBLE);
     }
 
@@ -1011,40 +1014,47 @@ public class CameraActivity extends AppCompatActivity {
         public void onClick(View v) {
             closeCamera();
             if (characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_BACK) {
-                setCameraId(camID[1]);
+                setCameraId(FRONT_CAMERA_ID);
+
+                switch (getState()){
+                    case PORTRAIT:
+                        mModePicker.setSelectedItem(CachedCameraModes[1].length-3);
+                        break;
+                    case NIGHT:
+                        mModePicker.setSelectedItem(CachedCameraModes[1].length-2);
+                        break;
+                    case PRO:
+                        mModePicker.setSelectedItem(CachedCameraModes[1].length-1);
+                        break;
+                }
+
                 openCamera();
-                mModePicker.setValues(CachedCameraModes[modeMap.get(Integer.parseInt(getCameraId()))]);
-                auxDock.setVisibility(View.GONE);
+                mModePicker.setValues(CachedCameraModes[1]);
+                auxDock.post(hideAuxDock);
                 front_switch.animate().rotation(180f).setDuration(300);
             } else {
-                setCameraId(camID[0]);
+                setCameraId(BACK_CAMERA_ID);
+
+                switch (getState()){
+                    case PORTRAIT:
+                        mModePicker.setSelectedItem(CachedCameraModes[0].length-3);
+                        break;
+                    case NIGHT:
+                        mModePicker.setSelectedItem(CachedCameraModes[0].length-2);
+                        break;
+                    case PRO:
+                        mModePicker.setSelectedItem(CachedCameraModes[0].length-1);
+                        break;
+                }
+
                 openCamera();
-                mModePicker.setValues(CachedCameraModes[modeMap.get(Integer.parseInt(getCameraId()))]);
+                mModePicker.setValues(CachedCameraModes[0]);
                 wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
-                auxDock.setVisibility(View.VISIBLE);
+                auxDock.post(hideAuxDock);
                 front_switch.animate().rotation(-180f).setDuration(300);
             }
-            switch (getState()){
-                case CAMERA:
-                    modifyMenuForPhoto();
-                    break;
-                case VIDEO:
-                    addCapableVideoResolutions();
-                    break;
-                case SLOMO:
-                    modeSloMo();
-                    break;
-                case TIMEWARP:
-                    break;
-                case HIRES:
-                    break;
-                case PORTRAIT:
-                    break;
-                case NIGHT:
-                    break;
-                case PRO:
-                    break;
-            }
+            Log.e(TAG, "SWITCH CAMERA: getState : " + getState());
+            applyModeChange(getState());
         }
     };
 
@@ -1207,13 +1217,13 @@ public class CameraActivity extends AppCompatActivity {
             zoom_level = 1f;
             zSlider.setValue(0f);
         }
-        auxDock.setVisibility(View.GONE);
+        auxDock.post(hideAuxDock);
         zSlider.setVisibility(View.VISIBLE);
 
         if(!is_sliding) {
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 //TODO : ADD SEMAPHORE
-                auxDock.setVisibility(View.VISIBLE);
+                auxDock.post(hideAuxDock);
                 zSlider.setVisibility(View.INVISIBLE);
             }, 1500);
         }
@@ -1353,14 +1363,14 @@ public class CameraActivity extends AppCompatActivity {
                     zoom_level+=0.5f;
 //                    Log.e(TAG, "pinchtoZoom: Zoom In "+zoom_level);
 
-                    auxDock.setVisibility(View.GONE);
+                    auxDock.post(hideAuxDock);
                     zSlider.setVisibility(View.VISIBLE);
                     zSlider.setValue((float) getZoomValueSingleDecimal((zoom_level/4.5f)));
                 } else if (current_finger_spacing < finger_spacing && zoom_level > 1){
                     zoom_level-=0.5f;
 //                    Log.e(TAG, "pinchtoZoom: Zoom Out "+zoom_level);
 
-                    auxDock.setVisibility(View.GONE);
+                    auxDock.post(hideAuxDock);
                     zSlider.setVisibility(View.VISIBLE);
                     zSlider.setValue((float) getZoomValueSingleDecimal((zoom_level/4.5f)));
                 }
@@ -1369,7 +1379,7 @@ public class CameraActivity extends AppCompatActivity {
                 if(!is_sliding) {
                     new Handler(Looper.getMainLooper()).postDelayed(() -> {
                         //TODO : ADD SEMAPHORE
-                        auxDock.setVisibility(View.VISIBLE);
+                        auxDock.post(hideAuxDock);
                         zSlider.setVisibility(View.INVISIBLE);
                     }, 1500);
                 }
@@ -1483,15 +1493,13 @@ public class CameraActivity extends AppCompatActivity {
 
     }
 
-    public void captureImage() {
+    private void captureImage() {
         if(!ready)
             return;
         try {
             //check for ZSL support then only add ZSL request
             captureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureRequest.set(CaptureRequest.JPEG_QUALITY,(byte) 100);
-            captureRequest.set(CaptureRequest.EDGE_MODE
-                    ,CaptureRequest.EDGE_MODE_HIGH_QUALITY);
             captureRequest.set(CaptureRequest.JPEG_ORIENTATION,getJpegOrientation());
 
             captureRequest.addTarget(surfaceList.get(0));
@@ -1890,12 +1898,41 @@ public class CameraActivity extends AppCompatActivity {
         resolutionSelector.setHaloByHeaderAndFooterText(sloMoPair.first.getHeight()+"P_"+ sloMoPair.second.getUpper()+"FPS");
     }
 
-    public String getCameraId() {
+    private String getCameraId() {
         return cameraId;
     }
 
-    public void setCameraId(String cameraId) {
+    private void setCameraId(String cameraId) {
         CameraActivity.cameraId = cameraId;
+    }
+
+    private void applyModeChange(CamState state) {
+        switch (state) {
+            case CAMERA:
+                modifyMenuForPhoto();
+                break;
+            case VIDEO:
+                addCapableVideoResolutions();
+                break;
+            case SLOMO:
+                modeSloMo();
+                break;
+            case TIMEWARP:
+                modeTimeWarp();
+                break;
+            case HIRES:
+                modeHiRes();
+                break;
+            case PORTRAIT:
+                modePortrait();
+                break;
+            case NIGHT:
+                modeNight();
+                break;
+            case PRO:
+                modePro();
+                break;
+        }
     }
 
     private int getScreenWidth() {
@@ -1909,63 +1946,7 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     private void displayMediaThumbnailFromGallery() { //FIXME : PROCESSING CAUSES LAG IN VIEWFINDER
-        String dirPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + "DCIM/Camera" + "/";
-        if(Build.VERSION.SDK_INT<Build.VERSION_CODES.Q){
-            File f = new File(dirPath);
-            File[] dcimFiles = f.listFiles(FILENAME_FILTER);
-            List<File> filesList = new ArrayList<>(Arrays.asList(dcimFiles != null ? dcimFiles : new File[0]));
-            if (!filesList.isEmpty()) {
-                filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
-                File lastImage = filesList.get(0);
-
-
-                if(fileIsImage(String.valueOf(lastImage))){
-                    Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
-                    thumbPreview.setImageBitmap(ThumbnailUtils.extractThumbnail(bmp,100,100));
-                }
-                else {
-                    thumbPreview.setImageBitmap(ThumbnailUtils.createVideoThumbnail(String.valueOf(lastImage)
-                            ,MediaStore.Images.Thumbnails.MINI_KIND));
-                }
-
-            } else {
-                Log.e(TAG, "display_latest_image_from_gallery(): Could not find any Image Files [1]");
-            }
-        }
-        else {
-            new Handler(Looper.getMainLooper()).post(() -> {
-                File f = new File("//storage//emulated//0//DCIM//Camera//");
-                File[] dcimFiles = f.listFiles(FILENAME_FILTER);
-                List<File> filesList = new ArrayList<>(Arrays.asList(dcimFiles != null ? dcimFiles : new File[0]));
-                if (!filesList.isEmpty()) {
-                    filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
-                    File lastImage = filesList.get(0);
-
-                    Log.e(TAG, "display_latest_image_from_gallery: latest : "+lastImage);
-
-                    if(fileIsImage(String.valueOf(lastImage))){
-                        Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
-                        thumbPreview.setImageBitmap(ThumbnailUtils.extractThumbnail(bmp,100,100));
-                    }
-                    else {
-                        try {
-                            thumbPreview.setImageBitmap(ThumbnailUtils.createVideoThumbnail(lastImage
-                                    , new Size(96, 96), new CancellationSignal()));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                } else {
-                    Log.e(TAG, "getAllImageFiles(): Could not find any Image Files");
-                }
-
-            });
-        }
-    }
-
-    private boolean fileIsImage(String file) {
-        return IMAGE_FILES_EXTENSIONS.contains(file.split("\\.")[1].toUpperCase());
+        new Handler(Looper.getMainLooper()).post(new ImageDecoderThread(thumbPreview));
     }
 
     private void requestVideoPermissions() {
@@ -2016,33 +1997,6 @@ public class CameraActivity extends AppCompatActivity {
      */
 
     ImageReader.OnImageAvailableListener snapshotImageCallback = imageReader -> {
-//        Image image =  imageReader.acquireNextImage();
-//        if (image != null) {
-//            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-//            byte[] bytes = new byte[buffer.remaining()];
-//            buffer.get(bytes);
-//            Bitmap preview = BitmapFactory.decodeByteArray(bytes, 0, buffer.capacity());
-//            image.close();
-//            if (preview != null) {
-//                // This gets the canvas for the same mTextureView we would have connected to the
-//                // Camera2 preview directly above.
-//                Canvas canvas = tvPreview.lockCanvas();
-//                if (canvas != null) {
-//                    float[] colorTransform = {
-//                            0, 0, 0, 0, 0,
-//                            .35f, .45f, .25f, 0, 0,
-//                            0, 0, 0, 0, 0,
-//                            0, 0, 0, 1, 0};
-//                    ColorMatrix colorMatrix = new ColorMatrix();
-//                    colorMatrix.set(colorTransform); //Apply the monochrome green
-//                    ColorMatrixColorFilter colorFilter = new ColorMatrixColorFilter(colorMatrix);
-//                    Paint paint = new Paint();
-//                    paint.setColorFilter(colorFilter);
-//                    canvas.drawBitmap(preview, 0, 0, paint);
-//                    tvPreview.unlockCanvasAndPost(canvas);
-//                }
-//            }
-//        }
         Log.e(TAG, "onImageAvailable: received snapshot image data");
         Image img = imageReader.acquireLatestImage();
         new Handler(Looper.getMainLooper()).post(new ImageSaverThread(this,img,cameraId,getContentResolver()));
@@ -2175,16 +2129,13 @@ public class CameraActivity extends AppCompatActivity {
     @Override
     public void onResume() {
         super.onResume();
+        setAestheticLayout();
         resumed = true;
+        openCamera();
         displayMediaThumbnailFromGallery();
         startBackgroundThread();
         shutter.animateInnerCircle(getState());
-        if(getState() == CamState.CAMERA)
-            openCamera();
-        else if(getState() == CamState.VIDEO){
-            createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId()) ? 1080
-                    : 720));
-        }
+        applyModeChange(getState());
     }
 
     @Override
@@ -2208,6 +2159,7 @@ public class CameraActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        stopBackgroundThread();
 //        rs.destroy();
     }
 

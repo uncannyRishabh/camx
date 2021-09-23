@@ -11,7 +11,7 @@ android {
         minSdkVersion 24
         targetSdkVersion 30
         versionCode 1
-        versionName "dirk-diggler.v1"
+        versionName "dirk_diggler.v2(αlpha)"
 
         renderscriptTargetApi 24
         renderscriptSupportModeEnabled false

@@ -26,6 +26,7 @@
             android:layout_width="match_parent"
             android:layout_height="18dp"
             android:layout_alignParentBottom="true" />
+
     </RelativeLayout>
 
     <com.uncanny.camx.CustomViews.ViewFinder.AutoFitPreviewView
@@ -113,9 +114,9 @@
         android:id="@+id/zoom_slider"
         android:layout_width="210dp"
         android:layout_height="30dp"
-        android:layout_above="@id/relative_layout_button_dock"
+        android:layout_above="@id/aux_cam_switch"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="6dp"
+        android:layout_marginBottom="12dp"
         android:elevation="2dp"
         android:value="0"
         android:valueFrom="0"
@@ -183,19 +184,18 @@
         android:id="@+id/mode_picker_view"
         android:layout_width="match_parent"
         android:layout_height="34dp"
-        android:minHeight="32dp"
-        android:layout_marginBottom="14dp"
         android:layout_alignParentBottom="true"
-        android:paddingVertical="10dp"
-        android:paddingHorizontal="12dp"
-        android:textColor="@color/white"
-        android:textSize="14sp"
+        android:layout_marginBottom="14dp"
+        android:ellipsize="end"
         android:hapticFeedbackEnabled="true"
         android:marqueeRepeatLimit="-1"
-        android:ellipsize="end"
+        android:minHeight="32dp"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="10dp"
+        android:textColor="@color/white"
+        android:textSize="14sp"
         app:selectedColor="?colorControlActivated"
-        app:sideItems="2"
-        />
+        app:sideItems="2" />
 
     <com.uncanny.camx.CustomViews.UncannyChronometer
         android:id="@+id/chronometer"
