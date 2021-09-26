@@ -29,68 +29,79 @@
 
     </RelativeLayout>
 
-    <com.uncanny.camx.CustomViews.ViewFinder.AutoFitPreviewView
-        android:id="@+id/preview"
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+    </androidx.cardview.widget.CardView>
+
+    <RelativeLayout
+        android:id="@+id/previewParent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="52dp"
-        />
+        android:orientation="vertical"
+        android:background="@drawable/rounded_corners"
+        >
 
-    <TextView
-        android:id="@+id/zoom_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="36dp"
-        android:textSize="38sp"
-        android:textColor="#E3DDDD"
-        android:visibility="invisible"
-        android:layout_below="@id/appbar"
-        />
+        <com.uncanny.camx.CustomViews.ViewFinder.AutoFitPreviewView
+            android:id="@+id/preview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+        <TextView
+            android:id="@+id/zoom_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="36dp"
+            android:textSize="38sp"
+            android:textColor="#E3DDDD"
+            android:visibility="invisible"
+            />
 
-    <com.uncanny.camx.CustomViews.ViewFinder.Grids
-        android:id="@+id/grid"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="invisible"
-        android:layout_alignTop="@id/preview"
-        />
+        <com.uncanny.camx.CustomViews.ViewFinder.Grids
+            android:id="@+id/grid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:layout_alignBottom="@id/preview"/>
 
-    <com.uncanny.camx.CustomViews.ViewFinder.FocusCircle
-        android:id="@+id/focus_circle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        android:layout_alignTop="@id/preview"
-        />
+        <com.uncanny.camx.CustomViews.ViewFinder.FocusCircle
+            android:id="@+id/focus_circle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:layout_alignBottom="@id/preview"
+            />
 
-    <com.google.android.material.chip.Chip
-        android:id="@+id/vi_indicator"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignTop="@id/preview"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="2dp"
-        android:layout_marginEnd="12dp"
-        android:backgroundTint="#80000000"
-        android:text="1080p@30FPS"
-        android:textSize="10sp"
-        android:clickable="false"
-        android:focusable="false"
-        android:visibility="invisible" />
+        <com.google.android.material.chip.Chip
+            android:id="@+id/vi_indicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_marginTop="2dp"
+            android:layout_marginEnd="12dp"
+            android:backgroundTint="#80000000"
+            android:text="1080p@30FPS"
+            android:textSize="10sp"
+            android:clickable="false"
+            android:focusable="false"
+            android:visibility="invisible" />
 
-    <com.uncanny.camx.CustomViews.ViewFinder.FaceMeteringRect
-        android:id="@+id/fm_rect"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/appbar"
-        android:visibility="gone" />
+        <com.uncanny.camx.CustomViews.ViewFinder.FaceMeteringRect
+            android:id="@+id/fm_rect"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+    </RelativeLayout>
 
     <LinearLayout
         android:id="@+id/aux_cam_switch"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_above="@id/relative_layout_button_dock"
+        android:paddingHorizontal="5dp"
+        android:paddingVertical="3dp"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="12dp"
         android:background="@drawable/rounded_aux_dock"
@@ -100,13 +111,12 @@
             android:layout_width="@dimen/aux_param"
             android:layout_height="@dimen/aux_param"
             android:layout_gravity="center_vertical"
-            android:background="@drawable/colored_textview"
+            android:background="@drawable/circular_textview"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:text="1.0"
-            android:textColor="@color/white"
-            android:textSize="14sp"
+            android:text="1x "
+            android:textSize="16sp"
             android:layout_weight="1"/>
     </LinearLayout>
 

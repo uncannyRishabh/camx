@@ -133,9 +133,9 @@ public class CaptureButton extends View {
         valueAnimator.setInterpolator(new LinearOutSlowInInterpolator());
         valueAnimator.addUpdateListener(animation -> {
             invalidate();
-            icRadius = (float) animation.getAnimatedValue();
+            icRadius = (float) animation.getAnimatedValue("radius");
         });
-        valueAnimator.setDuration(520);
+        valueAnimator.setDuration(600);
         valueAnimator.start();
         invalidate();
     }

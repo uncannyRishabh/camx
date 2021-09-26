@@ -3,11 +3,19 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/circular_textview.xml" value="0.2203125" />
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/circular_textview_small.xml" value="0.2203125" />
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/colored_textview.xml" value="0.2203125" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/ic_timer_10_btn.xml" value="0.2203125" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/ic_timer_3_btn.xml" value="0.2203125" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/ic_timer_5_btn.xml" value="0.5" />
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/rounded_aux_dock.xml" value="0.2203125" />
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/rounded_corners.xml" value="0.2203125" />
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/rounded_ctb.xml" value="0.2203125" />
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/rounded_relative_layout.xml" value="0.2203125" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/splash.xml" value="0.2203125" />
-        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/layout/activity_main.xml" value="0.25" />
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/white_circumcircle.xml" value="0.2203125" />
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/layout/activity_main.xml" value="0.18" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/layout/activity_settings.xml" value="0.17028985507246377" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/layout/button_group.xml" value="0.25" />
       </map>

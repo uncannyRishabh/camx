@@ -1,15 +1,23 @@
 package com.uncanny.camx.CustomViews;
 
+import android.animation.PropertyValuesHolder;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 
 import androidx.annotation.Nullable;
+import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
+
+import com.uncanny.camx.CameraActivity.CamState;
 
 import java.util.ArrayList;
 
@@ -24,10 +32,17 @@ public class ResolutionSelector extends View {
     private String headerAndFooterText;
     private float headingTextSize = 30f;
     private float footerTextSize = 24f;
-    private float index;
+    private float index,prev;
     private float divisions;
+    private int i = 0;
     private ArrayList<String> headerItems = new ArrayList<>(8);
     private ArrayList<String> headerAndFooterItems = new ArrayList<>(8);
+
+    private PropertyValuesHolder valuesHolder;
+    private ValueAnimator valueAnimator;
+
+    private CamState state;
+    private HandlerThread handlerThread;
 
     public ResolutionSelector(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -64,18 +79,53 @@ public class ResolutionSelector extends View {
         sPaint.setColor(Color.parseColor("#9883F0"));
         sPaint.setStyle(Paint.Style.FILL);
         sPaint.setAntiAlias(true);
+
+        handlerThread = new HandlerThread("bgExec");
+        handlerThread.start();
+
+        state = CamState.CAMERA;
     }
 
     public void setHaloByHeaderText(String item){
-        headerText = item;
-        index = headerItems.indexOf(item)+1;
-        invalidate();
+        if(state != CamState.VIDEO_PROGRESSED){
+            prev = index;
+            headerText = item;
+            index = headerItems.indexOf(item)+1;
+
+            if(prev != 0f){
+                valuesHolder = PropertyValuesHolder.ofFloat("i",prev,index);
+                valueAnimator = new ValueAnimator();
+                valueAnimator.setValues(valuesHolder);
+                valueAnimator.setDuration(600);
+                valueAnimator.setInterpolator(new LinearOutSlowInInterpolator());
+                valueAnimator.addUpdateListener(animation -> {
+                    index = (float) animation.getAnimatedValue("i");
+                    invalidate();
+                });
+                valueAnimator.start();
+            }
+        }
     }
 
     public void setHaloByHeaderAndFooterText(String item){
-        headerAndFooterText = item;
-        index = headerAndFooterItems.indexOf(item)+1;
-        invalidate();
+        if(state != CamState.HSVIDEO_PROGRESSED) {
+            prev = index;
+            headerAndFooterText = item;
+            index = headerAndFooterItems.indexOf(item)+1;
+
+            if(prev != 0f){
+                valuesHolder = PropertyValuesHolder.ofFloat("i",prev,index);
+                valueAnimator = new ValueAnimator();
+                valueAnimator.setValues(valuesHolder);
+                valueAnimator.setDuration(600);
+                valueAnimator.setInterpolator(new LinearOutSlowInInterpolator());
+                valueAnimator.addUpdateListener(animation -> {
+                    index = (float) animation.getAnimatedValue("i");
+                    invalidate();
+                });
+                valueAnimator.start();
+            }
+        }
     }
 
     public void clearHeaderItems(){
@@ -119,14 +169,24 @@ public class ResolutionSelector extends View {
         return (headerItems.isEmpty() ? headerAndFooterItems.size() : headerItems.size());
     }
 
+    public void setState(CamState state){
+        this.state = state;
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        for(int i=1; i<=getDivisions();i++){
+        for(i=1; i<=getDivisions();i++){
             if(event.getX() < (getWidth()/(float) getDivisions())*i){
                 if(headerAndFooterItems.isEmpty())
-                    setHaloByHeaderText(headerItems.get(i-1));
+                    new Handler(Looper.getMainLooper())
+                            .postAtFrontOfQueue(() -> {
+                        setHaloByHeaderText(headerItems.get(i-1));
+                    });
                 else
-                    setHaloByHeaderAndFooterText(headerAndFooterItems.get(i-1));
+                    new Handler(Looper.getMainLooper())
+                            .postAtFrontOfQueue(() -> {
+                                setHaloByHeaderAndFooterText(headerAndFooterItems.get(i-1));
+                            });
                 break;
             }
         }
@@ -147,7 +207,7 @@ public class ResolutionSelector extends View {
 
         divisions = getDivisions();
 
-        //INNER RECT
+        //INNER RECT (HALO)
         rectIn.set((getWidth()/divisions)*index - (getWidth()/divisions) + 16,
                 getPaddingTop()+8,
                 (getWidth()/divisions)*index -16,

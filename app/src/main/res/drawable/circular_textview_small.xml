@@ -1,26 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:start ="2dp"
-        android:end   ="2dp"
-        android:top   ="2dp"
-        android:bottom="2dp">
+        android:start ="5dp"
+        android:end   ="5dp"
+        android:top   ="5dp"
+        android:bottom="5dp">
         <shape android:shape="oval">
-            <size android:height="30dp"
-                android:width="30dp" />
-            <solid android:color="#292929" />
+            <size android:height="22dp"
+                android:width   ="22dp" />
+            <solid android:color="#99000000" />
         </shape>
     </item>
 
     <item>
         <shape
-            android:innerRadiusRatio="2.3"
+            android:innerRadiusRatio="2.8"
             android:shape="ring"
-            android:thickness="2.3dp"
+            android:thickness="2.5dp"
             android:useLevel="false">
             <size android:height="36dp"
                 android:width="36dp" />
-            <solid android:color="#FFFFFF" />
+            <solid android:color="#00000000" />
             <corners android:radius="50dp" />
         </shape>
     </item>

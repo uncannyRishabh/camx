@@ -106,7 +106,7 @@ public class UncannyChronometer extends View {
     public void stop(){
         isRunning = false;
         removeCallbacks(startTick);
-        drawTime = "00:00:00";
+        drawTime = "00:00";
     }
 
     public void pause(){
@@ -126,7 +126,10 @@ public class UncannyChronometer extends View {
 
         rectF.set(0,0,getWidth(),getHeight());
         canvas.drawRoundRect(rectF,48f,48f,paint);
-        canvas.drawText(drawTime,cy,cx+10,tPaint);
+        canvas.drawText(drawTime
+                ,cy
+                ,(getHeight()+ tPaint.getTextSize())/2f-5
+                ,tPaint);
 
     }
 }

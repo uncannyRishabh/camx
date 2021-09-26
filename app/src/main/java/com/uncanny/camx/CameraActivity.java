@@ -86,7 +86,6 @@
  import com.uncanny.camx.Utility.ImageSaverThread;
 
  import java.io.File;
- import java.io.FilenameFilter;
  import java.io.IOException;
  import java.math.BigDecimal;
  import java.math.RoundingMode;
@@ -107,12 +106,6 @@ public class CameraActivity extends AppCompatActivity {
     private static final int REQUEST_PERMISSIONS = 200;
     private static final String[] PERMISSION_STRING = {Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE
             , Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
-    private static final List<String> ACCEPTED_FILES_EXTENSIONS = Arrays.asList("JPG", "JPEG", "DNG","MP4");
-    private static final List<String> IMAGE_FILES_EXTENSIONS = Arrays.asList("JPG", "JPEG", "DNG");
-    private static final FilenameFilter FILENAME_FILTER = (dir, name) -> {
-        int index = name.lastIndexOf(46);
-        return ACCEPTED_FILES_EXTENSIONS.contains(-1 == index ? "" : name.substring(index + 1).toUpperCase()) && new File(dir, name).length() > 0;
-    };
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
@@ -151,7 +144,7 @@ public class CameraActivity extends AppCompatActivity {
     private RelativeLayout appbar;
     private AutoFitPreviewView tvPreview;
     private CaptureButton shutter;
-    private MaterialTextView wide_lens;
+    private MaterialTextView wide_lens,tv;
     private AppCompatImageButton front_switch;
     private LinearLayout auxDock;
     private TextView zoomText;
@@ -169,6 +162,7 @@ public class CameraActivity extends AppCompatActivity {
     private UncannyChronometer chronometer;
     private Chip vi_info;
     private ResolutionSelector resolutionSelector;
+    private RelativeLayout tvPreviewParent;
 
     private int resultCode = 1;
     private long time;
@@ -285,7 +279,7 @@ public class CameraActivity extends AppCompatActivity {
         wide_lens = findViewById(R.id.main_wide);
         front_switch = findViewById(R.id.front_back_switch);
         auxDock = findViewById(R.id.aux_cam_switch);
-
+        tvPreviewParent = findViewById(R.id.previewParent);
         setAestheticLayout();
 
         lensData = new LensData(getApplicationContext());
@@ -298,6 +292,7 @@ public class CameraActivity extends AppCompatActivity {
         cachedScreenWidth  = getScreenWidth();
         cachedScreenHeight = getScreenHeight();
 
+        tvPreviewParent.setClipToOutline(true);
 
 //        rs = RenderScript.create(CameraActivity.this);
     }
@@ -307,8 +302,9 @@ public class CameraActivity extends AppCompatActivity {
     protected void onPostCreate(@Nullable Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
 
+        tvPreview.setClipToOutline(true);
+        Log.e(TAG, "onPostCreate: CAN CLIP : "+tvPreview.getClipToOutline());
         addAuxButtons();
-
         button1 = findViewById(R.id.btn_1);
         button2 = findViewById(R.id.btn_2);
         button3 = findViewById(R.id.btn_3);
@@ -666,7 +662,7 @@ public class CameraActivity extends AppCompatActivity {
                     default:
                         break;
                 }
-
+                resolutionSelector.setState(getState());
             }
         });
 
@@ -684,10 +680,12 @@ public class CameraActivity extends AppCompatActivity {
                     else if(getState()==CamState.SLOMO) addCapableSloMoResolutions();
 
                     for(int id : auxCameraList){
-                        auxDock.findViewById(id).setBackground(null);
+                        tv = auxDock.findViewById(id);
+                        tv.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
+                        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
                     }
-                    wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
-                    wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,14);
+                    wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview));
+                    wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
                 }
             }
         });
@@ -871,7 +869,9 @@ public class CameraActivity extends AppCompatActivity {
                 aux_btn.setId(auxCameraList.get(i));
 //                Log.e(TAG, "addAuxButtons: get aux id : "+aux_btn.getId());
                 aux_btn.setGravity(Gravity.CENTER);
+                aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
                 aux_btn.setText(auxCameraList.get(i).toString());
+                aux_btn.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
                 auxDock.addView(aux_btn);
                 aux_btn.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -884,16 +884,19 @@ public class CameraActivity extends AppCompatActivity {
                         if(getState() == CamState.VIDEO) addCapableVideoResolutions();
                         else if(getState() == CamState.SLOMO) addCapableSloMoResolutions();
 
-                        wide_lens.setBackground(null);
+                        wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
+                        wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
                         for(int id : auxCameraList){
                             if((id + "").equals(getCameraId())){
                                 continue;
                             }
-                            auxDock.findViewById(id).setBackground(null);
+                            tv = auxDock.findViewById(id);
+                            tv.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
+                            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
                         }
 
-                        aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP,14);
-                        aux_btn.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+                        aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
+                        aux_btn.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview));
                     }
                 });
             }
@@ -938,10 +941,6 @@ public class CameraActivity extends AppCompatActivity {
                     appbar.getWidth(), cachedHeight * 3);
             appbar.setLayoutParams(layoutParams);
 
-            if(getState() == CamState.VIDEO)
-                resolutionSelector.setHaloByHeaderText(resolutionSelector.getHeaderText());
-            else
-                resolutionSelector.setHaloByHeaderAndFooterText(resolutionSelector.getHeaderAndFooterText());
         }
         else {
             tvPreview.setOnTouchListener(touchListener);
@@ -1049,7 +1048,7 @@ public class CameraActivity extends AppCompatActivity {
 
                 openCamera();
                 mModePicker.setValues(CachedCameraModes[0]);
-                wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.colored_textview));
+                wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview));
                 auxDock.post(hideAuxDock);
                 front_switch.animate().rotation(-180f).setDuration(300);
             }
@@ -1501,8 +1500,8 @@ public class CameraActivity extends AppCompatActivity {
             captureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureRequest.set(CaptureRequest.JPEG_QUALITY,(byte) 100);
             captureRequest.set(CaptureRequest.JPEG_ORIENTATION,getJpegOrientation());
+            captureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_AUTO);
 
-            captureRequest.addTarget(surfaceList.get(0));
             captureRequest.addTarget(surfaceList.get(1));
             if(mflash) {
                 captureRequest.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE);
@@ -1569,6 +1568,7 @@ public class CameraActivity extends AppCompatActivity {
         try {
             previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             previewCaptureRequest.addTarget(previewSurface);
+            previewCaptureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_AUTO);
 //            camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,new Range<>(24,60));
             camDevice.createCaptureSession(Arrays.asList(previewSurface)
                     , new CameraCaptureSession.StateCallback() {
@@ -1608,6 +1608,7 @@ public class CameraActivity extends AppCompatActivity {
             previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
             previewCaptureRequest.addTarget(previewSurface);
             previewCaptureRequest.addTarget(recordSurface);
+            previewCaptureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_AUTO);
             camDevice.createCaptureSession(Arrays.asList(previewSurface, recordSurface, snapshotImageReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
                         @Override
@@ -2059,7 +2060,7 @@ public class CameraActivity extends AppCompatActivity {
                 previewCaptureRequest.addTarget(surfaceList.get(0));
 //                camDeviceCaptureRequest.set(CaptureRequest.STATISTICS_FACE_DETECT_MODE
 //                        ,CaptureRequest.STATISTICS_FACE_DETECT_MODE_SIMPLE);
-
+                previewCaptureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_AUTO);
                 //FRONT CAMERA INVERSION FIX
                 if(characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_FRONT){
                     previewCaptureRequest.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(Surface.ROTATION_180));
