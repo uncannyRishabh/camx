@@ -16,7 +16,7 @@ import android.util.Range;
 import android.util.Size;
 import android.widget.Toast;
 
-import com.uncanny.camx.Utility.CompareSizeByArea;
+import com.uncanny.camx.Utils.CompareSizeByArea;
 
 import java.util.ArrayList;
 import java.util.Arrays;

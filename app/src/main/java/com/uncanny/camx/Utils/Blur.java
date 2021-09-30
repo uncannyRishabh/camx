@@ -1,4 +1,4 @@
-package com.uncanny.camx.Utility;
+package com.uncanny.camx.Utils;
 
 import android.content.Context;
 import android.graphics.Bitmap;

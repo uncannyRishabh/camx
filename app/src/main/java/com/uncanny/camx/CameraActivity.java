@@ -72,18 +72,18 @@
  import com.google.android.material.imageview.ShapeableImageView;
  import com.google.android.material.slider.Slider;
  import com.google.android.material.textview.MaterialTextView;
- import com.uncanny.camx.CustomViews.CaptureButton;
- import com.uncanny.camx.CustomViews.GestureBar;
- import com.uncanny.camx.CustomViews.HorizontalPicker;
- import com.uncanny.camx.CustomViews.ResolutionSelector;
- import com.uncanny.camx.CustomViews.UncannyChronometer;
- import com.uncanny.camx.CustomViews.ViewFinder.AutoFitPreviewView;
- import com.uncanny.camx.CustomViews.ViewFinder.FocusCircle;
- import com.uncanny.camx.CustomViews.ViewFinder.Grids;
  import com.uncanny.camx.Data.LensData;
- import com.uncanny.camx.Utility.CompareSizeByArea;
- import com.uncanny.camx.Utility.ImageDecoderThread;
- import com.uncanny.camx.Utility.ImageSaverThread;
+ import com.uncanny.camx.UI.CaptureButton;
+ import com.uncanny.camx.UI.GestureBar;
+ import com.uncanny.camx.UI.HorizontalPicker;
+ import com.uncanny.camx.UI.ResolutionSelector;
+ import com.uncanny.camx.UI.UncannyChronometer;
+ import com.uncanny.camx.UI.ViewFinder.AutoFitPreviewView;
+ import com.uncanny.camx.UI.ViewFinder.FocusCircle;
+ import com.uncanny.camx.UI.ViewFinder.Grids;
+ import com.uncanny.camx.Utils.CompareSizeByArea;
+ import com.uncanny.camx.Utils.ImageDecoderThread;
+ import com.uncanny.camx.Utils.ImageSaverThread;
 
  import java.io.File;
  import java.io.IOException;
@@ -115,7 +115,7 @@ public class CameraActivity extends AppCompatActivity {
     }
     private LensData lensData;
 
-    private final String [] camID= {"0","1","20","21","22","2","6","3"}; //0,1,2,3,4,5,6,7 in realme and stock android
+//    private final String [] camID= {"0","1","20","21","22","2","6","3"}; //0,1,2,3,4,5,6,7 in realme and stock android
                                   // 0   1   2    3    4    5   6   7
 
     private CameraManager camManager = null;
@@ -280,6 +280,8 @@ public class CameraActivity extends AppCompatActivity {
         front_switch = findViewById(R.id.front_back_switch);
         auxDock = findViewById(R.id.aux_cam_switch);
         tvPreviewParent = findViewById(R.id.previewParent);
+        dock = findViewById(R.id.relative_layout_button_dock);
+        mModePicker = findViewById(R.id.mode_picker_view);
         setAestheticLayout();
 
         lensData = new LensData(getApplicationContext());
@@ -316,8 +318,6 @@ public class CameraActivity extends AppCompatActivity {
         button24 = findViewById(R.id.btn_24);
         button25 = findViewById(R.id.btn_25);
         grids = findViewById(R.id.grid);
-        dock = findViewById(R.id.relative_layout_button_dock);
-        mModePicker = findViewById(R.id.mode_picker_view);
         zoomText = findViewById(R.id.zoom_text);
         zSlider = findViewById(R.id.zoom_slider);
         focusCircle = findViewById(R.id.focus_circle);
@@ -920,6 +920,7 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     private void inflateButtonMenu() {
+        Log.e(TAG, "inflateButtonMenu: ch : "+cachedHeight+" rh : "+appbar.getHeight());
         if (cachedHeight == appbar.getHeight()) {
             tvPreview.setOnTouchListener(null);
             tvPreview.setClickable(false);
@@ -961,17 +962,19 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     private void setDockHeight() {
-        int tvHeight = (int) (cachedScreenWidth * 1.334f);
-        int height = cachedScreenHeight-tvHeight-appbar.getHeight()-mModePicker.getHeight();
+        RelativeLayout parent = findViewById(R.id.parent);
+        int tvHeight = 1440;
+        int height = parent.getHeight()-tvHeight-appbar.getHeight()-mModePicker.getHeight();
         if(dock.getMinimumHeight()<height) {
             RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(cachedScreenWidth
                     , height);
             layoutParams.addRule(RelativeLayout.ABOVE, R.id.mode_picker_view);
             dock.setLayoutParams(layoutParams);
         }
-        Log.e(TAG, "SETDOCKHEIGHT : pHeight : "+cachedScreenHeight+" tvHeight : "+tvHeight
-                +" apppbar : "+appbar.getHeight()+" hor : "+mModePicker.getHeight()
-                +" calculatedH : "+height+"minHeight : "+dock.getMinimumHeight());
+//        Log.e(TAG, "setDockHeight: parent height : "+parent.getHeight());
+//        Log.e(TAG, "SETDOCKHEIGHT : pHeight : "+cachedScreenHeight+" tvHeight : "+tvHeight
+//                +" apppbar : "+appbar.getHeight()+" hor : "+mModePicker.getHeight()
+//                +" calculatedH : "+height+"minHeight : "+dock.getMinimumHeight());
     }
 
     private void modifyMenuForVideo(){
@@ -1155,9 +1158,10 @@ public class CameraActivity extends AppCompatActivity {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i1) {
             surface = true;
-            stPreview = tvPreview.getSurfaceTexture();
+            stPreview = surfaceTexture;
             cachedHeight = appbar.getHeight();
             setDockHeight();
+            Log.e(TAG, "onSurfaceTextureAvailable: FROM ST : "+cachedHeight);
             openCamera();
         }
 
@@ -1500,7 +1504,7 @@ public class CameraActivity extends AppCompatActivity {
             captureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureRequest.set(CaptureRequest.JPEG_QUALITY,(byte) 100);
             captureRequest.set(CaptureRequest.JPEG_ORIENTATION,getJpegOrientation());
-            captureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_AUTO);
+//            captureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_OFF);
 
             captureRequest.addTarget(surfaceList.get(1));
             if(mflash) {
@@ -1568,7 +1572,7 @@ public class CameraActivity extends AppCompatActivity {
         try {
             previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             previewCaptureRequest.addTarget(previewSurface);
-            previewCaptureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_AUTO);
+//            previewCaptureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_OFF);
 //            camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,new Range<>(24,60));
             camDevice.createCaptureSession(Arrays.asList(previewSurface)
                     , new CameraCaptureSession.StateCallback() {
@@ -1608,7 +1612,7 @@ public class CameraActivity extends AppCompatActivity {
             previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
             previewCaptureRequest.addTarget(previewSurface);
             previewCaptureRequest.addTarget(recordSurface);
-            previewCaptureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_AUTO);
+//            previewCaptureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_OFF);
             camDevice.createCaptureSession(Arrays.asList(previewSurface, recordSurface, snapshotImageReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
                         @Override
@@ -2060,7 +2064,7 @@ public class CameraActivity extends AppCompatActivity {
                 previewCaptureRequest.addTarget(surfaceList.get(0));
 //                camDeviceCaptureRequest.set(CaptureRequest.STATISTICS_FACE_DETECT_MODE
 //                        ,CaptureRequest.STATISTICS_FACE_DETECT_MODE_SIMPLE);
-                previewCaptureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_AUTO);
+//                previewCaptureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_OFF);
                 //FRONT CAMERA INVERSION FIX
                 if(characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_FRONT){
                     previewCaptureRequest.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(Surface.ROTATION_180));
@@ -2132,18 +2136,17 @@ public class CameraActivity extends AppCompatActivity {
         super.onResume();
         setAestheticLayout();
         resumed = true;
+        startBackgroundThread();
         openCamera();
         displayMediaThumbnailFromGallery();
-        startBackgroundThread();
-        shutter.animateInnerCircle(getState());
         applyModeChange(getState());
+        shutter.animateInnerCircle(getState());
     }
 
     @Override
     public void onPause() {
         super.onPause();
         Log.e(TAG, "onPause");
-        stopBackgroundThread();
         ready = false;
         resumed = false;
 

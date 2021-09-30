@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.uncanny.camx.CustomViews;
+package com.uncanny.camx.UI;
 
 import android.animation.ArgbEvaluator;
 import android.content.Context;

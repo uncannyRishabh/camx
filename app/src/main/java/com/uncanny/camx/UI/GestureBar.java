@@ -1,11 +1,10 @@
-package com.uncanny.camx.CustomViews;
+package com.uncanny.camx.UI;
 
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.CycleInterpolator;
@@ -44,7 +43,6 @@ public class GestureBar extends View {
         sWidth = getWidth();
         startX = (sWidth/2)-45;
         stopX  = (sWidth/2)+45;
-        Log.e("TAG", "onDraw: appbar Width : "+sWidth);
         canvas.drawLine(startX,getHeight()/2f,stopX,getHeight()/2f,paint);
     }
 

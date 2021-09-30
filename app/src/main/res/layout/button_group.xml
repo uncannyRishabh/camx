@@ -67,7 +67,7 @@
         android:paddingEnd="8dp"
         >
 
-        <com.uncanny.camx.CustomViews.ResolutionSelector
+        <com.uncanny.camx.UI.ResolutionSelector
             android:id="@+id/resolution_selector"
             android:layout_width="330dp"
             android:layout_height="48dp"
