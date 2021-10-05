@@ -1,6 +1,7 @@
  package com.uncanny.camx;
 
  import android.Manifest;
+ import android.animation.LayoutTransition;
  import android.annotation.SuppressLint;
  import android.content.Context;
  import android.content.Intent;
@@ -35,7 +36,6 @@
  import android.os.Looper;
  import android.os.SystemClock;
  import android.provider.MediaStore;
- import android.renderscript.Allocation;
  import android.renderscript.RenderScript;
  import android.util.Log;
  import android.util.Pair;
@@ -97,7 +97,7 @@
  import java.util.Map;
  import java.util.Vector;
 
-@SuppressWarnings({"FieldMayBeFinal",
+ @SuppressWarnings({"FieldMayBeFinal",
         "FieldCanBeLocal"})
 public class CameraActivity extends AppCompatActivity {
     private static final String TAG = "CameraActivity";
@@ -163,6 +163,7 @@ public class CameraActivity extends AppCompatActivity {
     private Chip vi_info;
     private ResolutionSelector resolutionSelector;
     private RelativeLayout tvPreviewParent;
+    private RelativeLayout parent;
 
     private int resultCode = 1;
     private long time;
@@ -256,7 +257,6 @@ public class CameraActivity extends AppCompatActivity {
     private String[][] CachedCameraModes = new String[10][];
 
     private RenderScript rs;
-    private Allocation alloc;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -264,6 +264,9 @@ public class CameraActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        parent = findViewById(R.id.root);
+        parent.getLayoutTransition().enableTransitionType(LayoutTransition.CHANGING);
 
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
             checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
@@ -962,7 +965,6 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     private void setDockHeight() {
-        RelativeLayout parent = findViewById(R.id.parent);
         int tvHeight = 1440;
         int height = parent.getHeight()-tvHeight-appbar.getHeight()-mModePicker.getHeight();
         if(dock.getMinimumHeight()<height) {
