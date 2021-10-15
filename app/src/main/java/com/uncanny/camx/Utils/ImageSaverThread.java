@@ -3,12 +3,18 @@ package com.uncanny.camx.Utils;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.Image;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 
+import com.google.mlkit.vision.common.InputImage;
+import com.uncanny.camx.Modes.Portrait;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -26,11 +32,7 @@ public class ImageSaverThread implements Runnable {
     private final ContentResolver contentResolver;
     private Uri uri;
     Path jpgPath;
-
-//    private RenderScript rs;
-//    private Allocation allocIn,allocOut;
-//    private Bitmap op;
-//    private ScriptC_filter filter;
+    private Bitmap bitmap;
 
     public ImageSaverThread(Image image, String cameraId, ContentResolver contentResolver) {
         this.mImage = image;
@@ -43,8 +45,6 @@ public class ImageSaverThread implements Runnable {
         this.cameraId = cameraId;
         this.contentResolver = contentResolver;
 
-//        rs = RenderScript.create(context);
-//        filter = new ScriptC_filter(rs);
     }
 
     @Override
@@ -78,9 +78,35 @@ public class ImageSaverThread implements Runnable {
         }
 
         ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
+//        int h = mImage.getHeight() , w = mImage.getWidth();
         byte[] bytes = new byte[buffer.remaining()];
         buffer.get(bytes);
 
+        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes , 0, bytes .length);
+        new Portrait(bitmap, 3456, 4608, 270, InputImage.IMAGE_FORMAT_BITMAP, contentResolver);
+
+        saveByteBuffer(bytes,img);
+
+    }
+
+    private void saveBitmap(Bitmap bitmap) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                OutputStream outputStream = contentResolver.openOutputStream(uri);
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+                byte[] byteArray = stream.toByteArray();
+                bitmap.recycle();
+                outputStream.write(byteArray);
+                outputStream.close();
+            }
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void saveByteBuffer(byte[] bytes, File img) {
         try {
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 OutputStream outputStream = contentResolver.openOutputStream(uri);
