@@ -7,9 +7,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
-import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Looper;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -96,7 +94,7 @@ public class ResolutionSelector extends View {
                 valuesHolder = PropertyValuesHolder.ofFloat("i",prev,index);
                 valueAnimator = new ValueAnimator();
                 valueAnimator.setValues(valuesHolder);
-                valueAnimator.setDuration(600);
+                valueAnimator.setDuration(300);
                 valueAnimator.setInterpolator(new LinearOutSlowInInterpolator());
                 valueAnimator.addUpdateListener(animation -> {
                     index = (float) animation.getAnimatedValue("i");
@@ -117,7 +115,7 @@ public class ResolutionSelector extends View {
                 valuesHolder = PropertyValuesHolder.ofFloat("i",prev,index);
                 valueAnimator = new ValueAnimator();
                 valueAnimator.setValues(valuesHolder);
-                valueAnimator.setDuration(600);
+                valueAnimator.setDuration(300);
                 valueAnimator.setInterpolator(new LinearOutSlowInInterpolator());
                 valueAnimator.addUpdateListener(animation -> {
                     index = (float) animation.getAnimatedValue("i");
@@ -178,15 +176,9 @@ public class ResolutionSelector extends View {
         for(i=1; i<=getDivisions();i++){
             if(event.getX() < (getWidth()/(float) getDivisions())*i){
                 if(headerAndFooterItems.isEmpty())
-                    new Handler(Looper.getMainLooper())
-                            .postAtFrontOfQueue(() -> {
-                        setHaloByHeaderText(headerItems.get(i-1));
-                    });
+                    setHaloByHeaderText(headerItems.get(i-1));
                 else
-                    new Handler(Looper.getMainLooper())
-                            .postAtFrontOfQueue(() -> {
-                                setHaloByHeaderAndFooterText(headerAndFooterItems.get(i-1));
-                            });
+                    setHaloByHeaderAndFooterText(headerAndFooterItems.get(i-1));
                 break;
             }
         }

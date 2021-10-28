@@ -175,7 +175,9 @@ public class LensData {
             cameraModes.add("HighRes");
         }
 
-        cameraModes.add("Portrait");
+        if(id.equals("0") || id.equals("1"))
+            cameraModes.add("Portrait");
+
         cameraModes.add("Night");
         if(hasCamera2api()){
             cameraModes.add("Pro");

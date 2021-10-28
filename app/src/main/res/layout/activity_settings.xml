@@ -10,9 +10,9 @@
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appbar_layout"
         android:layout_width="match_parent"
-        android:layout_height="350dp"
+        android:layout_height="240dp"
         android:fitsSystemWindows="true"
-        android:background="@color/black"
+        android:background="#101010"
         app:expandedTitleMarginBottom="30dp"
         app:expandedTitleMarginStart="72dp"
         android:elevation="6dp"
@@ -50,8 +50,7 @@
             <!--GENERAL SETTINGS -->
             <include
                 android:id="@+id/s_dc"
-                layout="@layout/settings_tab_description"
-                />
+                layout="@layout/settings_tab_description" />
             <TextView
                 android:id="@+id/c2api_check_status"
                 android:layout_width="match_parent"

@@ -4,7 +4,7 @@ import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.graphics.Matrix;
+import android.media.Image;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
@@ -14,12 +14,12 @@ import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 
 import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.segmentation.Segmentation;
-import com.google.mlkit.vision.segmentation.SegmentationMask;
 import com.google.mlkit.vision.segmentation.Segmenter;
 import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions;
+import com.uncanny.camx.Utils.BitmapUtils;
+import com.uncanny.camx.Utils.SerialExecutor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -28,54 +28,98 @@ import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
 
 public class Portrait {
     private static final String TAG = "PORTRAIT";
     private ByteBuffer buffer;
     private int width,height,rotation,format;
     private int maskWidth,maskHeight;
-    private Bitmap bitmap,cacheBitmap;
+    private Bitmap bitmap,cacheBitmap,blurBitmap;
     private ContentResolver contentResolver;
     private byte[] bytes;
+    private Image mImage;
+    private InputImage image;
+    private @ColorInt int[] colorInt;
 
-    public Portrait(Bitmap data, int width, int height, int rotation, int format, ContentResolver contentResolver){
-//        this.buffer = data;
-//        this.bytes = data;
+    private Executor executor = new SerialExecutor(Executors.newCachedThreadPool());
+
+    public Portrait(Bitmap data,Bitmap blurBmp, int rotation, ContentResolver contentResolver){
         this.bitmap = data;
+        this.blurBitmap = blurBmp;
+        this.rotation = rotation;
+        this.contentResolver = contentResolver;
+
+        segmentationFromBitmap();
+    }
+
+    public Portrait(Image data, Bitmap bitmap, int rotation, ContentResolver contentResolver){
+        this.mImage = data;
+        this.rotation = rotation;
+        this.contentResolver = contentResolver;
+        this.bitmap = bitmap;
+
+        segmentationFromMediaImage();
+    }
+
+    public Portrait(ByteBuffer data, int width, int height, int rotation, int format, ContentResolver contentResolver){
+        this.buffer = data;
         this.width = width;
         this.height = height;
         this.rotation = rotation;
         this.format = format;
         this.contentResolver = contentResolver;
 
-//        bitmap = RotateBitmap(bitmap,180);
+        segmentationFromByteBuffer();
+    }
+
+    public Portrait(byte[] data, int width, int height, int rotation, int format, ContentResolver contentResolver){
+        this.bytes = data;
+        this.width = width;
+        this.height = height;
+        this.rotation = rotation;
+        this.format = format;
+        this.contentResolver = contentResolver;
+
+        segmentationFromByteArray();
+    }
+
+    private void segmentationFromByteBuffer() {
+        image = InputImage.fromByteBuffer(buffer, width, height, rotation, InputImage.IMAGE_FORMAT_NV21);
+        performSegmentation();
+    }
+
+    private void segmentationFromMediaImage() {
+        image = InputImage.fromMediaImage(mImage,rotation);
+        cacheBitmap = bitmap.copy(Bitmap.Config.ARGB_8888,true);
+        performSegmentation();
+    }
+
+    private void segmentationFromBitmap() {
+        image = InputImage.fromBitmap(bitmap,rotation);
+        cacheBitmap = bitmap.copy(Bitmap.Config.ARGB_8888,true);
+        performSegmentation();
+    }
+
+    private void segmentationFromByteArray() {
+        image = InputImage.fromByteArray(bytes,width,height,rotation,InputImage.IMAGE_FORMAT_BITMAP);
         performSegmentation();
     }
 
     private void performSegmentation() {
-        InputImage image = InputImage
-//            .fromByteArray(bytes,width,height,rotation,InputImage.IMAGE_FORMAT_BITMAP);
-//                .fromByteBuffer(buffer, width, height, rotation, InputImage.IMAGE_FORMAT_NV21);
-        .fromBitmap(bitmap,rotation);
-        cacheBitmap = bitmap.copy(Bitmap.Config.ARGB_8888,true);
-
-        SelfieSegmenterOptions options =
-                new SelfieSegmenterOptions.Builder()
-                        .setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE)
-                        .build();
+        SelfieSegmenterOptions options = new SelfieSegmenterOptions.Builder()
+                .setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE)
+                .build();
 
         Segmenter segmenter = Segmentation.getClient(options);
-        segmenter.process(image).addOnSuccessListener(new OnSuccessListener<SegmentationMask>() {
-            @Override
-            public void onSuccess(@NonNull SegmentationMask mask) {
-                // Task completed successfully
-                maskHeight = mask.getHeight();
-                maskWidth = mask.getWidth();
-                bitmap = Bitmap
-//                        .createBitmap(maskColorsFromByteBuffer(mask.getBuffer()), maskWidth, maskHeight, Bitmap.Config.ARGB_8888);
-                        .createBitmap(coloredBG(mask.getBuffer()));
-//                saveBitmap(bitmap);
-            }
+        segmenter.process(image).addOnSuccessListener(mask -> {
+            maskHeight = mask.getHeight();
+            maskWidth = mask.getWidth();
+
+            executor.execute(() -> bitmap = coloredBG(mask.getBuffer()));
+            executor.execute(() -> saveBitmap(bitmap,90));
         }).addOnFailureListener(new OnFailureListener() {
             @Override
             public void onFailure(@NonNull Exception e) {
@@ -86,28 +130,15 @@ public class Portrait {
     }
 
     private Bitmap coloredBG(ByteBuffer byteBuffer){
-        int alpha;
-        float confidence;
-        for(int row=maskHeight-1; row>=0; row--){
+        for(int row=0; row<maskHeight; row++){
             for(int col=0; col<maskWidth; col++){
-                confidence = 1 - byteBuffer.getFloat();
-                if(confidence > 0.9){
-                    cacheBitmap.setPixel(row,col, Color.argb(255, 255, 0, 255));
-                }
-                else if (confidence > 0.3) {
-                    alpha = (int) (182.9 * confidence - 36.6 + 0.5);
-                    cacheBitmap.setPixel(row,col,Color.argb(alpha, 255, 0, 255));
+                if(byteBuffer.getFloat() < 0.9){
+//                    cacheBitmap.setPixel(col,row, Color.argb(255, 255, 0, 255));
+                    cacheBitmap.setPixel(col,row,blurBitmap.getPixel(col,row));
                 }
             }
         }
-        saveBitmap(cacheBitmap);
         return cacheBitmap;
-    }
-
-    public static Bitmap RotateBitmap(Bitmap source, float angle) {
-        Matrix matrix = new Matrix();
-        matrix.postRotate(angle);
-        return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
     }
 
     @ColorInt
@@ -128,14 +159,17 @@ public class Portrait {
         return colors;
     }
 
-    private void saveBitmap(Bitmap bitmap) {
+    private void saveBitmap(Bitmap bitmap,int bitmapRotation) {
+        if(bitmapRotation != 0){
+            bitmap = BitmapUtils.RotateBitmap(bitmap,bitmapRotation);
+        }
         Uri uri = null;
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
         String currentDateandTime = sdf.format(new Date());
         ContentValues values = new ContentValues();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             values.put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM/Camera/");
-            values.put(MediaStore.Images.Media.DISPLAY_NAME, "CamX_"+currentDateandTime+".jpg");
+            values.put(MediaStore.Images.Media.DISPLAY_NAME, "CamX_PORTRAIT_"+currentDateandTime+".jpg");
             values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpg");
             values.put( MediaStore.MediaColumns.DATE_TAKEN, System.currentTimeMillis() );
             values.put(MediaStore.Images.Media.TITLE, "Image.jpg");
@@ -157,7 +191,6 @@ public class Portrait {
         }catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
 }

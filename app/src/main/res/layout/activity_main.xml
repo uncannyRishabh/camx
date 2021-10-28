@@ -162,9 +162,9 @@
             android:padding="1dp"
             android:scaleType="centerCrop"
             app:shapeAppearanceOverlay="@style/circularImageView"
-            app:srcCompat="@drawable/rami"
+            app:srcCompat="@drawable/solid_black"
             app:strokeColor="@color/white"
-            app:strokeWidth="1dp" />
+            app:strokeWidth="2dp" />
 
         <com.uncanny.camx.UI.CaptureButton
             android:id="@+id/capture"

@@ -28,7 +28,7 @@
 @SuppressWarnings({"FieldMayBeFinal"})
 public class CircularImageView extends View {
     private static final String TAG = "CircularImageView";
-    private Bitmap img = BitmapFactory.decodeResource(getResources(), R.drawable.rami);
+    private Bitmap img = BitmapFactory.decodeResource(getResources(), R.drawable.solid_black);
     private Path mPath   = new Path();
     private Paint paint  = new Paint();
     private Rect srcRect,dstRect;

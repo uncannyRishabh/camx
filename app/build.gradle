@@ -10,9 +10,10 @@ android {
         applicationId "com.example.camx"
         minSdkVersion 24
         targetSdkVersion 30
-        versionCode 1
-        versionName "dirk_diggler.v2(αlpha)"
+        multiDexEnabled true
 
+        versionCode 1
+        versionName "dirk_diggler.v3(αlpha)"
         renderscriptTargetApi 24
         renderscriptSupportModeEnabled false
 
@@ -24,6 +25,11 @@ android {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+
+        debug{
+            minifyEnabled false
+            proguardFiles 'proguard-rules.pro'
+        }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -34,7 +40,6 @@ android {
 
 
 dependencies {
-
     configurations.all {
         resolutionStrategy { force 'androidx.core:core:1.6.0' }
     }
@@ -43,10 +48,13 @@ dependencies {
     implementation 'com.google.android.material:material:1.4.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation "androidx.core:core:1.7.0-beta02"
+    implementation "androidx.core:core:1.7.0-rc01"
     implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.3.1'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.3.1'
     implementation 'com.google.mlkit:segmentation-selfie:16.0.0-beta2'
+
+    implementation 'io.reactivex.rxjava3:rxjava:3.1.2'
+    implementation 'io.reactivex.rxjava3:rxandroid:3.0.0'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'

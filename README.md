@@ -12,7 +12,7 @@ An Open Source android camera with ability to utilize auxiliary cameras to its e
 <h2>Features</h2>
 
 * Ability to use all the Auxiliary cameras
-* Camera Modes - Photo/ Video/ Slo Motion/ ~~TimeLapse~~/ High resolution/ ~~Portrait~~/ ~~Night~~/ ~~Pro~~
+* Camera Modes - Photo/ Video/ Slo Motion/ ~~TimeLapse~~/ High resolution/ Portrait/ ~~Night~~/ ~~Pro~~
 * Autofocus / Touch to focus
 * 2 finger zoom/ Double tap to zoom
 * Ability to change aspect ratio/ flash / timer
@@ -40,6 +40,8 @@ For queries,contribution,bug fixes... [contact](mailto:rishabhrajgupta2000@gmail
 
 * [MaterialComponents](https://github.com/material-components/material-components-android)
 * [HorizontalPicker](https://github.com/blazsolar/HorizontalPicker)
+* [RxJava](https://github.com/ReactiveX/RxJava)
+* [RxAndroid](https://github.com/ReactiveX/RxAndroid)
 
 <!-- ![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss1.jpg) <br /><br />
 ![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss2.jpg) <br /><br />

@@ -33,7 +33,7 @@
             android:parentActivityName=".CameraActivity"/>
         <activity
             android:name=".CameraActivity"
-            android:screenOrientation="nosensor"
+            android:screenOrientation="portrait"
             android:exported="true"
             >
             <intent-filter>

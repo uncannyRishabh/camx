@@ -6,7 +6,6 @@ import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.util.TypedValue;
-import android.view.WindowManager;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -20,6 +19,8 @@ import androidx.core.view.WindowCompat;
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
 
+import java.util.Objects;
+
 public class SettingsActivity extends AppCompatActivity {
     private static final String TAG = "SettingsActivity";
     private String c2status,c2text;
@@ -31,6 +32,7 @@ public class SettingsActivity extends AppCompatActivity {
     private TextView camera2status,camera2text;
 
     private ColorStateList thumbStateList,trackStateList;
+    private int DEVICE_ACCENT;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,9 +41,11 @@ public class SettingsActivity extends AppCompatActivity {
         toolbar = findViewById(R.id.custom_toolbar);
         setSupportActionBar(toolbar);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN
-                , WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
+        DEVICE_ACCENT = getDeviceAccent();
+
+        getWindow().setStatusBarColor(Color.parseColor("#101010"));
+        Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
 
         c2status = getIntent().getStringExtra("c2api");
 
@@ -50,7 +54,7 @@ public class SettingsActivity extends AppCompatActivity {
                 new int[] {-android.R.attr.state_checked}, // disabled
         };
         int[] thumbColors = new int[] {
-                getDeviceAccent(),
+                DEVICE_ACCENT,
                 Color.WHITE
         };
         thumbStateList = new ColorStateList(thumbStates, thumbColors);
@@ -59,7 +63,7 @@ public class SettingsActivity extends AppCompatActivity {
                 new int[] { android.R.attr.state_checked}, // enabled
         };
         int[] trackColors = new int[] {
-                getDeviceAccent(),
+                DEVICE_ACCENT,
         };
         trackStateList = new ColorStateList(trackStates, trackColors);
     }
@@ -74,7 +78,7 @@ public class SettingsActivity extends AppCompatActivity {
         collapsingToolbarLayout.setCollapsedTitleTextColor(Color.WHITE);
         collapsingToolbarLayout.setExpandedTitleTextAppearance(R.style.TextAppearance_AppCompat_Display2);
         collapsingToolbarLayout.setCollapsedTitleTextAppearance(R.style.TextAppearance_AppCompat_Large);
-        collapsingToolbarLayout.setExpandedTitleColor(getDeviceAccent());
+        collapsingToolbarLayout.setExpandedTitleColor(DEVICE_ACCENT);
 
         s_description = findViewById(R.id.s_c);
         SwitchCompat switch_1 = s_description.findViewById(R.id.custom_switch);

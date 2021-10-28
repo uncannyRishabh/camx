@@ -6,13 +6,9 @@ import android.media.ThumbnailUtils;
 import android.os.Build;
 import android.os.CancellationSignal;
 import android.os.Environment;
-import android.os.Handler;
-import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.util.Size;
-
-import com.google.android.material.imageview.ShapeableImageView;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -22,17 +18,23 @@ import java.util.Arrays;
 import java.util.List;
 
 public class ImageDecoderThread implements Runnable{
-    private ShapeableImageView thumbPreview;
+    private static final String TAG = "ImageDecoderThread";
     private static final List<String> ACCEPTED_FILES_EXTENSIONS = Arrays.asList("JPG", "JPEG", "DNG","MP4");
     private static final List<String> IMAGE_FILES_EXTENSIONS = Arrays.asList("JPG", "JPEG", "DNG");
     private static final FilenameFilter FILENAME_FILTER = (dir, name) -> {
         int index = name.lastIndexOf(46);
-        return ACCEPTED_FILES_EXTENSIONS.contains(-1 == index ? "" : name.substring(index + 1).toUpperCase()) && new File(dir, name).length() > 0;
+        return ACCEPTED_FILES_EXTENSIONS.contains(-1 == index ? "" : name.substring(index + 1).toUpperCase())
+                && new File(dir, name).length() > 0;
     };
-    private static final String TAG = "ImageDecoderThread";
+    private Bitmap bitmap;
 
-    public ImageDecoderThread(ShapeableImageView view){
-        thumbPreview = view;
+    public Bitmap getBitmap(){
+        if(bitmap==null)
+            return Bitmap.createBitmap(96,96, Bitmap.Config.ARGB_8888);
+        return bitmap;
+    }
+
+    public ImageDecoderThread(){
     }
 
     @Override
@@ -41,19 +43,18 @@ public class ImageDecoderThread implements Runnable{
         if(Build.VERSION.SDK_INT<Build.VERSION_CODES.Q){
             File f = new File(dirPath);
             File[] dcimFiles = f.listFiles(FILENAME_FILTER);
+            /// FIXME : RECURSIVELY TRAVERSE FROM END IF UNABLE TO GENERATE THUMBNAIL
             List<File> filesList = new ArrayList<>(Arrays.asList(dcimFiles != null ? dcimFiles : new File[0]));
             if (!filesList.isEmpty()) {
                 filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
                 File lastImage = filesList.get(0);
-
-
                 if(fileIsImage(String.valueOf(lastImage))){
                     Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
-                    thumbPreview.setImageBitmap(ThumbnailUtils.extractThumbnail(bmp,100,100));
+                    bitmap = ThumbnailUtils.extractThumbnail(bmp,100,100);
                 }
                 else {
-                    thumbPreview.setImageBitmap(ThumbnailUtils.createVideoThumbnail(String.valueOf(lastImage)
-                            , MediaStore.Images.Thumbnails.MINI_KIND));
+                    bitmap = ThumbnailUtils.createVideoThumbnail(String.valueOf(lastImage)
+                            , MediaStore.Images.Thumbnails.MINI_KIND);
                 }
 
             } else {
@@ -61,39 +62,35 @@ public class ImageDecoderThread implements Runnable{
             }
         }
         else {
-            new Handler(Looper.getMainLooper()).post(() -> {
-                File f = new File("//storage//emulated//0//DCIM//Camera//");
-                File[] dcimFiles = f.listFiles(FILENAME_FILTER);
-                List<File> filesList = new ArrayList<>(Arrays.asList(dcimFiles != null ? dcimFiles : new File[0]));
-                if (!filesList.isEmpty()) {
-                    filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
-                    File lastImage = filesList.get(0);
-
-                    Log.e(TAG, "display_latest_image_from_gallery: latest : "+lastImage);
-
-                    if(fileIsImage(String.valueOf(lastImage))){
-                        Bitmap bmp = BitmapFactory.decodeFile(String.valueOf(lastImage));
-                        thumbPreview.setImageBitmap(ThumbnailUtils.extractThumbnail(bmp,100,100));
+            File f = new File("//storage//emulated//0//DCIM//Camera//");
+            File[] dcimFiles = f.listFiles(FILENAME_FILTER);
+            List<File> filesList = new ArrayList<>(Arrays.asList(dcimFiles != null ? dcimFiles : new File[0]));
+            if (!filesList.isEmpty()) {
+                filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
+                File lastImage = filesList.get(0);
+                Log.e(TAG, "display_latest_image_from_gallery: latest : "+lastImage);
+                if(fileIsImage(String.valueOf(lastImage))){
+                    bitmap = BitmapFactory.decodeFile(String.valueOf(lastImage));
+                }
+                else {
+                    try {
+                        bitmap = ThumbnailUtils.createVideoThumbnail(lastImage
+                                , new Size(96, 96), new CancellationSignal());
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                    else {
-                        try {
-                            thumbPreview.setImageBitmap(ThumbnailUtils.createVideoThumbnail(lastImage
-                                    , new Size(96, 96), new CancellationSignal()));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                } else {
-                    Log.e(TAG, "getAllImageFiles(): Could not find any Image Files");
                 }
 
-            });
+            } else {
+                Log.e(TAG, "getAllImageFiles(): Could not find any Image Files");
+            }
         }
     }
 
     private boolean fileIsImage(String file) {
-        return IMAGE_FILES_EXTENSIONS.contains(file.split("\\.")[1].toUpperCase());
+        int index = file.lastIndexOf(46);
+        return IMAGE_FILES_EXTENSIONS.contains(-1 == index ? ""
+                : file.substring(index + 1).toUpperCase());
     }
 
 }
