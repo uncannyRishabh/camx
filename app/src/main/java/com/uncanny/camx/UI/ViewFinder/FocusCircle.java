@@ -8,7 +8,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.view.View;
-import android.view.animation.CycleInterpolator;
+import android.view.animation.AnticipateOvershootInterpolator;
 
 import androidx.annotation.Nullable;
 
@@ -17,10 +17,12 @@ import androidx.annotation.Nullable;
  */
 
 public class FocusCircle extends View {
-    Paint paint = new Paint();
+    Paint oPaint = new Paint();
+    Paint iPaint = new Paint();
     int height,width,screenWidth;
     int radius;
-    float circleRadius = 12f;
+    float iRadius = 0f;
+    float oRadius = 72f;
 
     public FocusCircle(Context context) {
         super(context);
@@ -33,10 +35,13 @@ public class FocusCircle extends View {
     }
 
     private void init() {
-        paint.setStrokeWidth(2.0f);
-        paint.setAntiAlias(true);
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setColor(Color.WHITE);
+        oPaint.setStrokeWidth(4.0f);
+        oPaint.setAntiAlias(true);
+        oPaint.setStyle(Paint.Style.STROKE);
+        oPaint.setColor(Color.WHITE);
+
+        iPaint.setStyle(Paint.Style.FILL);
+        iPaint.setColor(0x80FFFFFF);
     }
 
     public void setPosition(int height,int width,int screenWidth){
@@ -49,14 +54,24 @@ public class FocusCircle extends View {
     }
 
     public void animateInnerCircle(){
-        PropertyValuesHolder rPropertyValuesHolder = PropertyValuesHolder.ofFloat("radius",11f,9f);
-        ValueAnimator valueAnimator = ValueAnimator.ofPropertyValuesHolder(rPropertyValuesHolder);
-        valueAnimator.setInterpolator(new CycleInterpolator(2));
+        PropertyValuesHolder oPropertyValuesHolder = PropertyValuesHolder.ofFloat("radius",radius/3f,radius);
+        ValueAnimator valueAnimator = ValueAnimator.ofPropertyValuesHolder(oPropertyValuesHolder);
+        valueAnimator.setInterpolator(new AnticipateOvershootInterpolator());
         valueAnimator.addUpdateListener(animation -> {
             invalidate();
-            circleRadius = (float) animation.getAnimatedValue();
+            iRadius = (float) animation.getAnimatedValue();
         });
-        valueAnimator.setDuration(1500);
+        valueAnimator.setDuration(650);
+        valueAnimator.start();
+
+        PropertyValuesHolder iPropertyValuesHolder = PropertyValuesHolder.ofFloat("radius",radius/2f,radius);
+        valueAnimator = ValueAnimator.ofPropertyValuesHolder(iPropertyValuesHolder);
+        valueAnimator.setInterpolator(new AnticipateOvershootInterpolator());
+        valueAnimator.addUpdateListener(animation -> {
+            invalidate();
+            oRadius = (float) animation.getAnimatedValue();
+        });
+        valueAnimator.setDuration(450);
         valueAnimator.start();
     }
 
@@ -65,12 +80,12 @@ public class FocusCircle extends View {
         super.onDraw(canvas);
         invalidate();
         if(screenWidth>0){
-            canvas.drawCircle(height,width, circleRadius,paint);
-            canvas.drawCircle(height,width,radius,paint);
+            canvas.drawCircle(height,width,iRadius,iPaint); // inner circle
+            canvas.drawCircle(height,width,oRadius,oPaint); // outer circle
         }
         else{
-            canvas.drawCircle(height,width, circleRadius,paint);
-            canvas.drawCircle(height,width,90f,paint);
+            canvas.drawCircle(height,width, iRadius,iPaint); // inner circle
+            canvas.drawCircle(height,width,90f,oPaint); // outer circle
         }
     }
 

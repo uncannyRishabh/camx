@@ -3,13 +3,13 @@ plugins {
 }
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 31
     buildToolsVersion "30.0.3"
 
     defaultConfig {
         applicationId "com.example.camx"
         minSdkVersion 24
-        targetSdkVersion 30
+        targetSdkVersion 31
         multiDexEnabled true
 
         versionCode 1

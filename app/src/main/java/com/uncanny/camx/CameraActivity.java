@@ -144,6 +144,12 @@ public class CameraActivity extends AppCompatActivity {
     public enum CamState{
         CAMERA,VIDEO,VIDEO_PROGRESSED,HSVIDEO_PROGRESSED,PORTRAIT,PRO,NIGHT,SLOMO,TIMEWARP,HIRES
     }
+    public enum VFStates{
+        IDLE,FOCUS,DOUBLE_TAP,SLIDE_ZOOM,SLIDE_EXPOSURE;
+    }
+
+    private CamState state = CamState.CAMERA;
+    private VFStates vfStates = VFStates.IDLE;
 
     private Vector<Surface> surfaceList = new Vector<>();
     private Vector<Surface> hfrSurfaceList = new Vector<>();
@@ -173,7 +179,7 @@ public class CameraActivity extends AppCompatActivity {
     private RelativeLayout parent;
 
     private int resultCode = 1;
-    private long time;
+    private long lastClickTime = 0;
     private Size previewSize;
     private Size imageSize;
     private Size mVideoSize;
@@ -184,10 +190,22 @@ public class CameraActivity extends AppCompatActivity {
     public float finger_spacing = 0;
     private int cachedHeight;
     private Rect zoom = new Rect();
+    private Rect zoomRect = new Rect();
 
     private Pair<Size,Range<Integer>> sloMoPair;
     private List<Integer> cameraList;
     private List<Integer> auxCameraList;
+
+     private boolean isVRecording = false;
+     private boolean isSLRecording = false;
+     private boolean isVideoPaused = false;
+     private boolean mflash = false;
+     private volatile boolean is_sliding = false;
+     private boolean firstTouch = true;
+     private boolean ASPECT_RATIO_43 = true;
+     private static boolean ASPECT_RATIO_169 = false;
+     private int timer_cc = 1;
+     private int gridClick = 0;
 
     private CamState getState() {
         return state;
@@ -197,21 +215,19 @@ public class CameraActivity extends AppCompatActivity {
         this.state = state;
     }
 
-    private CamState state = CamState.CAMERA;
-    private boolean isVRecording = false;
-    private boolean isSLRecording = false;
-    private boolean isVideoPaused = false;
-    private boolean mflash = false;
-    private volatile boolean is_sliding = false;
-    private boolean firstTouch = false;
-    private boolean ASPECT_RATIO_43 = true;
-    private static boolean ASPECT_RATIO_169 = false;
-    private int timer_cc = 1;
-     private int gridClick = 0;
+    private VFStates getVfStates(){
+        return vfStates;
+    }
+
+    private void setVfStates(VFStates vfStates){
+        this.vfStates = vfStates;
+    }
 
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
+    private Handler vfHandler = HandlerCompat.createAsync(Looper.getMainLooper());
     private Executor executor = new SerialExecutor(Executors.newCachedThreadPool());
+
 //    private Executor executor1 = new SerialExecutor(Executors.newFixedThreadPool(2));
 
     private Runnable hideFocusCircle = new Runnable() {
@@ -309,7 +325,7 @@ public class CameraActivity extends AppCompatActivity {
         super.onPostCreate(savedInstanceState);
 
         tvPreview.setClipToOutline(true);
-        Log.e(TAG, "onPostCreate: CAN CLIP : "+tvPreview.getClipToOutline());
+//        Log.e(TAG, "onPostCreate: CAN CLIP : "+tvPreview.getClipToOutline());
         addAuxButtons();
         button1 = findViewById(R.id.btn_1);
         button2 = findViewById(R.id.btn_2);
@@ -668,12 +684,16 @@ public class CameraActivity extends AppCompatActivity {
 
         try {
             mZoom = getMaxZoom();
+
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
         zSlider.addOnChangeListener(new Slider.OnChangeListener() {
+            @SuppressLint("RestrictedApi")
             @Override
             public void onValueChange(@NonNull Slider slider, float value, boolean fromUser) {
+                zoomText.removeCallbacks(hideZoomText);
+                auxDock.removeCallbacks(hideAuxDock);
                 try {
                     setZoom(mZoom, value * 4.5f);
                 } catch (CameraAccessException | IllegalStateException e) {
@@ -683,21 +703,19 @@ public class CameraActivity extends AppCompatActivity {
             }
         });
         zSlider.addOnSliderTouchListener(new Slider.OnSliderTouchListener() {
+            @SuppressLint("RestrictedApi")
             @Override
             public void onStartTrackingTouch(@NonNull Slider slider) {
                 is_sliding = true;
-                zSlider.removeCallbacks(hideZoomSlider);
-                auxDock.removeCallbacks(hideAuxDock);
             }
+            @SuppressLint("RestrictedApi")
             @Override
             public void onStopTrackingTouch(@NonNull Slider slider) {
-                auxDock.removeCallbacks(hideAuxDock);
-                zSlider.removeCallbacks(hideZoomSlider);
-                zoomText.removeCallbacks(hideZoomText);
                 is_sliding = false;
+                setVfStates(VFStates.IDLE);
                 auxDock.postDelayed(hideAuxDock,2000);
-                zSlider.postDelayed(hideZoomSlider,2000);
                 zoomText.postDelayed(hideZoomText,2000);
+                zSlider.postDelayed(hideZoomSlider,2000);
             }
         });
 
@@ -1039,43 +1057,53 @@ public class CameraActivity extends AppCompatActivity {
             if(v.isInTouchMode()){
                 v.performClick();
             }
-            time = System.currentTimeMillis();
-            if (event.getAction() == MotionEvent.ACTION_UP) {
-                if(firstTouch && (System.currentTimeMillis() - time) <= 50) {
+            int action = event.getActionMasked();
+            switch (action){
+                case MotionEvent.ACTION_MOVE:{
                     /*
-                     * DOUBLE TAP TO ZOOM
+                     * PINCH TO ZOOM
                      */
-                    Log.e("** DOUBLE TAP**"," second tap ");
-                    try {
-                        doubleTapZoom();
-                    } catch (CameraAccessException e) {
-                        e.printStackTrace();
+                    if (event.getPointerCount() > 1) {
+                        pinchToZoom(event);
+                        break;
                     }
-                    firstTouch = false;
-                } else if(zSlider.getVisibility()!=View.VISIBLE){
-                    /*
-                     * TOUCH TO FOCUS
-                     */
-                    firstTouch = true;
-                    Handler handler = HandlerCompat.createAsync(Looper.getMainLooper());
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            firstTouch = false;
+                    return true;
+                }
+                case MotionEvent.ACTION_POINTER_UP:{
+                    vfHandler.postDelayed(() -> setVfStates(VFStates.IDLE), 700);
+                    break;
+                }
+                case MotionEvent.ACTION_UP:{
+                    zSlider.removeCallbacks(hideZoomSlider);
+                    long clickTime = System.currentTimeMillis();
+                    if ((clickTime - lastClickTime) < 500) {
+                        /*
+                         * DOUBLE TAP TO ZOOM
+                         */
+                        setVfStates(VFStates.DOUBLE_TAP);
+                        Log.e("** DOUBLE TAP**", " second tap ");
+                        try {
+                            doubleTapZoom();
+                        } catch (CameraAccessException e) {
+                            e.printStackTrace();
                         }
-                    }, 700);
-                    touchToFocus(v,event);
-                    time = System.currentTimeMillis();
-                    Log.e("** SINGLE  TAP **"," First Tap time  "+time);
-                    return false;
+                        lastClickTime = 0;
+                    } else if (getVfStates() != VFStates.DOUBLE_TAP && getVfStates() != VFStates.SLIDE_ZOOM) {
+                        /*
+                         * TOUCH TO FOCUS
+                         */
+                        setVfStates(VFStates.FOCUS);
+                        firstTouch = true;
+                        touchToFocus(v, event);
+                        lastClickTime = System.currentTimeMillis();
+                        Log.e("** SINGLE  TAP **", " First Tap time  " + lastClickTime);
+                        return false;
+                    }
+                    lastClickTime = clickTime;
+                    firstTouch = true;
                 }
             }
-            /*
-             * PINCH TO ZOOM
-             */
-            if (event.getPointerCount() > 1) {
-                pinchToZoom(event);
-            }
+
             return true;
         }
     };
@@ -1149,13 +1177,12 @@ public class CameraActivity extends AppCompatActivity {
         auxDock.post(hideAuxDock);
         zSlider.setVisibility(View.VISIBLE);
 
-        if(!is_sliding) {
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                //TODO : ADD SEMAPHORE
-                auxDock.post(hideAuxDock);
-                zSlider.setVisibility(View.INVISIBLE);
-            }, 1500);
-        }
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            //TODO : ADD SEMAPHORE
+            auxDock.post(hideAuxDock);
+            zSlider.post(hideZoomSlider);
+        }, 2000);
+        setVfStates(VFStates.IDLE);
         Log.e(TAG, "doubleTaptoZoom: D O U B L E - T A P P E D");
     }
 
@@ -1177,13 +1204,8 @@ public class CameraActivity extends AppCompatActivity {
 
 
         Log.e(TAG, "touchToFocus: F O C U S I N G");
-        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        try {
-            characteristics = manager.getCameraCharacteristics(getCameraId());
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-        final Rect sensorArraySize = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+
+        final Rect sensorArraySize = getCameraCharacteristics().get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
 
         /*
          * here I just flip x,y, but this needs to correspond with the sensor orientation (via SENSOR_ORIENTATION)
@@ -1279,8 +1301,9 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     private void pinchToZoom(MotionEvent event){
+        setVfStates(VFStates.SLIDE_ZOOM);
         auxDock.removeCallbacks(hideAuxDock);
-        zSlider.removeCallbacks(hideZoomSlider);
+
         try {
             float maxzoom = getMaxZoom();
             float current_finger_spacing;
@@ -1288,7 +1311,7 @@ public class CameraActivity extends AppCompatActivity {
             current_finger_spacing = getFingerSpacing(event);
             if(finger_spacing != 0){
 //                pinched = true;
-                if(current_finger_spacing > finger_spacing && maxzoom > zoom_level){
+                if(current_finger_spacing > finger_spacing &&  zoom_level < maxzoom){
                     zoom_level+=0.5f;
 //                    Log.e(TAG, "pinchtoZoom: Zoom In "+zoom_level);
 
@@ -1309,7 +1332,7 @@ public class CameraActivity extends AppCompatActivity {
                     new Handler(Looper.getMainLooper()).postDelayed(() -> {
                         //TODO : ADD SEMAPHORE
                         auxDock.post(hideAuxDock);
-                        zSlider.setVisibility(View.INVISIBLE);
+                        zSlider.postDelayed(hideZoomSlider,2000);
                     }, 1500);
                 }
 
@@ -1321,30 +1344,26 @@ public class CameraActivity extends AppCompatActivity {
 
     }
 
-    private void setZoom(float maxzoom, float zoom_level) throws CameraAccessException {
-        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        CameraCharacteristics characteristics = manager.getCameraCharacteristics(getCameraId());
-        Rect m = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
-
+    private void setZoom(float maxZoom, float zoom_level) throws CameraAccessException {
         zoomText.removeCallbacks(hideZoomText);
 
-        int minW = (int) (m.width() / maxzoom);
-        int minH = (int) (m.height() / maxzoom);
-        int difW = m.width() - minW;
-        int difH = m.height() - minH;
+        int minW = (int) (zoomRect.width() / maxZoom);
+        int minH = (int) (zoomRect.height() / maxZoom);
+        int difW = zoomRect.width() - minW;
+        int difH = zoomRect.height() - minH;
         int cropW = difW /100 *(int)zoom_level;
         int cropH = difH /100 *(int)zoom_level;
         cropW -= cropW & 3;
         cropH -= cropH & 3;
-        zoom = new Rect(cropW, cropH, m.width() - cropW, m.height() - cropH);
+        zoom = new Rect(cropW, cropH, zoomRect.width() - cropW, zoomRect.height() - cropH);
 
-        String zText = getZoomValueSingleDecimal(zoom_level/4.5f)+"x";
-        zoomText.setVisibility(View.VISIBLE);
-        zoomText.setText(zText);
-
-        if(!is_sliding){
-            zoomText.postDelayed(()-> zoomText.setVisibility(View.INVISIBLE),1800);
-        }
+//        String zText = getZoomValueSingleDecimal(zoom_level/4.5f)+"x";
+//        zoomText.setVisibility(View.VISIBLE);
+//        zoomText.setText(zText);
+//
+//        if(!is_sliding){
+//            zoomText.postDelayed(()-> zoomText.setVisibility(View.INVISIBLE),1800);
+//        }
 
         previewCaptureRequest.set(CaptureRequest.SCALER_CROP_REGION, zoom);
         try {
@@ -1371,9 +1390,7 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     public float getMaxZoom() throws CameraAccessException {
-        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        CameraCharacteristics characteristics = manager.getCameraCharacteristics(getCameraId());
-        return (characteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM))*4.5f;
+        return (getCameraCharacteristics().get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM))*4.5f;
     }
 
     /**
@@ -1391,6 +1408,8 @@ public class CameraActivity extends AppCompatActivity {
         else if(getState() == CamState.HIRES){
             imageSize = lensData.getBayerLensSize();
         }
+
+        zoomRect = getCameraCharacteristics().get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
 
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         previewSize = getPreviewResolution(map.getOutputSizes(ImageFormat.JPEG)
@@ -1499,6 +1518,10 @@ public class CameraActivity extends AppCompatActivity {
             previewCaptureRequest.addTarget(previewSurface);
 //            previewCaptureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_OFF);
 //            camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,new Range<>(24,60));
+            previewCaptureRequest.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE
+                    ,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON);
+//            captureRequest.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE
+//                    ,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON);
             camDevice.createCaptureSession(Arrays.asList(previewSurface)
                     , new CameraCaptureSession.StateCallback() {
                         @Override
@@ -1740,12 +1763,15 @@ public class CameraActivity extends AppCompatActivity {
      */
 
     private CameraCharacteristics getCameraCharacteristics() {
-        camManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        if(camManager == null){
+            camManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        }
         try {
             characteristics = camManager.getCameraCharacteristics(getCameraId());
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+
         return characteristics;
     }
 
@@ -1773,31 +1799,22 @@ public class CameraActivity extends AppCompatActivity {
         return (surfaceRotation + sensorOrientation + 270) % 360;
     }
 
-     private int getRotationCompensation(String cameraId, boolean isFrontFacing) {
-         // Get the device's current rotation relative to its "native" orientation.
-         // Then, from the ORIENTATIONS table, look up the angle the image must be
-         // rotated to compensate for the device's rotation.
-         int deviceRotation = getWindowManager().getDefaultDisplay().getRotation();
-         int rotationCompensation = ORIENTATIONS.get(deviceRotation);
+    private int getRotationCompensation(boolean isFrontFacing) {
+        // Get the device's current rotation relative to its "native" orientation.
+        // Then, from the ORIENTATIONS table, look up the angle the image must be
+        // rotated to compensate for the device's rotation.
+        int deviceRotation = getWindowManager().getDefaultDisplay().getRotation();
+        int rotationCompensation = ORIENTATIONS.get(deviceRotation);
 
-         // Get the device's sensor orientation.
-         CameraManager cameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
-         int sensorOrientation = 0;
-         try {
-             sensorOrientation = cameraManager
-                     .getCameraCharacteristics(cameraId)
-                     .get(CameraCharacteristics.SENSOR_ORIENTATION);
-         } catch (CameraAccessException e) {
-             e.printStackTrace();
-         }
-
-         if (isFrontFacing) {
-             rotationCompensation = (sensorOrientation + rotationCompensation) % 360;
-         } else { // back-facing
-             rotationCompensation = (sensorOrientation - rotationCompensation + 360) % 360;
-         }
-         return rotationCompensation;
-     }
+        // Get the device's sensor orientation.
+        int sensorOrientation = getCameraCharacteristics().get(CameraCharacteristics.SENSOR_ORIENTATION);
+        if (isFrontFacing) {
+            rotationCompensation = (sensorOrientation + rotationCompensation) % 360;
+        } else { // back-facing
+            rotationCompensation = (sensorOrientation - rotationCompensation + 360) % 360;
+        }
+        return rotationCompensation;
+    }
 
     private int translateResolution(String selectedItem) {
         switch (selectedItem) {
@@ -1965,7 +1982,7 @@ public class CameraActivity extends AppCompatActivity {
                 , getContentResolver()
                 , (getState() == CamState.PORTRAIT)
                 , false                      //TODO: add flipping logic
-                , getRotationCompensation(getCameraId(), (getCameraId().equals("1"))) ))
+                , getRotationCompensation((getCameraId().equals("1"))) ))
                 .subscribeOn(Schedulers.io())
         .subscribe(new CompletableObserver() {
             @Override

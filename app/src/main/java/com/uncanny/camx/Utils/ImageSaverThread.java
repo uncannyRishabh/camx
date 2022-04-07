@@ -89,7 +89,7 @@ public class ImageSaverThread implements Runnable {
 
         if(isPortrait){
             Completable c1 = Completable.fromRunnable(() -> blurBmp = new Blur(context)
-                    .blur(BitmapFactory.decodeByteArray(bytes, 0, bytes.length),10));
+                    .blur(BitmapFactory.decodeByteArray(bytes, 0, bytes.length),8));
             c1.andThen(Completable.fromRunnable(() -> temp = BitmapFactory.decodeByteArray(bytes , 0, bytes.length)))
                     .observeOn(Schedulers.computation())
                     .subscribe(() -> new Portrait(temp,blurBmp,rotation,contentResolver));
