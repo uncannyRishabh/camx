@@ -28,11 +28,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/splash">
-        <activity android:name=".SettingsActivity"
+        <activity android:name=".App.SettingsActivity"
             android:theme="@style/EdgeToEdge"
-            android:parentActivityName=".CameraActivity"/>
+            android:parentActivityName=".App.CameraActivity"/>
         <activity
-            android:name=".CameraActivity"
+            android:name=".App.CameraActivity"
             android:screenOrientation="portrait"
             android:exported="true"
             >
@@ -47,6 +47,10 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <meta-data
+            android:name="preloaded_fonts"
+            android:resource="@array/preloaded_fonts" />
     </application>
 
 </manifest>

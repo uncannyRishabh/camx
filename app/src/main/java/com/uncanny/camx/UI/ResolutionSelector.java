@@ -15,7 +15,7 @@ import android.view.View;
 import androidx.annotation.Nullable;
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
 
-import com.uncanny.camx.CameraActivity.CamState;
+import com.uncanny.camx.App.CameraActivity.CamState;
 
 import java.util.ArrayList;
 

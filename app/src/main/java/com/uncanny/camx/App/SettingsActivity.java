@@ -1,4 +1,4 @@
-package com.uncanny.camx;
+package com.uncanny.camx.App;
 
 import android.annotation.SuppressLint;
 import android.content.res.ColorStateList;
@@ -18,6 +18,7 @@ import androidx.core.view.WindowCompat;
 
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
+import com.uncanny.camx.R;
 
 import java.util.Objects;
 

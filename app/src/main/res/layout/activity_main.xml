@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:background="@color/black"
     android:animateLayoutChanges="true"
-    tools:context=".CameraActivity">
+    tools:context=".App.CameraActivity">
 
     <RelativeLayout
         android:id="@+id/appbar"
@@ -101,23 +101,24 @@
         android:layout_height="wrap_content"
         android:layout_above="@id/relative_layout_button_dock"
         android:paddingHorizontal="5dp"
-        android:paddingVertical="3dp"
+        android:paddingVertical="4dp"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="12dp"
         android:background="@drawable/rounded_aux_dock"
         >
+
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/main_wide"
             android:layout_width="@dimen/aux_param"
             android:layout_height="@dimen/aux_param"
             android:layout_gravity="center_vertical"
+            android:layout_weight="1"
             android:background="@drawable/circular_textview"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
             android:text="1x "
-            android:textSize="16sp"
-            android:layout_weight="1"/>
+            android:textSize="16sp" />
     </LinearLayout>
 
     <com.google.android.material.slider.Slider

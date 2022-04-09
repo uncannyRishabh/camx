@@ -1,4 +1,4 @@
- package com.uncanny.camx;
+ package com.uncanny.camx.App;
 
  import android.Manifest;
  import android.animation.LayoutTransition;
@@ -71,6 +71,7 @@
  import com.google.android.material.slider.Slider;
  import com.google.android.material.textview.MaterialTextView;
  import com.uncanny.camx.Data.LensData;
+ import com.uncanny.camx.R;
  import com.uncanny.camx.UI.CaptureButton;
  import com.uncanny.camx.UI.GestureBar;
  import com.uncanny.camx.UI.HorizontalPicker;
@@ -186,7 +187,7 @@ public class CameraActivity extends AppCompatActivity {
 
     private ImageReader snapshotImageReader;
     private float mZoom = 1.0f;
-    public float zoom_level = 1;
+    public float ZOOM_LEVEL = 0;
     public float finger_spacing = 0;
     private int cachedHeight;
     private Rect zoom = new Rect();
@@ -196,16 +197,15 @@ public class CameraActivity extends AppCompatActivity {
     private List<Integer> cameraList;
     private List<Integer> auxCameraList;
 
-     private boolean isVRecording = false;
-     private boolean isSLRecording = false;
-     private boolean isVideoPaused = false;
-     private boolean mflash = false;
-     private volatile boolean is_sliding = false;
-     private boolean firstTouch = true;
-     private boolean ASPECT_RATIO_43 = true;
-     private static boolean ASPECT_RATIO_169 = false;
-     private int timer_cc = 1;
-     private int gridClick = 0;
+    private boolean isVRecording = false;
+    private boolean isSLRecording = false;
+    private boolean isVideoPaused = false;
+    private boolean mflash = false;
+    private boolean ASPECT_RATIO_43 = true;
+    private static boolean ASPECT_RATIO_169 = false;
+    private int timer_cc = 1;
+    private int gridClick = 0;
+    private String zText = "";
 
     private CamState getState() {
         return state;
@@ -242,7 +242,7 @@ public class CameraActivity extends AppCompatActivity {
     private Runnable hideZoomSlider = new Runnable() {
         @Override
         public void run() {
-            if(zSlider.getVisibility()==View.VISIBLE && !is_sliding){
+            if(zSlider.getVisibility()==View.VISIBLE){
                 zSlider.setVisibility(View.GONE);
             }
         }
@@ -325,7 +325,7 @@ public class CameraActivity extends AppCompatActivity {
         super.onPostCreate(savedInstanceState);
 
         tvPreview.setClipToOutline(true);
-//        Log.e(TAG, "onPostCreate: CAN CLIP : "+tvPreview.getClipToOutline());
+
         addAuxButtons();
         button1 = findViewById(R.id.btn_1);
         button2 = findViewById(R.id.btn_2);
@@ -695,23 +695,22 @@ public class CameraActivity extends AppCompatActivity {
                 zoomText.removeCallbacks(hideZoomText);
                 auxDock.removeCallbacks(hideAuxDock);
                 try {
-                    setZoom(mZoom, value * 4.5f);
+                    ZOOM_LEVEL = value * 4.5f;
+                    setZoom(mZoom,  (int) ZOOM_LEVEL);
                 } catch (CameraAccessException | IllegalStateException e) {
                     e.printStackTrace();
                 }
-
             }
         });
         zSlider.addOnSliderTouchListener(new Slider.OnSliderTouchListener() {
             @SuppressLint("RestrictedApi")
             @Override
             public void onStartTrackingTouch(@NonNull Slider slider) {
-                is_sliding = true;
+
             }
             @SuppressLint("RestrictedApi")
             @Override
             public void onStopTrackingTouch(@NonNull Slider slider) {
-                is_sliding = false;
                 setVfStates(VFStates.IDLE);
                 auxDock.postDelayed(hideAuxDock,2000);
                 zoomText.postDelayed(hideZoomText,2000);
@@ -827,7 +826,6 @@ public class CameraActivity extends AppCompatActivity {
         front_switch.setVisibility(lensData.hasCamera2api() ? View.VISIBLE : View.INVISIBLE);
     }
 
-
     /**
      * UI CHANGES
      */
@@ -843,7 +841,6 @@ public class CameraActivity extends AppCompatActivity {
                 MaterialTextView aux_btn = new MaterialTextView(this);
                 aux_btn.setLayoutParams(layoutParams);
                 aux_btn.setId(auxCameraList.get(i));
-//                Log.e(TAG, "addAuxButtons: get aux id : "+aux_btn.getId());
                 aux_btn.setGravity(Gravity.CENTER);
                 aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
                 aux_btn.setText(auxCameraList.get(i).toString());
@@ -861,6 +858,7 @@ public class CameraActivity extends AppCompatActivity {
 
                         wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
                         wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
+//                        wide_lens.setTextColor(Color.WHITE);
                         for(int id : auxCameraList){
                             if((id + "").equals(getCameraId())){
                                 continue;
@@ -868,8 +866,9 @@ public class CameraActivity extends AppCompatActivity {
                             tv = auxDock.findViewById(id);
                             tv.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
                             tv.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
+                            tv.setTextColor(Color.WHITE);
                         }
-
+//                        aux_btn.setTextColor(ContextCompat.getColor(getApplicationContext(),R.color.purple_200));
                         aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
                         aux_btn.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview));
                     }
@@ -974,7 +973,7 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     private void update_chip_text(String size,String fps){
-        chip_Text = size+"p@"+fps+"fps";
+        chip_Text = size+"p | "+fps+"fps";
         vi_info.setText(chip_Text);
         Log.e(TAG, "update_chip_text: CHIP UPDATED | "+chip_Text);
     }
@@ -1019,7 +1018,7 @@ public class CameraActivity extends AppCompatActivity {
             try {
                 captureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_VIDEO_SNAPSHOT);
                 captureRequest.addTarget(snapshotImageReader.getSurface());
-                if(zoom_level!=1) {
+                if(ZOOM_LEVEL !=1) {
                     captureRequest.set(CaptureRequest.SCALER_CROP_REGION, zoom);
                 }
                 camSession.capture(captureRequest.build(), null, null);
@@ -1054,10 +1053,8 @@ public class CameraActivity extends AppCompatActivity {
     private View.OnTouchListener touchListener = new View.OnTouchListener(){
         @Override
         public boolean onTouch(View v, MotionEvent event) {
-            if(v.isInTouchMode()){
-                v.performClick();
-            }
             int action = event.getActionMasked();
+
             switch (action){
                 case MotionEvent.ACTION_MOVE:{
                     /*
@@ -1070,11 +1067,12 @@ public class CameraActivity extends AppCompatActivity {
                     return true;
                 }
                 case MotionEvent.ACTION_POINTER_UP:{
+                    zSlider.postDelayed(hideZoomSlider,2000);
+                    zoomText.postDelayed(hideZoomText, 2000);
                     vfHandler.postDelayed(() -> setVfStates(VFStates.IDLE), 700);
                     break;
                 }
                 case MotionEvent.ACTION_UP:{
-                    zSlider.removeCallbacks(hideZoomSlider);
                     long clickTime = System.currentTimeMillis();
                     if ((clickTime - lastClickTime) < 500) {
                         /*
@@ -1093,14 +1091,13 @@ public class CameraActivity extends AppCompatActivity {
                          * TOUCH TO FOCUS
                          */
                         setVfStates(VFStates.FOCUS);
-                        firstTouch = true;
                         touchToFocus(v, event);
                         lastClickTime = System.currentTimeMillis();
                         Log.e("** SINGLE  TAP **", " First Tap time  " + lastClickTime);
                         return false;
                     }
                     lastClickTime = clickTime;
-                    firstTouch = true;
+                    v.performClick();
                 }
             }
 
@@ -1158,30 +1155,28 @@ public class CameraActivity extends AppCompatActivity {
         }
         float DT_value = maxZoom/2;
 
-        Log.e(TAG, "doubleTaptoZoom: Zoom Level "+zoom_level);
-        if(zoom_level<DT_value){
-            setZoom(maxZoom,DT_value);
-            zoom_level = DT_value;
+        Log.e(TAG, "doubleTaptoZoom: Zoom Level "+ ZOOM_LEVEL);
+        if(ZOOM_LEVEL <DT_value){
+            setZoom(maxZoom, (int) DT_value);
+            ZOOM_LEVEL = DT_value;
             zSlider.setValue(5.0f);
         }
-        else if(zoom_level>DT_value){
-            setZoom(maxZoom,DT_value);
-            zoom_level = DT_value;
+        else if(ZOOM_LEVEL >DT_value){
+            setZoom(maxZoom, (int) DT_value);
+            ZOOM_LEVEL = DT_value;
             zSlider.setValue(5.0f);
         }
-        else if(zoom_level==DT_value){
-            setZoom(maxZoom,1f);
-            zoom_level = 1f;
+        else if(ZOOM_LEVEL ==DT_value){
+            setZoom(maxZoom,1);
+            ZOOM_LEVEL = 1f;
             zSlider.setValue(0f);
         }
         auxDock.post(hideAuxDock);
         zSlider.setVisibility(View.VISIBLE);
 
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            //TODO : ADD SEMAPHORE
-            auxDock.post(hideAuxDock);
-            zSlider.post(hideZoomSlider);
-        }, 2000);
+        auxDock.postDelayed(hideAuxDock,2000);
+        zSlider.postDelayed(hideZoomSlider,2000);
+        zoomText.postDelayed(hideZoomText,2000);
         setVfStates(VFStates.IDLE);
         Log.e(TAG, "doubleTaptoZoom: D O U B L E - T A P P E D");
     }
@@ -1193,15 +1188,9 @@ public class CameraActivity extends AppCompatActivity {
         float h = event.getX();
         float w = event.getY();
 
-//        focusCircle.animateInnerCircle();
         focusCircle.setVisibility(View.VISIBLE);
         focusCircle.setPosition((int)h,(int)w,getScreenWidth());
-//        focusCircle.setPivotX((int)h);
-//        focusCircle.setPivotY((int)w);
-//        focusCircle.animate().scaleX(1.2f).scaleY(1.2f).setDuration(2000).setInterpolator(new CycleInterpolator(1));
-
-        focusCircle.postDelayed(hideFocusCircle,2000);
-
+        focusCircle.postDelayed(hideFocusCircle,1200);
 
         Log.e(TAG, "touchToFocus: F O C U S I N G");
 
@@ -1310,32 +1299,18 @@ public class CameraActivity extends AppCompatActivity {
             // Multi touch logic
             current_finger_spacing = getFingerSpacing(event);
             if(finger_spacing != 0){
-//                pinched = true;
-                if(current_finger_spacing > finger_spacing &&  zoom_level < maxzoom){
-                    zoom_level+=0.5f;
-//                    Log.e(TAG, "pinchtoZoom: Zoom In "+zoom_level);
+                if(zSlider.getVisibility() != View.VISIBLE) zSlider.setVisibility(View.VISIBLE);
 
+                if(current_finger_spacing > finger_spacing &&  ZOOM_LEVEL < maxzoom){
+                    ZOOM_LEVEL +=0.5f;
                     auxDock.post(hideAuxDock);
-                    zSlider.setVisibility(View.VISIBLE);
-                    zSlider.setValue((float) getZoomValueSingleDecimal((zoom_level/4.5f)));
-                } else if (current_finger_spacing < finger_spacing && zoom_level > 1){
-                    zoom_level-=0.5f;
-//                    Log.e(TAG, "pinchtoZoom: Zoom Out "+zoom_level);
-
+                    zSlider.setValue((float) getZoomValueSingleDecimal((ZOOM_LEVEL /4.5f)));
+                } else if (current_finger_spacing < finger_spacing && ZOOM_LEVEL > 1){
+                    ZOOM_LEVEL -=0.5f;
                     auxDock.post(hideAuxDock);
-                    zSlider.setVisibility(View.VISIBLE);
-                    zSlider.setValue((float) getZoomValueSingleDecimal((zoom_level/4.5f)));
+                    zSlider.setValue((float) getZoomValueSingleDecimal((ZOOM_LEVEL /4.5f)));
                 }
-                setZoom(maxzoom,zoom_level);
-
-                if(!is_sliding) {
-                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                        //TODO : ADD SEMAPHORE
-                        auxDock.post(hideAuxDock);
-                        zSlider.postDelayed(hideZoomSlider,2000);
-                    }, 1500);
-                }
-
+                setZoom(maxzoom, (int) ZOOM_LEVEL);
             }
             finger_spacing = current_finger_spacing;
         } catch (CameraAccessException e) {
@@ -1344,26 +1319,28 @@ public class CameraActivity extends AppCompatActivity {
 
     }
 
-    private void setZoom(float maxZoom, float zoom_level) throws CameraAccessException {
-        zoomText.removeCallbacks(hideZoomText);
-
-        int minW = (int) (zoomRect.width() / maxZoom);
+    private void setZoom(float maxZoom, int zoom_level) throws CameraAccessException {
+        int minW = (int) (zoomRect.width()  / maxZoom);
         int minH = (int) (zoomRect.height() / maxZoom);
-        int difW = zoomRect.width() - minW;
-        int difH = zoomRect.height() - minH;
-        int cropW = difW /100 *(int)zoom_level;
-        int cropH = difH /100 *(int)zoom_level;
-        cropW -= cropW & 3;
-        cropH -= cropH & 3;
+        int cropW = (zoomRect.width() - minW)  / 100 * zoom_level;
+        int cropH = (zoomRect.height() - minH) / 100 * zoom_level;
         zoom = new Rect(cropW, cropH, zoomRect.width() - cropW, zoomRect.height() - cropH);
 
-//        String zText = getZoomValueSingleDecimal(zoom_level/4.5f)+"x";
-//        zoomText.setVisibility(View.VISIBLE);
-//        zoomText.setText(zText);
-//
-//        if(!is_sliding){
-//            zoomText.postDelayed(()-> zoomText.setVisibility(View.INVISIBLE),1800);
-//        }
+//        zoom = new Rect(minW * (int) zoom_level, minH * (int) zoom_level
+//                , zoomRect.width()- minW * (int) zoom_level, zoomRect.width() - minH * (int) zoom_level);
+
+//        float ratio = 1f / zoom_level;
+
+//        int croppedWidth = zoomRect.width() - Math.round( ( float ) zoomRect.width() * ratio );
+//        int croppedHeight = zoomRect.height() - Math.round( ( float ) zoomRect.height() * ratio );
+
+
+//        zoom = new Rect( croppedWidth / 2, croppedHeight / 2,
+//                zoomRect.width() - croppedWidth / 2, zoomRect.height() - croppedHeight / 2 );
+
+        zText = getZoomValueSingleDecimal(zoom_level/4.5f)+"x";
+        zoomText.setVisibility(View.VISIBLE);
+        zoomText.setText(zText);
 
         previewCaptureRequest.set(CaptureRequest.SCALER_CROP_REGION, zoom);
         try {
@@ -1425,6 +1402,10 @@ public class CameraActivity extends AppCompatActivity {
         imgReader = ImageReader.newInstance(imageSize.getWidth(), imageSize.getHeight(), ImageFormat.JPEG, 5);
         imgReader.setOnImageAvailableListener(snapshotImageCallback, mBackgroundHandler);
         surfaceList.add(imgReader.getSurface());
+
+        //RESET ZOOM
+        zSlider.setValue(0f);
+        ZOOM_LEVEL = 0;
         Log.e(TAG, "openCamera: ImageReader preview size " + previewSize.getWidth() + "x" + previewSize.getHeight());
         Log.e(TAG, "openCamera: ImageReader capture size " + imageSize.getWidth() + "x" + imageSize.getHeight());
 
@@ -1458,7 +1439,7 @@ public class CameraActivity extends AppCompatActivity {
                 captureRequest.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF);
             }
 
-            if(zoom_level!=1) {
+            if(ZOOM_LEVEL !=1) {
                 captureRequest.set(CaptureRequest.SCALER_CROP_REGION, zoom);
             }
             camSession.capture(captureRequest.build(), snapshotCallback, mHandler);
