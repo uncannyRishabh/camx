@@ -3,6 +3,7 @@ package com.uncanny.camx.UI.ViewFinder;
 import android.animation.PropertyValuesHolder;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -44,11 +45,11 @@ public class FocusCircle extends View {
         iPaint.setColor(0x80FFFFFF);
     }
 
-    public void setPosition(int height,int width,int screenWidth){
+    public void setPosition(int height,int width){
         invalidate();
         this.height = height;
         this.width = width;
-        this.screenWidth = screenWidth;
+        this.screenWidth = getScreenWidth();
         radius = screenWidth/10;
         animateInnerCircle();
     }
@@ -73,6 +74,10 @@ public class FocusCircle extends View {
         });
         valueAnimator.setDuration(450);
         valueAnimator.start();
+    }
+
+    private static int getScreenWidth() {
+        return Resources.getSystem().getDisplayMetrics().widthPixels;
     }
 
     @Override
