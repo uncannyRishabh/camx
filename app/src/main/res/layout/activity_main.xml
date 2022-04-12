@@ -47,7 +47,8 @@
         <com.uncanny.camx.UI.ViewFinder.AutoFitPreviewView
             android:id="@+id/preview"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:clipToOutline="true"/>
         <TextView
             android:id="@+id/zoom_text"
             android:layout_width="wrap_content"

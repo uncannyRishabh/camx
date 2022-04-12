@@ -206,6 +206,7 @@ public class CameraActivity extends AppCompatActivity {
     private int timer_cc = 1;
     private int gridClick = 0;
     private String zText = "";
+    private int tvHeight, tvWidth;
 
     private CamState getState() {
         return state;
@@ -225,8 +226,9 @@ public class CameraActivity extends AppCompatActivity {
 
     private FocusControls focus;
 
-
     private Handler mBackgroundHandler;
+    private Handler focusHandler;
+    private HandlerThread focusHandlerThread;
     private HandlerThread mBackgroundThread;
     private Handler vfHandler = HandlerCompat.createAsync(Looper.getMainLooper());
     private Executor executor = new SerialExecutor(Executors.newCachedThreadPool());
@@ -267,14 +269,14 @@ public class CameraActivity extends AppCompatActivity {
                 if(getState() == CamState.SLOMO
                         || getState() == CamState.HIRES || getState() == CamState.VIDEO_PROGRESSED
                         || getState() == CamState.PORTRAIT){
-                    auxDock.setVisibility(View.INVISIBLE);
+                    auxDock.setVisibility(View.GONE);
                 }
                 else{
                     auxDock.setVisibility(View.VISIBLE);
                 }
             }
             else{                                       //FIXME: HANDLE FOR MULTIPLE FRONT CAMERA
-                auxDock.setVisibility(View.INVISIBLE);
+                auxDock.setVisibility(View.GONE);
             }
         }
     };
@@ -327,7 +329,7 @@ public class CameraActivity extends AppCompatActivity {
     protected void onPostCreate(@Nullable Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
 
-        tvPreview.setClipToOutline(true);
+//        tvPreview.setClipToOutline(true); //TODO: test in API 24
 
         addAuxButtons();
         button1 = findViewById(R.id.btn_1);
@@ -357,6 +359,7 @@ public class CameraActivity extends AppCompatActivity {
             mModePicker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
             vi_info = findViewById(R.id.vi_indicator);
             auxDock.post(hideAuxDock);
+            zoomText.post(hideZoomText);
             tvPreview.setOnTouchListener(null);
             switch (index){
                 case 0:
@@ -937,6 +940,7 @@ public class CameraActivity extends AppCompatActivity {
         @Override
         public void onClick(View v) {
             tvPreview.setOnTouchListener(null);
+            zoomText.post(hideZoomText);
             closeCamera();
             if (characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_BACK) {
                 setCameraId(FRONT_CAMERA_ID);
@@ -1040,8 +1044,7 @@ public class CameraActivity extends AppCompatActivity {
                          * TOUCH TO FOCUS
                          */
                         setVfStates(VFStates.FOCUS);
-                        focus.touchToFocus(v,event);
-//                        touchToFocus(v, event);
+                        focus.setFocus(v,event);
                         lastClickTime = System.currentTimeMillis();
                         Log.e("** SINGLE  TAP **", " First Tap time  " + lastClickTime);
                         return false;
@@ -1063,6 +1066,7 @@ public class CameraActivity extends AppCompatActivity {
             cachedHeight = appbar.getHeight();
             setDockHeight(i);
 //            Log.e(TAG, "onSurfaceTextureAvailable: w : "+i+" h : "+tvPreview.getHeight());
+            tvHeight = i1;tvWidth = i;
             openCamera();
         }
 
@@ -1076,6 +1080,7 @@ public class CameraActivity extends AppCompatActivity {
                 grids.postInvalidate();
                 grids.setViewBounds(i1,i);
             }
+            tvHeight = i1; tvWidth = i;
         }
 
         @Override
@@ -1096,6 +1101,7 @@ public class CameraActivity extends AppCompatActivity {
 
     private void doubleTapZoom() throws CameraAccessException {
         auxDock.removeCallbacks(hideAuxDock);
+        zoomText.removeCallbacks(hideZoomText);
         zSlider.removeCallbacks(hideZoomSlider);
         float maxZoom = 1;
         try {
@@ -1130,7 +1136,6 @@ public class CameraActivity extends AppCompatActivity {
         setVfStates(VFStates.IDLE);
         Log.e(TAG, "doubleTaptoZoom: D O U B L E - T A P P E D");
     }
-
 
     private void pinchToZoom(MotionEvent event){
         setVfStates(VFStates.SLIDE_ZOOM);
@@ -1191,7 +1196,7 @@ public class CameraActivity extends AppCompatActivity {
                 highSpeedCaptureSession.createHighSpeedRequestList(previewCaptureRequest.build());
             else
                 camSession
-                    .setRepeatingRequest(previewCaptureRequest.build(), null, null);
+                    .setRepeatingRequest(previewCaptureRequest.build(), null, mBackgroundHandler);
         } catch (CameraAccessException | NullPointerException e) {
             e.printStackTrace();
         }
@@ -1259,7 +1264,6 @@ public class CameraActivity extends AppCompatActivity {
         } catch(Exception e) {
             Log.e(TAG, "openCamera: open failed: " + e.getMessage());
         }
-
     }
 
     private void captureImage() {
@@ -1773,11 +1777,16 @@ public class CameraActivity extends AppCompatActivity {
         mBackgroundThread = new HandlerThread("Camera Background");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+
+        focusHandlerThread =new HandlerThread("Focus Thread");
+        focusHandlerThread.start();
+        focusHandler = new Handler(focusHandlerThread.getLooper());
     }
 
     protected void stopBackgroundThread() {
         if(mBackgroundThread!=null){
             mBackgroundThread.quitSafely();
+            focusHandlerThread.quitSafely();
         }
         else{
             finishAffinity();
@@ -1787,6 +1796,10 @@ public class CameraActivity extends AppCompatActivity {
             mBackgroundThread.join();
             mBackgroundThread = null;
             mBackgroundHandler = null;
+
+            focusHandlerThread.join();
+            focusHandlerThread = null;
+            focusHandler = null;
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -1875,15 +1888,12 @@ public class CameraActivity extends AppCompatActivity {
         @Override
         public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
             camSession = cameraCaptureSession;
-//            ImageWriter iwReprocess = ImageWriter.newInstance(cameraCaptureSession.getInputSurface(), 2);
-//            iwReprocess.dequeueInputImage();
-
             try {
                 previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
                 previewCaptureRequest.addTarget(surfaceList.get(0));
 
                 focus = new FocusControls(getCameraCharacteristics(),focusCircle,hideFocusCircle,getState(),camSession
-                        ,previewCaptureRequest,highSpeedCaptureSession,mBackgroundHandler);
+                        ,previewCaptureRequest,highSpeedCaptureSession,focusHandler);
                 tvPreview.setOnTouchListener(touchListener);
 //                camDeviceCaptureRequest.set(CaptureRequest.STATISTICS_FACE_DETECT_MODE
 //                        ,CaptureRequest.STATISTICS_FACE_DETECT_MODE_SIMPLE);
@@ -1963,6 +1973,7 @@ public class CameraActivity extends AppCompatActivity {
         openCamera();
         displayMediaThumbnailFromGallery();
         applyModeChange(getState());
+        tvPreview.setOnTouchListener(touchListener);
         shutter.animateInnerCircle(getState());
     }
 
@@ -1972,7 +1983,7 @@ public class CameraActivity extends AppCompatActivity {
         Log.e(TAG, "onPause");
         ready = false;
         resumed = false;
-
+        tvPreview.setOnTouchListener(null);
         if(getState() == CamState.CAMERA)
             closeCamera();
         else if(getState() == CamState.VIDEO) {

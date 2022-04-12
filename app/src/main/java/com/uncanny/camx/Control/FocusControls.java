@@ -15,8 +15,12 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
+import androidx.annotation.Nullable;
+
 import com.uncanny.camx.App.CameraActivity;
 import com.uncanny.camx.UI.ViewFinder.FocusCircle;
+
+import java.util.Objects;
 
 @SuppressWarnings({"FieldCanBeLocal","FieldMayBeFinal"})
 public class FocusControls {
@@ -29,12 +33,12 @@ public class FocusControls {
 
     private FocusCircle focusCircle;
     private Runnable hideFocusCircle;
-    private Handler mBackgroundHandler;
+    private Handler handler;
     private CameraActivity.CamState state;
 
     public FocusControls(CameraCharacteristics characteristics, FocusCircle focusCircle, Runnable hideCallback
     ,CameraActivity.CamState state, CameraCaptureSession camSession, CaptureRequest.Builder previewCaptureRequest
-    ,CameraConstrainedHighSpeedCaptureSession highSpeedCaptureSession, Handler mBackgroundHandler){
+    ,CameraConstrainedHighSpeedCaptureSession highSpeedCaptureSession, Handler handler){
         this.characteristics = characteristics;
         this.focusCircle = focusCircle;
         this.hideFocusCircle = hideCallback;
@@ -42,74 +46,48 @@ public class FocusControls {
         this.camSession = camSession;
         this.previewCaptureRequest = previewCaptureRequest;
         this.highSpeedCaptureSession = highSpeedCaptureSession;
-        this.mBackgroundHandler = mBackgroundHandler;
-
-        setFocus();
+        this.handler = handler;
     }
 
-    public static void setFocus(){
-
+    public void setFocus(int height, int width){
+        focus( height, width,null);
     }
 
-    public void touchToFocus(View v, MotionEvent event) {
-        //TODO : create separate class & method for this
+    public void setFocus(View v, MotionEvent e){
+        focus(v.getHeight(), v.getWidth(),e);
+    }
+
+    private void focus(int height, int width, @Nullable MotionEvent event) {
         focusCircle.removeCallbacks(hideFocusCircle);
-        float h = event.getX();
-        float w = event.getY();
+        float h;
+        float w;
+        if(Objects.equals(event,null)){
+            h = width/2f;
+            w = height/2f;
+        }
+        else {
+            h = event.getX();
+            w = event.getY();
+        }
 
         focusCircle.setVisibility(View.VISIBLE);
         focusCircle.setPosition((int)h,(int)w);
         focusCircle.postDelayed(hideFocusCircle,1200);
 
         Log.e(TAG, "touchToFocus: F O C U S I N G");
-
         final Rect sensorArraySize = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
 
-        /*
-         * here I just flip x,y, but this needs to correspond with the sensor orientation (via SENSOR_ORIENTATION)
-         */
-        final int y = (int)((event.getX() / (float)v.getWidth())  * (float)sensorArraySize.height());
-        final int x = (int)((event.getY() / (float)v.getHeight()) * (float)sensorArraySize.width());
+        final int y = (int)((h / (float)width)  * (float)sensorArraySize.height());
+        final int x = (int)((w / (float)height) * (float)sensorArraySize.width());
 
-        /*
-         * this doesn't represent actual touch size in pixel. Values range in [3, 10]...
-         */
-        final int halfTouchWidth  = 150; //(int)motionEvent.getTouchMajor();
-        final int halfTouchHeight = 150; //(int)motionEvent.getTouchMinor();
+        final int halfTouchWidth  = 150;
+        final int halfTouchHeight = 150;
+
         MeteringRectangle focusAreaTouch = new MeteringRectangle(Math.max(x - halfTouchWidth,  0),
                 Math.max(y - halfTouchHeight, 0),
                 halfTouchWidth  * 2,
                 halfTouchHeight * 2,
                 MeteringRectangle.METERING_WEIGHT_MAX - 1);
-
-        CameraCaptureSession.CaptureCallback captureCallbackHandler = new CameraCaptureSession.CaptureCallback() {
-            @Override
-            public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
-                super.onCaptureCompleted(session, request, result);
-//                mManualFocusEngaged = false;
-
-                if (request.getTag() == "FOCUS_TAG") {
-                    //the focus trigger is complete -
-                    //resume repeating (preview surface will get frames), clear AF trigger
-                    previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, null);
-                    try {
-                        if(state== CameraActivity.CamState.HSVIDEO_PROGRESSED)
-                            highSpeedCaptureSession.createHighSpeedRequestList(previewCaptureRequest.build());
-                        else
-                            camSession.setRepeatingRequest(previewCaptureRequest.build(), null, null);
-
-                    } catch (CameraAccessException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-            @Override
-            public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
-                super.onCaptureFailed(session, request, failure);
-                Log.e(TAG, "Manual AF failure: " + failure);
-//                mManualFocusEngaged = false;
-            }
-        };
 
         //first stop the existing repeating request
 //        try {
@@ -120,44 +98,28 @@ public class FocusControls {
 
         //cancel any existing AF trigger (repeated touches, etc.)
         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
-        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
-        try {
-            if(state== CameraActivity.CamState.HSVIDEO_PROGRESSED)
-                highSpeedCaptureSession.createHighSpeedRequestList(previewCaptureRequest.build());
-            else
-                camSession.capture(previewCaptureRequest.build(), captureCallbackHandler, mBackgroundHandler);
-
-
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-
-        //Now add a new AF trigger with focus region
-        if (isMeteringAreaAFSupported()) {
-            previewCaptureRequest.set(CaptureRequest.CONTROL_AF_REGIONS, new MeteringRectangle[]{focusAreaTouch});
-        }
-
-        //TODO:FIX METERING AE
-//        if(isMeteringAreaAESupported()){
-//            camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_REGIONS, new MeteringRectangle[]{focusAreaTouch});
-//        }
+//        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+        buildPreview();
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_REGIONS, new MeteringRectangle[]{focusAreaTouch});
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AE_REGIONS, new MeteringRectangle[]{focusAreaTouch});
         previewCaptureRequest.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
-        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_ON);
+
+        //set focus area repeating,else cam forget after one frame where it should focus
+        //trigger af start only once. cam starts focusing till its focused or failed
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START);
+        buildPreview();
+
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE);
+
         previewCaptureRequest.setTag("FOCUS_TAG"); //we'll capture this later for resuming the preview
 
-        //then we ask for a single request (not repeating!)
-        try {
-            if(state== CameraActivity.CamState.HSVIDEO_PROGRESSED)
-                highSpeedCaptureSession.createHighSpeedRequestList(previewCaptureRequest.build());
-            else
-                camSession.capture(previewCaptureRequest.build(), captureCallbackHandler, mBackgroundHandler);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-//        mManualFocusEngaged = true;
+        buildPreview();
+//
     }
-
 
     private boolean isMeteringAreaAESupported() {
         Integer aeState = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AE);
@@ -167,5 +129,50 @@ public class FocusControls {
     private boolean isMeteringAreaAFSupported() {
         return characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF) >= 1;
     }
+
+    private void buildPreview(){
+        try {
+            if(state== CameraActivity.CamState.HSVIDEO_PROGRESSED)
+                highSpeedCaptureSession.createHighSpeedRequestList(previewCaptureRequest.build());
+            else
+                camSession.capture(previewCaptureRequest.build(), captureCallbackHandler, handler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void buildRepeatingPreview(){
+        try {
+            if(state== CameraActivity.CamState.HSVIDEO_PROGRESSED)
+                highSpeedCaptureSession.createHighSpeedRequestList(previewCaptureRequest.build());
+            else
+                camSession.setRepeatingRequest(previewCaptureRequest.build(), captureCallbackHandler, handler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private CameraCaptureSession.CaptureCallback captureCallbackHandler = new CameraCaptureSession.CaptureCallback() {
+        @Override
+        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
+            super.onCaptureCompleted(session, request, result);
+            if (request.getTag() == "FOCUS_TAG") {
+                //the focus trigger is complete -
+                //resume repeating (preview surface will get frames), clear AF trigger
+//                mBackgroundHandler.postDelayed(() ->
+//                        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
+//                        ,3000);
+
+                Log.e(TAG, "onCaptureCompleted: FOCUS COMPLETED ");
+//                previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE);
+//                previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE);
+            }
+        }
+        @Override
+        public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
+            super.onCaptureFailed(session, request, failure);
+            Log.e(TAG, "Manual AF failure: " + failure);
+        }
+    };
 
 }
