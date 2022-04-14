@@ -12,7 +12,7 @@
     <RelativeLayout
         android:id="@+id/appbar"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="44dp"
         android:layout_alignParentTop="true"
         android:background="@drawable/rounded_relative_layout"
         android:elevation="4dp">
@@ -21,53 +21,49 @@
             android:id="@+id/btn_group"
             layout="@layout/button_group" />
 
-        <com.uncanny.camx.UI.GestureBar
-            android:id="@+id/gesture_bar"
-            android:layout_width="match_parent"
-            android:layout_height="18dp"
-            android:layout_alignParentBottom="true" />
-
     </RelativeLayout>
 
-    <androidx.cardview.widget.CardView
+    <com.uncanny.camx.UI.Views.GestureBar
+        android:id="@+id/gesture_bar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-
-    </androidx.cardview.widget.CardView>
+        android:layout_height="16dp"
+        android:layout_below="@id/appbar"
+        android:elevation="4dp" />
 
     <RelativeLayout
         android:id="@+id/previewParent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="52dp"
+        android:layout_marginTop="44dp"
         android:orientation="vertical"
         android:background="@drawable/rounded_corners"
         >
 
-        <com.uncanny.camx.UI.ViewFinder.AutoFitPreviewView
+        <com.uncanny.camx.UI.Views.ViewFinder.AutoFitPreviewView
             android:id="@+id/preview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:clipToOutline="true"/>
+            android:clipToOutline="true" />
+
         <TextView
             android:id="@+id/zoom_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
             android:layout_marginTop="36dp"
-            android:textSize="38sp"
+            android:fontFamily="@font/poppins"
             android:textColor="#E3DDDD"
-            android:visibility="invisible"
-            />
+            android:textSize="38sp"
+            android:visibility="invisible" />
 
-        <com.uncanny.camx.UI.ViewFinder.Grids
+        <com.uncanny.camx.UI.Views.ViewFinder.Grids
             android:id="@+id/grid"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:visibility="gone"
             android:layout_alignBottom="@id/preview"/>
 
-        <com.uncanny.camx.UI.ViewFinder.FocusCircle
+        <com.uncanny.camx.UI.Views.ViewFinder.FocusCircle
             android:id="@+id/focus_circle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -89,7 +85,7 @@
             android:focusable="false"
             android:visibility="invisible" />
 
-        <com.uncanny.camx.UI.ViewFinder.FaceMeteringRect
+        <com.uncanny.camx.UI.Views.ViewFinder.FaceMeteringRect
             android:id="@+id/fm_rect"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -113,12 +109,14 @@
             android:layout_width="@dimen/aux_param"
             android:layout_height="@dimen/aux_param"
             android:layout_gravity="center_vertical"
+            android:paddingBottom="2dp"
             android:layout_weight="1"
             android:background="@drawable/circular_textview"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:text="1x "
+            android:text="1×"
+            android:fontFamily="@font/poppins"
             android:textSize="16sp" />
     </LinearLayout>
 
@@ -168,7 +166,7 @@
             app:strokeColor="@color/white"
             app:strokeWidth="2dp" />
 
-        <com.uncanny.camx.UI.CaptureButton
+        <com.uncanny.camx.UI.Views.CaptureButton
             android:id="@+id/capture"
             android:layout_width="84dp"
             android:layout_height="82dp"
@@ -189,24 +187,24 @@
             android:src="@drawable/ic_front_switch" />
     </RelativeLayout>
 
-    <com.uncanny.camx.UI.HorizontalPicker
+    <com.uncanny.camx.UI.Views.HorizontalPicker
         android:id="@+id/mode_picker_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="14dp"
+        android:layout_marginBottom="2dp"
         android:ellipsize="end"
         android:hapticFeedbackEnabled="true"
         android:marqueeRepeatLimit="-1"
-        android:minHeight="32dp"
-        android:paddingHorizontal="12dp"
+        android:minHeight="24dp"
+        android:paddingHorizontal="10dp"
         android:paddingVertical="10dp"
         android:textColor="@color/white"
-        android:textSize="14sp"
-        app:selectedColor="?colorControlActivated"
-        app:sideItems="2" />
+        android:textSize="14.5sp"
+        app:sideItems="2"
+        />
 
-    <com.uncanny.camx.UI.UncannyChronometer
+    <com.uncanny.camx.UI.Views.UncannyChronometer
         android:id="@+id/chronometer"
         android:layout_width="74dp"
         android:layout_height="36dp"

@@ -72,18 +72,19 @@
  import com.uncanny.camx.Control.ZoomControls;
  import com.uncanny.camx.Data.LensData;
  import com.uncanny.camx.R;
- import com.uncanny.camx.UI.CaptureButton;
- import com.uncanny.camx.UI.GestureBar;
- import com.uncanny.camx.UI.HorizontalPicker;
- import com.uncanny.camx.UI.ResolutionSelector;
- import com.uncanny.camx.UI.UncannyChronometer;
- import com.uncanny.camx.UI.ViewFinder.AutoFitPreviewView;
- import com.uncanny.camx.UI.ViewFinder.FocusCircle;
- import com.uncanny.camx.UI.ViewFinder.Grids;
+ import com.uncanny.camx.UI.AestheticLayout;
+ import com.uncanny.camx.UI.Views.CaptureButton;
+ import com.uncanny.camx.UI.Views.GestureBar;
+ import com.uncanny.camx.UI.Views.HorizontalPicker;
+ import com.uncanny.camx.UI.Views.ResolutionSelector;
+ import com.uncanny.camx.UI.Views.UncannyChronometer;
+ import com.uncanny.camx.UI.Views.ViewFinder.AutoFitPreviewView;
+ import com.uncanny.camx.UI.Views.ViewFinder.FocusCircle;
+ import com.uncanny.camx.UI.Views.ViewFinder.Grids;
  import com.uncanny.camx.Utils.CompareSizeByArea;
- import com.uncanny.camx.Utils.ImageDecoderThread;
- import com.uncanny.camx.Utils.ImageSaverThread;
- import com.uncanny.camx.Utils.SerialExecutor;
+ import com.uncanny.camx.Utils.NonUIThread.ImageDecoderThread;
+ import com.uncanny.camx.Utils.NonUIThread.ImageSaverThread;
+ import com.uncanny.camx.Utils.NonUIThread.SerialExecutor;
 
  import java.io.File;
  import java.io.IOException;
@@ -832,19 +833,13 @@ public class CameraActivity extends AppCompatActivity {
                 });
             }
         }
-        else{
+        else if(cameraList.isEmpty()){
             auxDock.setVisibility(View.GONE);
         }
     }
 
     private void setAestheticLayout() {
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN
-                , WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | View.SYSTEM_UI_FLAG_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION );
+        new AestheticLayout(this);
 
 //        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.Q){
 //            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
@@ -1139,7 +1134,7 @@ public class CameraActivity extends AppCompatActivity {
 
     private void pinchToZoom(MotionEvent event){
         setVfStates(VFStates.SLIDE_ZOOM);
-        auxDock.removeCallbacks(hideAuxDock);
+        auxDock.removeCallbacks(hideAuxDock); //TODO: CHECK REDUNDANT
 
         try {
             float maxzoom = ZoomControls.getMaxZoom(getCameraCharacteristics());

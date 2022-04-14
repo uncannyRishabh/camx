@@ -1,4 +1,4 @@
-package com.uncanny.camx.UI;
+package com.uncanny.camx.UI.Views;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -43,7 +43,11 @@ public class GestureBar extends View {
         sWidth = getWidth();
         startX = (sWidth/2)-45;
         stopX  = (sWidth/2)+45;
-        canvas.drawLine(startX,getHeight()/2f,stopX,getHeight()/2f,paint);
+        canvas.drawLine(startX
+                ,(getHeight()+getPaddingTop()-getPaddingBottom())/2f
+                ,stopX
+                ,(getHeight()+getPaddingTop()-getPaddingBottom())/2f
+                ,paint);
     }
 
     @Override

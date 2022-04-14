@@ -1,4 +1,4 @@
-package com.uncanny.camx.Utils;
+package com.uncanny.camx.Utils.NonUIThread;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;

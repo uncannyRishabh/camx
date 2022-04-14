@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.uncanny.camx.UI;
+package com.uncanny.camx.UI.Views;
 
 import android.animation.ArgbEvaluator;
 import android.content.Context;
@@ -25,6 +25,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -42,7 +43,7 @@ import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.accessibility.AccessibilityEvent;
-import android.view.animation.DecelerateInterpolator;
+import android.view.animation.AnticipateOvershootInterpolator;
 import android.widget.EdgeEffect;
 import android.widget.OverScroller;
 
@@ -116,6 +117,7 @@ public class HorizontalPicker extends View {
     private float dividerSize = 0;
     private int sideItems = 1;
     private TextDirectionHeuristicCompat textDir;
+    private Typeface Poppins;
 
     public HorizontalPicker(Context context) {
         this(context, null);
@@ -191,7 +193,7 @@ public class HorizontalPicker extends View {
         setWillNotDraw(false);
 
         flingScrollerX = new OverScroller(context);
-        adjustScrollerX = new OverScroller(context, new DecelerateInterpolator(2.5f));
+        adjustScrollerX = new OverScroller(context, new AnticipateOvershootInterpolator(2f));
 
         // initialize constants
         ViewConfiguration configuration = ViewConfiguration.get(context);
@@ -219,6 +221,8 @@ public class HorizontalPicker extends View {
         int heightMode = MeasureSpec.getMode(heightMeasureSpec);
         int width = MeasureSpec.getSize(widthMeasureSpec);
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+
+        Poppins = Typeface.create("Poppins", Typeface.NORMAL);
 
         int height;
         if (heightMode == MeasureSpec.EXACTLY) {
@@ -261,8 +265,10 @@ public class HorizontalPicker extends View {
             for (int i = 0; i < values.length; i++) {
 
                 // set text color for item
-                textPaint.setColor(getTextColor(i));
-                textPaint.setFakeBoldText(true);
+//                textPaint.setColor(getTextColor(i));
+                textPaint.setColor(Color.WHITE); //MODIFY TEXT COLOR
+                textPaint.setTypeface(Poppins);
+//                textPaint.setFakeBoldText(true);
 
                 // get text layout
                 BoringLayout layout = layouts[i];
@@ -298,17 +304,18 @@ public class HorizontalPicker extends View {
                 }
                 if (i == selectedItem) {
                     canvas.getClipBounds(canvasClipBounds);
-                    background.bottom = canvasClipBounds.bottom;
+                    background.bottom = canvasClipBounds.bottom - 6;
                     background.left = canvasClipBounds.left;
                     background.right = canvasClipBounds.right;
-                    background.top = canvasClipBounds.top;
+                    background.top = canvasClipBounds.top + 6;
 
                     float width = itemClipBounds.width();
                     float margin = (width - getTextWidth(values[i], textPaint)) / 8;
-                    background.left = itemClipBounds.left + margin;
-                    background.right = itemClipBounds.right - margin;
+                    background.left = itemClipBounds.left - 14 + margin;
+                    background.right = itemClipBounds.right + 14 - margin;
 
-                    paint.setColor(Color.parseColor("#FF606060"));        //MODIFIED white
+                    textPaint.setColor(Color.WHITE); //MODIFY SELECTED TEXT COLOR
+                    paint.setColor(Color.parseColor("#FF606060"));        //MODIFY BACKGROUND COLOR
                     canvas.drawRoundRect(background, 100, 100, paint);
                 }
                 canvas.clipRect(clipBounds);

@@ -1,4 +1,4 @@
-package com.uncanny.camx.UI;
+package com.uncanny.camx.UI.Views;
 
 import android.animation.PropertyValuesHolder;
 import android.animation.ValueAnimator;

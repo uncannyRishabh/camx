@@ -1,4 +1,4 @@
-package com.uncanny.camx.UI.ViewFinder;
+package com.uncanny.camx.UI.Views.ViewFinder;
 
 import android.content.Context;
 import android.graphics.Canvas;

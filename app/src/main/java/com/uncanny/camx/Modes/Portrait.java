@@ -19,7 +19,7 @@ import com.google.mlkit.vision.segmentation.Segmentation;
 import com.google.mlkit.vision.segmentation.Segmenter;
 import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions;
 import com.uncanny.camx.Utils.BitmapUtils;
-import com.uncanny.camx.Utils.SerialExecutor;
+import com.uncanny.camx.Utils.NonUIThread.SerialExecutor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

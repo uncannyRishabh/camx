@@ -1,4 +1,4 @@
-package com.uncanny.camx.Utils;
+package com.uncanny.camx.Utils.NonUIThread;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -12,6 +12,8 @@ import android.os.Environment;
 import android.provider.MediaStore;
 
 import com.uncanny.camx.Modes.Portrait;
+import com.uncanny.camx.Utils.BitmapUtils;
+import com.uncanny.camx.Utils.Blur;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;

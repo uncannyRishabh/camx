@@ -15,7 +15,7 @@
             android:layout_height="30dp"
             android:layout_weight="1"
             android:background="#00000000"
-            android:padding="3dp"
+            android:padding="4dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_timer_btn" />
         <ImageButton
@@ -24,7 +24,7 @@
             android:layout_height="30dp"
             android:layout_weight="1"
             android:background="#00000000"
-            android:padding="3dp"
+            android:padding="4dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_grid_btn" />
         <ImageButton
@@ -33,7 +33,7 @@
             android:layout_height="30dp"
             android:layout_weight="1"
             android:background="#00000000"
-            android:padding="3dp"
+            android:padding="4dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_hdr" />
         <ImageButton
@@ -42,7 +42,7 @@
             android:layout_height="30dp"
             android:layout_weight="1"
             android:background="#00000000"
-            android:padding="1dp"
+            android:padding="3dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_flash_off" />
         <ImageButton
@@ -51,7 +51,7 @@
             android:layout_height="30dp"
             android:layout_weight="1"
             android:background="#00000000"
-            android:padding="6dp"
+            android:padding="7dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_settings_menu" />
     </LinearLayout>
@@ -67,11 +67,11 @@
         android:paddingEnd="8dp"
         >
 
-        <com.uncanny.camx.UI.ResolutionSelector
+        <com.uncanny.camx.UI.Views.ResolutionSelector
             android:id="@+id/resolution_selector"
             android:layout_width="330dp"
             android:layout_height="48dp"
-            android:padding="4dp"
+            android:padding="5dp"
             android:paddingHorizontal="12dp"
             android:layout_gravity="start|center_vertical"
             android:visibility="gone"
@@ -85,7 +85,7 @@
             android:layout_height="30dp"
             android:layout_weight="1"
             android:background="#00000000"
-            android:padding="3dp"
+            android:padding="4dp"
             android:scaleType="fitCenter"
             android:layout_gravity="center_vertical"
             android:src="@drawable/ic_raw"
@@ -97,7 +97,7 @@
             android:layout_height="30dp"
             android:layout_weight="1"
             android:background="#00000000"
-            android:padding="3dp"
+            android:padding="4dp"
             android:scaleType="fitCenter"
             android:layout_gravity="center_vertical"
             android:src="@drawable/ic_awb" />
@@ -108,7 +108,7 @@
             android:layout_height="30dp"
             android:layout_weight="1"
             android:background="#00000000"
-            android:padding="3dp"
+            android:padding="4dp"
             android:scaleType="fitCenter"
             android:layout_gravity="center_vertical"
             android:src="@drawable/ic_aspect_ratio" />
@@ -119,7 +119,7 @@
             android:layout_height="30dp"
             android:layout_weight="1"
             android:background="#00000000"
-            android:padding="2dp"
+            android:padding="4dp"
             android:scaleType="fitCenter"
             android:layout_gravity="center_vertical"
             android:src="@drawable/ic_ai" />
@@ -130,7 +130,7 @@
             android:layout_height="30dp"
             android:layout_weight="1"
             android:background="#00000000"
-            android:padding="0dp"
+            android:padding="1dp"
             android:scaleType="fitCenter"
             android:layout_gravity="center_vertical"
             android:src="@drawable/ic_icon_settings" />
