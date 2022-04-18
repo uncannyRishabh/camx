@@ -91,7 +91,7 @@
             android:visibility="gone" />
     </RelativeLayout>
 
-    <com.uncanny.camx.UI.Views.ViewFinder.VerticalSeekbar
+    <com.uncanny.camx.UI.Views.ViewFinder.VerticalSlider
         android:id="@+id/exposureControl"
         android:layout_width="30dp"
         android:layout_height="255dp"

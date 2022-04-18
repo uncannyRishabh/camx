@@ -83,6 +83,7 @@
  import com.uncanny.camx.UI.Views.ViewFinder.AutoFitPreviewView;
  import com.uncanny.camx.UI.Views.ViewFinder.FocusCircle;
  import com.uncanny.camx.UI.Views.ViewFinder.Grids;
+ import com.uncanny.camx.UI.Views.ViewFinder.VerticalSlider;
  import com.uncanny.camx.Utils.CompareSizeByArea;
  import com.uncanny.camx.Utils.NonUIThread.ImageDecoderThread;
  import com.uncanny.camx.Utils.NonUIThread.ImageSaverThread;
@@ -182,6 +183,7 @@ public class CameraActivity extends AppCompatActivity {
     private ResolutionSelector resolutionSelector;
     private RelativeLayout tvPreviewParent;
     private RelativeLayout parent;
+    private VerticalSlider exposureControl;
 
     private int resultCode = 1;
     private long lastClickTime = 0;
@@ -354,6 +356,8 @@ public class CameraActivity extends AppCompatActivity {
         btn_grid1 = findViewById(R.id.top_bar_0);
         btn_grid2 = findViewById(R.id.top_bar_1);
         resolutionSelector = findViewById(R.id.resolution_selector);
+        exposureControl = findViewById(R.id.exposureControl);
+
         addCapableVideoResolutions();
 
         //lensData.getAvailableModes(getCameraId())
@@ -676,6 +680,23 @@ public class CameraActivity extends AppCompatActivity {
                 auxDock.postDelayed(hideAuxDock,2000);
                 zoomText.postDelayed(hideZoomText,2000);
                 zSlider.postDelayed(hideZoomSlider,2000);
+            }
+        });
+
+        exposureControl.setOnSliderChangeListener(new VerticalSlider.OnSliderChangeListener() {
+            @Override
+            public void onProgressChanged(VerticalSlider seekBar, float progress) {
+                Log.e(TAG, "onStartTrackingTouch: GESTURE TRACKING"+progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(VerticalSlider seekBar) {
+                Log.e(TAG, "onStartTrackingTouch: START TRACKING");
+            }
+
+            @Override
+            public void onStopTrackingTouch(VerticalSlider seekBar) {
+                Log.e(TAG, "onStartTrackingTouch: STOP TRACKING");
             }
         });
 
