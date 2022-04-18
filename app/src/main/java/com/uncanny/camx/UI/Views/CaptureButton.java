@@ -25,10 +25,10 @@ import com.uncanny.camx.App.CameraActivity.CamState;
 
 public class CaptureButton extends View {
     private RectF rectF;
-    private Paint paint, nPaint, mPaint, tPaint;
+    private Paint paint, oPaint, mPaint, tPaint;
     private int cx,cy,screenWidth;
-    private final int RECT_PADDING = 72;
-
+    private int RECT_PADDING = 72;
+    private final float density = getResources().getDisplayMetrics().density;
     private float icRadius;
     private CamState mState;
 
@@ -50,21 +50,24 @@ public class CaptureButton extends View {
     private void init() {
         rectF = new RectF();
         paint = new Paint();
-        nPaint = new Paint();
+        oPaint = new Paint();
         mPaint = new Paint();
         tPaint = new Paint();
+
+        RECT_PADDING = (int) (30f * density);
+        float oStroke = 3.6f * density;
 
         paint.setColor(Color.WHITE);
         paint.setAntiAlias(true);
         paint.setStrokeWidth(10f);
         paint.setStyle(Paint.Style.FILL_AND_STROKE);
 
-        nPaint.setColor(Color.WHITE);
-        nPaint.setAntiAlias(true);
-        nPaint.setStrokeWidth(10f);
-        nPaint.setStyle(Paint.Style.STROKE);
+        oPaint.setColor(Color.WHITE);
+        oPaint.setAntiAlias(true);
+        oPaint.setStrokeWidth(oStroke);
+        oPaint.setStyle(Paint.Style.STROKE);
 
-        mPaint.setColor(Color.RED);
+        mPaint.setColor(0xFFF75C5C); //MUTE RED
         mPaint.setAntiAlias(true);
         mPaint.setStrokeWidth(10f);
         mPaint.setStyle(Paint.Style.FILL_AND_STROKE);
@@ -78,7 +81,7 @@ public class CaptureButton extends View {
         tPaint.setStyle(Paint.Style.FILL_AND_STROKE);
 
         screenWidth = getScreenWidth();
-        icRadius = screenWidth/12f;
+        icRadius = screenWidth/(4.5f * density);
         mState = CamState.CAMERA;
     }
 
@@ -88,23 +91,23 @@ public class CaptureButton extends View {
             case CAMERA:
             case HIRES:
                 icRadius = screenWidth/12f;
-                nPaint.setStyle(Paint.Style.STROKE);
+                oPaint.setStyle(Paint.Style.STROKE);
                 paint.setColor(Color.WHITE);
                 break;
             case VIDEO:
                 icRadius = screenWidth/16f;
-                nPaint.setStyle(Paint.Style.STROKE);
+                oPaint.setStyle(Paint.Style.STROKE);
                 paint.setColor(Color.RED);
                 break;
             case VIDEO_PROGRESSED:
             case HSVIDEO_PROGRESSED:
-                nPaint.setStyle(Paint.Style.FILL);
+                oPaint.setStyle(Paint.Style.FILL);
                 paint.setColor(Color.RED);
                 break;
             case SLOMO:
             case TIMEWARP:
                 icRadius = screenWidth/16f;
-                nPaint.setStyle(Paint.Style.FILL);
+                oPaint.setStyle(Paint.Style.FILL);
                 tPaint.setPathEffect(new CornerPathEffect(14f));
                 paint.setStrokeWidth(2f);
                 paint.setPathEffect(new CornerPathEffect(14f));
@@ -176,7 +179,7 @@ public class CaptureButton extends View {
         cy = getHeight()/2;
         rectF.set(RECT_PADDING, RECT_PADDING,getWidth()- RECT_PADDING,getHeight()- RECT_PADDING);
 
-        canvas.drawCircle(cx,cy,cy-10, nPaint); //OUTER CIRCLE
+        canvas.drawCircle(cx,cy,cy-10, oPaint); //OUTER CIRCLE
         switch(mState){
             case CAMERA:
             case HIRES:

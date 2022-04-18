@@ -7,11 +7,22 @@
         <deviceKey>
           <Key>
             <type value="VIRTUAL_DEVICE_PATH" />
-            <value value="C:\Users\Rishabh Raj Gupta\.android\avd\Pixel_3a_XL_API_31.avd" />
+            <value value="C:\Users\Rishabh Raj Gupta\.android\avd\Pixel_4_API_30.avd" />
           </Key>
         </deviceKey>
       </Target>
     </targetSelectedWithDropDown>
-    <timeTargetWasSelectedWithDropDown value="2022-04-14T05:55:38.283424600Z" />
+    <timeTargetWasSelectedWithDropDown value="2022-04-15T22:12:50.834216200Z" />
+    <runningDeviceTargetsSelectedWithDialog>
+      <Target>
+        <type value="RUNNING_DEVICE_TARGET" />
+        <deviceKey>
+          <Key>
+            <type value="SERIAL_NUMBER" />
+            <value value="4fe3160f" />
+          </Key>
+        </deviceKey>
+      </Target>
+    </runningDeviceTargetsSelectedWithDialog>
   </component>
 </project>

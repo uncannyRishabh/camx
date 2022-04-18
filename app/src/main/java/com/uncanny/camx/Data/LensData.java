@@ -385,6 +385,10 @@ public class LensData {
             catch (IllegalArgumentException | CameraAccessException ignored){
             }
         }
+
+        Log.e(TAG, "getAuxCameras: "+logicalCameras);
+        Log.e(TAG, "getAuxCameras: "+physicalCameras);
+
         Toast.makeText(activity, "Execution Completed cam_aux() Physical ids "+physicalCameras, Toast.LENGTH_SHORT).show();
         Toast.makeText(activity, "Execution Completed cam_aux() Logical  ids "+logicalCameras , Toast.LENGTH_SHORT).show();
     }

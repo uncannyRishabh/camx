@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.view.View;
@@ -28,6 +29,7 @@ public class UncannyChronometer extends View {
     private int cx,cy;
     private int seconds,minutes,hours;
     private String mSeconds,mMinutes,mHours;
+    private Typeface Poppins;
 
     private Runnable startTick = new Runnable() {
         @Override
@@ -69,14 +71,17 @@ public class UncannyChronometer extends View {
         paint = new Paint();
         tPaint = new Paint();
 
-        paint.setColor(Color.RED);
+        Poppins = Typeface.create("Poppins", Typeface.NORMAL);
+
+        paint.setColor(0xFFF75C5C); //MUTE RED
         paint.setAntiAlias(true);
 
-        tPaint.setColor(Color.WHITE);
+        tPaint.setColor(Color.BLACK);
         tPaint.setFakeBoldText(true);
         tPaint.setTextAlign(Paint.Align.CENTER);
         tPaint.setAntiAlias(true);
         tPaint.setTextSize(40f);
+        tPaint.setTypeface(Poppins);
     }
 
     private void updateDrawText(){

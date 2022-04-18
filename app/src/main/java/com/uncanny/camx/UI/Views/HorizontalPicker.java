@@ -304,10 +304,10 @@ public class HorizontalPicker extends View {
                 }
                 if (i == selectedItem) {
                     canvas.getClipBounds(canvasClipBounds);
-                    background.bottom = canvasClipBounds.bottom - 6;
+                    background.bottom = canvasClipBounds.bottom - 4;
                     background.left = canvasClipBounds.left;
                     background.right = canvasClipBounds.right;
-                    background.top = canvasClipBounds.top + 6;
+                    background.top = canvasClipBounds.top + 4;
 
                     float width = itemClipBounds.width();
                     float margin = (width - getTextWidth(values[i], textPaint)) / 8;

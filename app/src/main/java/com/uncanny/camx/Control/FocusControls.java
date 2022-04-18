@@ -132,10 +132,7 @@ public class FocusControls {
 
     private void buildPreview(){
         try {
-            if(state== CameraActivity.CamState.HSVIDEO_PROGRESSED)
-                highSpeedCaptureSession.createHighSpeedRequestList(previewCaptureRequest.build());
-            else
-                camSession.capture(previewCaptureRequest.build(), captureCallbackHandler, handler);
+            camSession.capture(previewCaptureRequest.build(), captureCallbackHandler, handler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }

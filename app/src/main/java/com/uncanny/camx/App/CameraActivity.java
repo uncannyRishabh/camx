@@ -17,10 +17,12 @@
  import android.hardware.camera2.CameraConstrainedHighSpeedCaptureSession;
  import android.hardware.camera2.CameraDevice;
  import android.hardware.camera2.CameraManager;
+ import android.hardware.camera2.CameraMetadata;
  import android.hardware.camera2.CaptureFailure;
  import android.hardware.camera2.CaptureRequest;
  import android.hardware.camera2.CaptureResult;
  import android.hardware.camera2.TotalCaptureResult;
+ import android.hardware.camera2.params.MeteringRectangle;
  import android.hardware.camera2.params.StreamConfigurationMap;
  import android.media.CamcorderProfile;
  import android.media.ImageReader;
@@ -96,6 +98,7 @@
  import java.util.HashMap;
  import java.util.List;
  import java.util.Map;
+ import java.util.Objects;
  import java.util.Vector;
  import java.util.concurrent.Executor;
  import java.util.concurrent.Executors;
@@ -526,8 +529,8 @@ public class CameraActivity extends AppCompatActivity {
                 case VIDEO:
                     if(!isVRecording) {
                         startRecording();
+                        chronometer.start();
                         setState(CamState.VIDEO_PROGRESSED);
-
                         thumbPreview.setImageDrawable(ResourcesCompat.getDrawable(getResources()
                                 ,R.drawable.ic_video_snapshot,null));
                         thumbPreview.setOnClickListener(captureSnapshot);
@@ -539,8 +542,6 @@ public class CameraActivity extends AppCompatActivity {
                         auxDock.post(hideAuxDock);
                         mModePicker.setVisibility(View.INVISIBLE);
                         chronometer.setBase(SystemClock.elapsedRealtime());
-                        mMediaRecorder.start();
-                        chronometer.start();
                         chronometer.setVisibility(View.VISIBLE);
                         isVRecording = true;
                     }
@@ -640,7 +641,7 @@ public class CameraActivity extends AppCompatActivity {
         button5.setOnClickListener(v -> inflateButtonMenu());
 
         gestureBar.setOnTouchListener((v, event) -> {
-            if(event.getAction() == MotionEvent.ACTION_DOWN){
+            if(event.getAction() == MotionEvent.ACTION_UP){
                 inflateButtonMenu();
             }
             return false;
@@ -1039,7 +1040,8 @@ public class CameraActivity extends AppCompatActivity {
                          * TOUCH TO FOCUS
                          */
                         setVfStates(VFStates.FOCUS);
-                        focus.setFocus(v,event);
+//                        focus.setFocus(v,event);
+                        focus(v.getHeight(),v.getWidth(),event);
                         lastClickTime = System.currentTimeMillis();
                         Log.e("** SINGLE  TAP **", " First Tap time  " + lastClickTime);
                         return false;
@@ -1169,18 +1171,6 @@ public class CameraActivity extends AppCompatActivity {
         int cropH = (zoomRect.height() - minH) / 100 * zoom_level;
         zoom = new Rect(cropW, cropH, zoomRect.width() - cropW, zoomRect.height() - cropH);
 
-//        zoom = new Rect(minW * (int) zoom_level, minH * (int) zoom_level
-//                , zoomRect.width()- minW * (int) zoom_level, zoomRect.width() - minH * (int) zoom_level);
-
-//        float ratio = 1f / zoom_level;
-
-//        int croppedWidth = zoomRect.width() - Math.round( ( float ) zoomRect.width() * ratio );
-//        int croppedHeight = zoomRect.height() - Math.round( ( float ) zoomRect.height() * ratio );
-
-
-//        zoom = new Rect( croppedWidth / 2, croppedHeight / 2,
-//                zoomRect.width() - croppedWidth / 2, zoomRect.height() - croppedHeight / 2 );
-
         zText = getZoomValueSingleDecimal(zoom_level/4.5f)+"";
         zoomText.setVisibility(View.VISIBLE);
         zoomText.setText(zText);
@@ -1197,7 +1187,105 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
-    private double getZoomValueSingleDecimal(float zoom_level) {
+     private void focus(int height, int width, @Nullable MotionEvent event) {
+         focusCircle.removeCallbacks(hideFocusCircle);
+         float h;
+         float w;
+         if(Objects.equals(event,null)){
+             h = width/2f;
+             w = height/2f;
+         }
+         else {
+             h = event.getX();
+             w = event.getY();
+         }
+
+         focusCircle.setVisibility(View.VISIBLE);
+         focusCircle.setPosition((int)h,(int)w);
+         focusCircle.postDelayed(hideFocusCircle,1200);
+
+         Log.e(TAG, "touchToFocus: F O C U S I N G");
+         final Rect sensorArraySize = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+
+         final int y = (int)((h / (float)width)  * (float)sensorArraySize.height());
+         final int x = (int)((w / (float)height) * (float)sensorArraySize.width());
+
+         final int halfTouchWidth  = 150;
+         final int halfTouchHeight = 150;
+
+         MeteringRectangle focusAreaTouch = new MeteringRectangle(Math.max(x - halfTouchWidth,  0),
+                 Math.max(y - halfTouchHeight, 0),
+                 halfTouchWidth  * 2,
+                 halfTouchHeight * 2,
+                 MeteringRectangle.METERING_WEIGHT_MAX - 1);
+
+         //first stop the existing repeating request
+//        try {
+//            cameraCaptureSessions.stopRepeating();
+//        } catch (CameraAccessException e) {
+//            e.printStackTrace();
+//        }
+
+         //cancel any existing AF trigger (repeated touches, etc.)
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
+//        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+         buildPreview();
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_REGIONS, new MeteringRectangle[]{focusAreaTouch});
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AE_REGIONS, new MeteringRectangle[]{focusAreaTouch});
+         previewCaptureRequest.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_ON);
+
+         //set focus area repeating,else cam forget after one frame where it should focus
+         //trigger af start only once. cam starts focusing till its focused or failed
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START);
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START);
+         buildPreview();
+
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE);
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE);
+
+         previewCaptureRequest.setTag("FOCUS_TAG"); //we'll capture this later for resuming the preview
+
+         buildPreview();
+//
+     }
+
+     private void buildPreview(){
+         try {
+             camSession.capture(previewCaptureRequest.build(), captureCallbackHandler, focusHandler);
+         } catch (CameraAccessException e) {
+             e.printStackTrace();
+         }
+     }
+
+     private CameraCaptureSession.CaptureCallback captureCallbackHandler = new CameraCaptureSession.CaptureCallback() {
+         @Override
+         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
+             super.onCaptureCompleted(session, request, result);
+             if (request.getTag() == "FOCUS_TAG") {
+                 //the focus trigger is complete -
+                 //resume repeating (preview surface will get frames), clear AF trigger
+//                mBackgroundHandler.postDelayed(() ->
+//                        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
+//                        ,3000);
+
+                 Log.e(TAG, "onCaptureCompleted: FOCUS COMPLETED ");
+//                previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE);
+//                previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE);
+             }
+         }
+         @Override
+         public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
+             super.onCaptureFailed(session, request, failure);
+             Log.e(TAG, "Manual AF failure: " + failure);
+         }
+     };
+
+
+
+
+     private double getZoomValueSingleDecimal(float zoom_level) {
         BigDecimal bd = new BigDecimal(Double.toString(zoom_level));
         bd = bd.setScale(1, RoundingMode.HALF_DOWN);
         return bd.doubleValue();
@@ -1310,7 +1398,7 @@ public class CameraActivity extends AppCompatActivity {
     private void createVideoPreview(int height,int width){
         if (!resumed || !surface)
             return;
-        mMediaRecorder = new MediaRecorder();
+
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         Log.e(TAG, "createVideoPreview: "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
 
@@ -1335,7 +1423,7 @@ public class CameraActivity extends AppCompatActivity {
 //            captureRequest.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE
 //                    ,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON);
 
-            camDevice.createCaptureSession(Arrays.asList(previewSurface)
+            camDevice.createCaptureSession(Collections.singletonList(previewSurface)
                     , new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(@NonNull CameraCaptureSession session) {
@@ -1344,7 +1432,7 @@ public class CameraActivity extends AppCompatActivity {
                                 camSession.setRepeatingRequest(previewCaptureRequest.build()
                                         , null,mBackgroundHandler);
 
-                                focus = new FocusControls(getCameraCharacteristics(),focusCircle,hideFocusCircle,getState(),camSession
+                                focus = new FocusControls(getCameraCharacteristics(),focusCircle,hideFocusCircle,getState(),session
                                         ,previewCaptureRequest,highSpeedCaptureSession,mBackgroundHandler);
                                 tvPreview.setOnTouchListener(touchListener);
                             } catch (CameraAccessException e) {
@@ -1362,7 +1450,42 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
-    private void startRecording(){
+     private void setupMediaRecorder(CamcorderProfile camcorderProfile) {
+         try {
+             mVideoFileName = "CamX" + System.currentTimeMillis() + "_" + getCameraId() + ".mp4";
+             Log.e(TAG, "setupMediaRecorder: CP : h : " + camcorderProfile.videoFrameHeight
+                     + " w : " + camcorderProfile.videoFrameWidth);
+             Log.e(TAG, "setupMediaRecorder: mVideo : h : " + mVideoSize.getHeight()
+                     + " w : " + mVideoSize.getWidth());
+             Log.e(TAG, "setupMediaRecorder: vBR : " + camcorderProfile.videoBitRate);
+
+             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(getApplicationContext());
+             else mMediaRecorder = new MediaRecorder();
+             mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+             mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
+             mMediaRecorder.setAudioSamplingRate(96);
+             mMediaRecorder.setAudioEncodingBitRate(96000); //FIXME : UNABLE TO SET HIGHER THAN 48kbits/sec
+             mMediaRecorder.setAudioEncodingBitRate(camcorderProfile.audioBitRate);
+             mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+             mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
+             mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+             mMediaRecorder.setVideoSize(mVideoSize.getWidth(), mVideoSize.getHeight());
+             mMediaRecorder.setVideoFrameRate(vFPS);
+             mMediaRecorder.setOrientationHint(90);      //TODO : CHANGE ACCORDING TO SENSOR ORIENTATION
+             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                 mMediaRecorder.setOutputFile(new File("//storage//emulated//0//DCIM//Camera//" + mVideoFileName));
+             } else {
+                 mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//" + mVideoFileName);
+             }
+             mMediaRecorder.setVideoEncodingBitRate(16400000);
+             mMediaRecorder.prepare();           //FIXME : prepare fails on emulator(sdk24)
+         }
+         catch (IOException e){
+             e.printStackTrace();
+         }
+     }
+
+     private void startRecording(){
         try {
             //TODO: ADD CHECKS FOR FRONT AND BACK ONLY
             int id = (getCameraId().equals("0") ? 0 : 1);
@@ -1370,6 +1493,7 @@ public class CameraActivity extends AppCompatActivity {
                     ,CamcorderProfile.QUALITY_HIGH);
             if(!isVRecording){
                 setupMediaRecorder(camcorderProfile);
+                mMediaRecorder.start();
             }
             SurfaceTexture surfaceTexture = tvPreview.getSurfaceTexture();
             surfaceTexture.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
@@ -1398,7 +1522,7 @@ public class CameraActivity extends AppCompatActivity {
                         }
                     }, null);
         }
-        catch (IOException |CameraAccessException e){
+        catch (IllegalStateException | CameraAccessException e){
             e.printStackTrace();
         }
     }
@@ -1429,33 +1553,6 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
-    private void setupMediaRecorder(CamcorderProfile camcorderProfile) throws IOException {
-        mVideoFileName = "CamX"+System.currentTimeMillis()+"_"+getCameraId()+".mp4";
-        Log.e(TAG, "setupMediaRecorder: CP : h : "+camcorderProfile.videoFrameHeight
-                +" w : "+camcorderProfile.videoFrameWidth);
-        Log.e(TAG, "setupMediaRecorder: vBR : "+camcorderProfile.videoBitRate );
-        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
-        mMediaRecorder.setAudioSamplingRate(96);
-        mMediaRecorder.setAudioEncodingBitRate(96000); //FIXME : UNABLE TO SET HIGHER THAN 48kbits/sec
-        mMediaRecorder.setAudioEncodingBitRate(camcorderProfile.audioBitRate);
-        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-        mMediaRecorder.setVideoFrameRate(vFPS);
-        mMediaRecorder.setVideoEncodingBitRate(16400000);
-        mMediaRecorder.setVideoSize(camcorderProfile.videoFrameWidth, camcorderProfile.videoFrameHeight);
-        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
-
-        mMediaRecorder.setOrientationHint(90);      //TODO : CHANGE ACCORDING TO SENSOR ORIENTATION
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            mMediaRecorder.setOutputFile(new File("//storage//emulated//0//DCIM//Camera//"+mVideoFileName));
-        }
-        else {
-            mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//"+mVideoFileName);
-        }
-        mMediaRecorder.prepare();           //FIXME : prepare fails on emulator(sdk24)
-    }
-
     /**
      * Slow Motion Methods
      */
@@ -1471,7 +1568,12 @@ public class CameraActivity extends AppCompatActivity {
         }
         else {
             hfrSurfaceList.clear();
-            mMediaRecorder = new MediaRecorder();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                mMediaRecorder = new MediaRecorder(getApplicationContext());
+            }
+            else {
+                mMediaRecorder = new MediaRecorder();
+            }
             update_chip_text(width + "", sFPS + "");
             stPreview.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
             tvPreview.setAspectRatio(mVideoSize.getHeight(), mVideoSize.getWidth());
@@ -1811,7 +1913,7 @@ public class CameraActivity extends AppCompatActivity {
                 , cameraId
                 , getContentResolver()
                 , (getState() == CamState.PORTRAIT)
-                , false                      //TODO: add flipping logic
+                , false
                 , getRotationCompensation((getCameraId().equals("1"))) ))
                 .subscribeOn(Schedulers.io())
         .subscribe(new CompletableObserver() {

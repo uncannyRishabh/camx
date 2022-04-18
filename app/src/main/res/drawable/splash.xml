@@ -7,8 +7,8 @@
     </item>
     <item
         android:drawable="@drawable/ic_icon"
-        android:width="250dp"
-        android:height="250dp"
+        android:width ="180dp"
+        android:height="180dp"
         android:gravity="center"
         >
     </item>
