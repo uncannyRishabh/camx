@@ -95,10 +95,11 @@
         android:id="@+id/exposureControl"
         android:layout_width="30dp"
         android:layout_height="255dp"
-        android:layout_marginEnd="18dp"
-        android:layout_marginBottom="136dp"
-        android:layout_alignParentEnd="true"
         android:layout_above="@id/relative_layout_button_dock"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="14dp"
+        android:layout_marginBottom="136dp"
+        android:visibility="gone"
         />
 
     <LinearLayout

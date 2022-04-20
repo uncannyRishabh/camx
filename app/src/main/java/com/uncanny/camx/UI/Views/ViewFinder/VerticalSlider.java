@@ -38,10 +38,6 @@ public class VerticalSlider extends Slider {
         super(context, attrs, defStyleAttr);
     }
 
-    public VerticalSlider(Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
-        super(context, attrs, defStyleAttr, defStyleRes);
-    }
-
     public void setOnSliderChangeListener(OnSliderChangeListener l) {
         mOnSliderChangeListener = l;
     }
@@ -117,7 +113,7 @@ abstract class Slider extends View{
         this.minValue = minValue;
     }
 
-    public void setMaxValue(int maxValue) {
+    public void  setMaxValue(int maxValue) {
         this.maxValue = maxValue;
     }
 
@@ -130,7 +126,7 @@ abstract class Slider extends View{
     }
 
     public float getPosition() {
-        return normalize(position, getMinValue(), getMaxValue(), THUMB_PADDING+thumbRadius, getHeight()-thumbRadius-THUMB_PADDING);
+        return normalize(position, getMinValue(), getMaxValue(), THUMB_PADDING+thumbRadius, height-thumbRadius-THUMB_PADDING);
     }
 
     private float normalize(float x, float newMin, float newMax, float oldMin, float oldMax) {

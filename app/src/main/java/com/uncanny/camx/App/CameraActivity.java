@@ -268,6 +268,15 @@ public class CameraActivity extends AppCompatActivity {
         }
     };
 
+    private Runnable hideExposureControl = new Runnable() {
+        @Override
+        public void run() {
+            if(exposureControl.getVisibility() == View.VISIBLE) {
+                exposureControl.setVisibility(View.GONE);
+            }
+        }
+    };
+
     private Runnable hideAuxDock = new Runnable() {
         @Override
         public void run() {
@@ -627,7 +636,7 @@ public class CameraActivity extends AppCompatActivity {
                 openCamera();
                 if(getState()==CamState.VIDEO) addCapableVideoResolutions();
                 else if(getState()==CamState.SLOMO) addCapableSloMoResolutions();
-
+                exposureControl.post(() -> setExposureRange());
                 for(int id : auxCameraList){
                     tv = auxDock.findViewById(id);
                     tv.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
@@ -687,18 +696,22 @@ public class CameraActivity extends AppCompatActivity {
             @Override
             public void onProgressChanged(VerticalSlider seekBar, float progress) {
                 Log.e(TAG, "onStartTrackingTouch: GESTURE TRACKING"+progress);
+                adjustExposure(progress);
             }
 
             @Override
             public void onStartTrackingTouch(VerticalSlider seekBar) {
+                exposureControl.removeCallbacks(hideExposureControl);
                 Log.e(TAG, "onStartTrackingTouch: START TRACKING");
             }
 
             @Override
             public void onStopTrackingTouch(VerticalSlider seekBar) {
+                exposureControl.postDelayed(hideExposureControl,3000);
                 Log.e(TAG, "onStartTrackingTouch: STOP TRACKING");
             }
         });
+        exposureControl.post(() -> setExposureRange());
 
         /*
         Caching Camera Modes for every camera id
@@ -828,6 +841,7 @@ public class CameraActivity extends AppCompatActivity {
                 aux_btn.setText(auxCameraList.get(i).toString());
                 aux_btn.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
                 auxDock.addView(aux_btn);
+
                 aux_btn.setOnClickListener(v -> {
                     tvPreview.setOnTouchListener(null);
                     setCameraId(aux_btn.getId()+"");
@@ -836,7 +850,7 @@ public class CameraActivity extends AppCompatActivity {
                     openCamera();
                     if(getState() == CamState.VIDEO) addCapableVideoResolutions();
                     else if(getState() == CamState.SLOMO) addCapableSloMoResolutions();
-
+                    exposureControl.post(() -> setExposureRange());
                     wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
                     wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
 //                        wide_lens.setTextColor(Color.WHITE);
@@ -958,6 +972,7 @@ public class CameraActivity extends AppCompatActivity {
         public void onClick(View v) {
             tvPreview.setOnTouchListener(null);
             zoomText.post(hideZoomText);
+            exposureControl.post(() -> setExposureRange());
             closeCamera();
             if (characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_BACK) {
                 setCameraId(FRONT_CAMERA_ID);
@@ -1049,7 +1064,7 @@ public class CameraActivity extends AppCompatActivity {
                          * DOUBLE TAP TO ZOOM
                          */
                         setVfStates(VFStates.DOUBLE_TAP);
-                        Log.e("** DOUBLE TAP**", " second tap ");
+                        Log.e("**DOUBLE TAP**", " second tap ");
                         try {
                             doubleTapZoom();
                         } catch (CameraAccessException e) {
@@ -1061,6 +1076,9 @@ public class CameraActivity extends AppCompatActivity {
                          * TOUCH TO FOCUS
                          */
                         setVfStates(VFStates.FOCUS);
+                        exposureControl.removeCallbacks(hideExposureControl);
+                        exposureControl.setVisibility(View.VISIBLE);
+                        exposureControl.postDelayed(hideExposureControl,3000);
 //                        focus.setFocus(v,event);
                         focus(v.getHeight(),v.getWidth(),event);
                         lastClickTime = System.currentTimeMillis();
@@ -1303,9 +1321,6 @@ public class CameraActivity extends AppCompatActivity {
          }
      };
 
-
-
-
      private double getZoomValueSingleDecimal(float zoom_level) {
         BigDecimal bd = new BigDecimal(Double.toString(zoom_level));
         bd = bd.setScale(1, RoundingMode.HALF_DOWN);
@@ -1316,6 +1331,26 @@ public class CameraActivity extends AppCompatActivity {
         float x = event.getX(0) - event.getX(1);
         float y = event.getY(0) - event.getY(1);
         return (float) Math.sqrt(x * x + y * y);
+    }
+
+    private void setExposureRange(){
+        Range<Integer> r = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE);
+        Log.e(TAG, "EXPOSURE RANGE : "+r);
+        exposureControl.setMaxValue(r.getLower());
+        exposureControl.setMinValue(r.getUpper());
+    }
+
+    private void adjustExposure(float progress){
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, (int) progress);
+        try {
+            if(getState() == CamState.HSVIDEO_PROGRESSED)
+                highSpeedCaptureSession.createHighSpeedRequestList(previewCaptureRequest.build());
+            else
+                camSession
+                        .setRepeatingRequest(previewCaptureRequest.build(), null, mBackgroundHandler);
+        } catch (CameraAccessException | NullPointerException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
