@@ -7,6 +7,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.AnticipateOvershootInterpolator;
@@ -19,7 +20,7 @@ public class VerticalSlider extends Slider {
 
         void onProgressChanged(VerticalSlider seekBar, float progress);
 
-        void onStartTrackingTouch(VerticalSlider seekBar);
+        void onStartTrackingTouch(VerticalSlider seekBar, float progress);
 
         void onStopTrackingTouch(VerticalSlider seekBar);
     }
@@ -54,7 +55,7 @@ public class VerticalSlider extends Slider {
     void onStartTrackingTouch() {
         super.onStartTrackingTouch();
         if(mOnSliderChangeListener !=null){
-            mOnSliderChangeListener.onStartTrackingTouch(this);
+            mOnSliderChangeListener.onStartTrackingTouch(this, super.onTrackingGesture());
         }
     }
 
@@ -83,6 +84,9 @@ abstract class Slider extends View{
     private float trackThickness;
     private float THUMB_PADDING;
 
+    private float setPosition;
+    private boolean requestSetPosition = false;
+    private boolean disableTapToMove = false;
     private boolean isDragging;
 
     private final float density = getResources().getDisplayMetrics().density;
@@ -125,20 +129,28 @@ abstract class Slider extends View{
         return maxValue;
     }
 
-    public float getPosition() {
+    public void setPosition(int position){
+        requestSetPosition = true;
+        setPosition = position;
+        invalidate();
+    }
+
+    public void disableTapToMove(boolean b){
+        disableTapToMove = b;
+    }
+
+    private float getPosition() {
         return normalize(position, getMinValue(), getMaxValue(), THUMB_PADDING+thumbRadius, height-thumbRadius-THUMB_PADDING);
     }
 
     private float normalize(float x, float newMin, float newMax, float oldMin, float oldMax) {
-        return ((x - oldMin)/(oldMax - oldMin)*(newMax - newMin) + newMin);
+        return (((x - oldMin)/(oldMax - oldMin))*(newMax - newMin)) + newMin;
     }
 
     private void init(){
         trackPaint = new Paint();
         thumbPaint = new Paint();
         activeTrackPaint = new Paint();
-
-        height = getHeight();
 
         minValue = 0;
         maxValue = 100;
@@ -189,30 +201,25 @@ abstract class Slider extends View{
     }
 
     @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        height = getHeight();
-        setMinimumWidth((int) (getWidth() + 2*THUMB_PADDING));
-    }
-
-    @Override
     public boolean onTouchEvent(MotionEvent event) {
         this.removeCallbacks(expandThumb);
         int action = event.getActionMasked();
         switch (action){
             case MotionEvent.ACTION_DOWN:{
                 this.post(expandThumb);
+                requestSetPosition = false;
                 onStartTrackingTouch();
                 return true;
             }
             case MotionEvent.ACTION_MOVE:{
+                Log.e("TAG", "onTouchEvent: VERTICAL SLIDER MOVED");
                 setPosition(event.getY());
                 onTrackingGesture();
                 invalidate();
                 return true;
             }
             case MotionEvent.ACTION_UP:{
-                setPosition(event.getY());
+                if(!disableTapToMove) setPosition(event.getY());
                 if (isDragging) onStopTrackingTouch();
                 this.post(shrinkThumb);
                 invalidate();
@@ -227,12 +234,20 @@ abstract class Slider extends View{
         super.onDraw(canvas);
 
         halfWidth = getWidth()/2f;
+        height = getHeight();
+
+        if(requestSetPosition){
+            setPosition( normalize(setPosition
+                    , THUMB_PADDING+thumbRadius, height-thumbRadius-THUMB_PADDING
+                    , getMinValue(), getMaxValue()) );
+            Log.e("TAG", "onDraw: requestSetPosition "+position);
+        }
 
         //TRACK
         canvas.drawLine(halfWidth,
                 thumbRadius+THUMB_PADDING,
                 halfWidth,
-                getHeight()-thumbRadius-THUMB_PADDING,
+                height-thumbRadius-THUMB_PADDING,
                 trackPaint);
 
         //ACTIVE TRACK
@@ -247,7 +262,6 @@ abstract class Slider extends View{
                 position,
                 thumbRadiusCache,
                 thumbPaint);
-
     }
 
     float onTrackingGesture(){

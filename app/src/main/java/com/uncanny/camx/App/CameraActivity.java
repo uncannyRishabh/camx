@@ -700,18 +700,20 @@ public class CameraActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onStartTrackingTouch(VerticalSlider seekBar) {
+            public void onStartTrackingTouch(VerticalSlider seekBar,float progress) {
                 exposureControl.removeCallbacks(hideExposureControl);
-                Log.e(TAG, "onStartTrackingTouch: START TRACKING");
             }
 
             @Override
             public void onStopTrackingTouch(VerticalSlider seekBar) {
                 exposureControl.postDelayed(hideExposureControl,3000);
-                Log.e(TAG, "onStartTrackingTouch: STOP TRACKING");
             }
         });
-        exposureControl.post(() -> setExposureRange());
+
+        exposureControl.post(() -> {
+            exposureControl.disableTapToMove(true);
+            setExposureRange();
+        });
 
         /*
         Caching Camera Modes for every camera id
@@ -1336,8 +1338,11 @@ public class CameraActivity extends AppCompatActivity {
     private void setExposureRange(){
         Range<Integer> r = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE);
         Log.e(TAG, "EXPOSURE RANGE : "+r);
+//        Log.e(TAG, "EXPOSURE RANGE : "+characteristics.get(CameraCharacteristics));
         exposureControl.setMaxValue(r.getLower());
         exposureControl.setMinValue(r.getUpper());
+
+        exposureControl.setPosition(0);
     }
 
     private void adjustExposure(float progress){
