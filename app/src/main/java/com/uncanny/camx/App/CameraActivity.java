@@ -48,6 +48,7 @@
  import android.view.Surface;
  import android.view.TextureView;
  import android.view.View;
+ import android.view.ViewGroup;
  import android.view.WindowManager;
  import android.view.animation.AccelerateInterpolator;
  import android.view.animation.DecelerateInterpolator;
@@ -367,10 +368,13 @@ public class CameraActivity extends AppCompatActivity {
         resolutionSelector = findViewById(R.id.resolution_selector);
         exposureControl = findViewById(R.id.exposureControl);
 
+        btn_grid1.getLayoutTransition().enableTransitionType(LayoutTransition.CHANGING);
+        btn_grid2.getLayoutTransition().enableTransitionType(LayoutTransition.CHANGING);
+
         addCapableVideoResolutions();
 
-        //lensData.getAvailableModes(getCameraId())
-        mModePicker.setValues(new String[] {"Camera", "Video", "Portrait", "Night", "Pro"});
+        mModePicker.setValues(new String[] {"Night", "Portrait", "Camera", "Video", "Pro"});
+        mModePicker.setSelectedItem(2);
         mModePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
         mModePicker.setOnItemSelectedListener(index -> {
             mModePicker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
@@ -378,27 +382,32 @@ public class CameraActivity extends AppCompatActivity {
             auxDock.post(hideAuxDock);
             zoomText.post(hideZoomText);
             tvPreview.setOnTouchListener(null);
+            exposureControl.post(this::setExposureRange);
             switch (index){
-                case 0:
-                    setState(CamState.CAMERA);
-                    modeCamera();
-                    Log.e(TAG, "onItemSelected: CAMERA MODE");
-                    break;
-                case 1:
-                    setState(CamState.VIDEO);
-                    modeVideo();
-                    Log.e(TAG, "onItemSelected: VIDEO MODE");
-                    break;
-                case 2:
-                    setState( CamState.PORTRAIT);
-                    modePortrait();
-                    Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[2]);
-                    break;
-                case 3:
+                case 0:{
                     setState(CamState.NIGHT);
                     modeNight();
                     Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[3]);
                     break;
+                }
+                case 1:{
+                    setState( CamState.PORTRAIT);
+                    modePortrait();
+                    Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[2]);
+                    break;
+                }
+                case 2:{
+                    setState(CamState.CAMERA);
+                    modeCamera();
+                    Log.e(TAG, "onItemSelected: CAMERA MODE");
+                    break;
+                }
+                case 3:{
+                    setState(CamState.VIDEO);
+                    modeVideo();
+                    Log.e(TAG, "onItemSelected: VIDEO MODE");
+                    break;
+                }
                 case 4:
                     setState(CamState.PRO);
                     modePro();
@@ -636,7 +645,7 @@ public class CameraActivity extends AppCompatActivity {
                 openCamera();
                 if(getState()==CamState.VIDEO) addCapableVideoResolutions();
                 else if(getState()==CamState.SLOMO) addCapableSloMoResolutions();
-                exposureControl.post(() -> setExposureRange());
+                exposureControl.post(this::setExposureRange);
                 for(int id : auxCameraList){
                     tv = auxDock.findViewById(id);
                     tv.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
@@ -852,7 +861,7 @@ public class CameraActivity extends AppCompatActivity {
                     openCamera();
                     if(getState() == CamState.VIDEO) addCapableVideoResolutions();
                     else if(getState() == CamState.SLOMO) addCapableSloMoResolutions();
-                    exposureControl.post(() -> setExposureRange());
+                    exposureControl.post(this::setExposureRange);
                     wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
                     wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
 //                        wide_lens.setTextColor(Color.WHITE);
@@ -925,14 +934,29 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     private void setDockHeight(int width) {
-        int tvHeight = (width == 720 ? 1280 : 1440); //FIXME : HANDLE FOR HIRES DISPLAY
+        int tvHeight = (width == 720 ? 1280 : 1440); //FIXME : HANDLE FOR HIRES DISPLAY (USING DP)
         int height = parent.getHeight()-tvHeight-appbar.getHeight()-mModePicker.getHeight();
+        int modeMargin;
         if(dock.getMinimumHeight()<height) {
             RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(width
                     , height);
             layoutParams.addRule(RelativeLayout.ABOVE, R.id.mode_picker_view);
             dock.setLayoutParams(layoutParams);
+            modeMargin = parent.getHeight()-appbar.getHeight()-tvHeight-height;
         }
+        else{
+            modeMargin = parent.getHeight()-appbar.getHeight()-tvHeight-dock.getMinimumHeight();
+        }
+//        Log.e(TAG, "setDockHeight: MPicker Margin : "+modeMargin);
+//        Log.e(TAG, "setDockHeight: PARENT HEIGHT : "+parent.getHeight());
+
+        //set modePicker margin
+        if(modeMargin/4 > 0){
+            ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) mModePicker.getLayoutParams();
+            mlp.setMargins(0,0,0,modeMargin/4);
+        }
+
+
     }
 
     private void modifyMenuForVideo(){
@@ -1593,13 +1617,13 @@ public class CameraActivity extends AppCompatActivity {
         for(Size size : outputSizes){
             float ar = (float) size.getWidth()/ size.getHeight();
             if(aspectRatio43) {
-                Log.e(TAG, "getPreviewResolution: AR43 resolution : "+resolution);
+//                Log.e(TAG, "getPreviewResolution: AR43 resolution : "+resolution);
                 if (size.getHeight() == resolution && ar > 1.2f) {
                     sizeArrayList.add(size);
                 }
             }
             else {
-                Log.e(TAG, "getPreviewResolution: AR169 resolution : "+resolution);
+//                Log.e(TAG, "getPreviewResolution: AR169 resolution : "+resolution);
                 if (size.getHeight() == resolution && ar > 1.6f) {
                     sizeArrayList.add(size);
                 }

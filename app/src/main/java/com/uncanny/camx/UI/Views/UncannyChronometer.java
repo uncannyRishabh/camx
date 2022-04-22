@@ -30,6 +30,7 @@ public class UncannyChronometer extends View {
     private int seconds,minutes,hours;
     private String mSeconds,mMinutes,mHours;
     private Typeface Poppins;
+    private final float density = getResources().getDisplayMetrics().density;
 
     private Runnable startTick = new Runnable() {
         @Override
@@ -71,6 +72,8 @@ public class UncannyChronometer extends View {
         paint = new Paint();
         tPaint = new Paint();
 
+        float tSize = 15 * density;
+
         Poppins = Typeface.create("Poppins", Typeface.NORMAL);
 
         paint.setColor(0xFFF75C5C); //MUTE RED
@@ -80,7 +83,7 @@ public class UncannyChronometer extends View {
         tPaint.setFakeBoldText(true);
         tPaint.setTextAlign(Paint.Align.CENTER);
         tPaint.setAntiAlias(true);
-        tPaint.setTextSize(40f);
+        tPaint.setTextSize(tSize);
         tPaint.setTypeface(Poppins);
     }
 
