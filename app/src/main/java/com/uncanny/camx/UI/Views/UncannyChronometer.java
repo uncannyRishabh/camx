@@ -8,6 +8,7 @@ import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.os.SystemClock;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 
 import androidx.annotation.Nullable;
@@ -41,6 +42,7 @@ public class UncannyChronometer extends View {
             }
         }
     };
+
 
     private Runnable countPauseDuration = new Runnable() {
         @Override
@@ -99,6 +101,7 @@ public class UncannyChronometer extends View {
         mHours   = (hours>60   ? (hours%60<10 ? "0"+hours%60:hours%60+"" )       : (hours<10   ? "0"+hours: hours+""));
 
         drawTime = (hours>0 ? mHours+":" : "" )+mMinutes+":"+mSeconds;
+        Log.e("TAG", "updateDrawText: "+drawTime);
         this.invalidate();
     }
 
@@ -108,20 +111,24 @@ public class UncannyChronometer extends View {
 
     public void start(){
         isRunning = true;
-        postDelayed(startTick,1000);
+        post(startTick);
     }
 
     public void stop(){
         isRunning = false;
         removeCallbacks(startTick);
+        removeCallbacks(countPauseDuration);
+        pauseDuration = 0;
         drawTime = "00:00";
     }
 
     public void pause(){
-        postDelayed(countPauseDuration,1000);
+        removeCallbacks(startTick);
+        post(countPauseDuration);
     }
 
     public void resume(){
+        post(startTick);
         removeCallbacks(countPauseDuration);
     }
 

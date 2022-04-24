@@ -85,10 +85,11 @@
  import com.uncanny.camx.UI.Views.ViewFinder.FocusCircle;
  import com.uncanny.camx.UI.Views.ViewFinder.Grids;
  import com.uncanny.camx.UI.Views.ViewFinder.VerticalSlider;
+ import com.uncanny.camx.UI.Views.ViewFinder.VideoMode;
+ import com.uncanny.camx.Utils.AsyncThreads.ImageDecoderThread;
+ import com.uncanny.camx.Utils.AsyncThreads.ImageSaverThread;
+ import com.uncanny.camx.Utils.AsyncThreads.SerialExecutor;
  import com.uncanny.camx.Utils.CompareSizeByArea;
- import com.uncanny.camx.Utils.NonUIThread.ImageDecoderThread;
- import com.uncanny.camx.Utils.NonUIThread.ImageSaverThread;
- import com.uncanny.camx.Utils.NonUIThread.SerialExecutor;
 
  import java.io.File;
  import java.io.IOException;
@@ -185,6 +186,7 @@ public class CameraActivity extends AppCompatActivity {
     private RelativeLayout tvPreviewParent;
     private RelativeLayout parent;
     private VerticalSlider exposureControl;
+    private VideoMode videoModePicker;
 
     private int resultCode = 1;
     private long lastClickTime = 0;
@@ -207,6 +209,8 @@ public class CameraActivity extends AppCompatActivity {
     private boolean isVRecording = false;
     private boolean isSLRecording = false;
     private boolean isVideoPaused = false;
+    private boolean viewfinderGesture = false;
+    private float vfPointerX,vfPointerY;
     private boolean mflash = false;
     private boolean ASPECT_RATIO_43 = true;
     private static boolean ASPECT_RATIO_169 = false;
@@ -367,6 +371,7 @@ public class CameraActivity extends AppCompatActivity {
         btn_grid2 = findViewById(R.id.top_bar_1);
         resolutionSelector = findViewById(R.id.resolution_selector);
         exposureControl = findViewById(R.id.exposureControl);
+        videoModePicker = findViewById(R.id.video_mode_picker);
 
         btn_grid1.getLayoutTransition().enableTransitionType(LayoutTransition.CHANGING);
         btn_grid2.getLayoutTransition().enableTransitionType(LayoutTransition.CHANGING);
@@ -418,6 +423,7 @@ public class CameraActivity extends AppCompatActivity {
             /*
              * For hiding and displaying fps info chip
              */
+            videoModePicker.setVisibility(getState() == CamState.VIDEO ? View.VISIBLE : View.GONE);
             vi_info.setVisibility(getState() == CamState.VIDEO || state == CamState.SLOMO || state == CamState.TIMEWARP ?
                     View.VISIBLE : View.INVISIBLE);
         });
@@ -724,6 +730,35 @@ public class CameraActivity extends AppCompatActivity {
             setExposureRange();
         });
 
+        videoModePicker.setIndex(1);
+        videoModePicker.setOnClickListener((view, Position) -> {
+            switch (Position){
+                case 0:{
+                    if(getState() != CamState.SLOMO) {
+                        closeCamera();
+                        setState(CamState.SLOMO);
+                        modeSloMo();
+                    }
+                    break;
+                }
+                case 1:{
+                    if(getState() != CamState.VIDEO){
+                        setState(CamState.VIDEO);
+                        openCamera();
+                        modeVideo();
+                    }
+                    break;
+                }
+                case 2:{
+                    if(getState() != CamState.TIMEWARP) {
+                        setState(CamState.TIMEWARP);
+                        modeTimeWarp();
+                    }
+                    break;
+                }
+            }
+        });
+
         /*
         Caching Camera Modes for every camera id
          */
@@ -854,29 +889,31 @@ public class CameraActivity extends AppCompatActivity {
                 auxDock.addView(aux_btn);
 
                 aux_btn.setOnClickListener(v -> {
-                    tvPreview.setOnTouchListener(null);
-                    setCameraId(aux_btn.getId()+"");
-                    closeCamera();
-                    setCameraId(aux_btn.getId()+"");
-                    openCamera();
-                    if(getState() == CamState.VIDEO) addCapableVideoResolutions();
-                    else if(getState() == CamState.SLOMO) addCapableSloMoResolutions();
-                    exposureControl.post(this::setExposureRange);
-                    wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
-                    wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
+                    if(!(aux_btn.getId()+"").equals(getCameraId())) {
+                        tvPreview.setOnTouchListener(null);
+                        setCameraId(aux_btn.getId() + "");
+                        closeCamera();
+                        setCameraId(aux_btn.getId() + "");
+                        openCamera();
+                        if (getState() == CamState.VIDEO) addCapableVideoResolutions();
+                        else if (getState() == CamState.SLOMO) addCapableSloMoResolutions();
+                        exposureControl.post(this::setExposureRange);
+                        wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
+                        wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
 //                        wide_lens.setTextColor(Color.WHITE);
-                    for(int id : auxCameraList){
-                        if((id + "").equals(getCameraId())){
-                            continue;
+                        for (int id : auxCameraList) {
+                            if ((id + "").equals(getCameraId())) {
+                                continue;
+                            }
+                            tv = auxDock.findViewById(id);
+                            tv.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
+                            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                            tv.setTextColor(Color.WHITE);
                         }
-                        tv = auxDock.findViewById(id);
-                        tv.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
-                        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
-                        tv.setTextColor(Color.WHITE);
-                    }
 //                        aux_btn.setTextColor(ContextCompat.getColor(getApplicationContext(),R.color.purple_200));
-                    aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
-                    aux_btn.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview));
+                        aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+                        aux_btn.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview));
+                    }
                 });
             }
         }
@@ -1067,6 +1104,12 @@ public class CameraActivity extends AppCompatActivity {
             int action = event.getActionMasked();
 
             switch (action){
+                case MotionEvent.ACTION_DOWN:{
+                    viewfinderGesture = false;
+                    vfPointerX = event.getX();
+                    vfPointerY = event.getY();
+                    return true;
+                }
                 case MotionEvent.ACTION_MOVE:{
                     /*
                      * PINCH TO ZOOM
@@ -1085,6 +1128,8 @@ public class CameraActivity extends AppCompatActivity {
                 }
                 case MotionEvent.ACTION_UP:{
                     long clickTime = System.currentTimeMillis();
+                    if(vfPointerX-event.getX() > 15 || vfPointerY-event.getY() > 15) viewfinderGesture = true;
+
                     if ((clickTime - lastClickTime) < 500) {
                         /*
                          * DOUBLE TAP TO ZOOM
@@ -1097,10 +1142,11 @@ public class CameraActivity extends AppCompatActivity {
                             e.printStackTrace();
                         }
                         lastClickTime = 0;
-                    } else if (getVfStates() != VFStates.DOUBLE_TAP && getVfStates() != VFStates.SLIDE_ZOOM) {
+                    } else if (getVfStates() != VFStates.DOUBLE_TAP && getVfStates() != VFStates.SLIDE_ZOOM && !viewfinderGesture) {
                         /*
                          * TOUCH TO FOCUS
                          */
+                        Log.e(TAG, "onClick: viewfinderGesture = "+viewfinderGesture);
                         setVfStates(VFStates.FOCUS);
                         exposureControl.removeCallbacks(hideExposureControl);
                         exposureControl.setVisibility(View.VISIBLE);

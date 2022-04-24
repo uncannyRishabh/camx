@@ -1,4 +1,4 @@
-package com.uncanny.camx.Utils.NonUIThread;
+package com.uncanny.camx.Utils.AsyncThreads;
 
 import java.util.ArrayDeque;
 import java.util.Queue;

@@ -256,7 +256,8 @@ public class HorizontalPicker extends View {
 
         int selectedItem = this.selectedItem;
 
-        float itemWithPadding = itemWidth + dividerSize;
+        float itemWithPadding = itemWidth ;
+//        float itemWithPadding = itemWidth + dividerSize;
 
         // translate horizontal to center
         canvas.translate(itemWithPadding * sideItems, 0);
@@ -268,7 +269,6 @@ public class HorizontalPicker extends View {
 //                textPaint.setColor(getTextColor(i));
                 textPaint.setColor(Color.WHITE); //MODIFY TEXT COLOR
                 textPaint.setTypeface(Poppins);
-//                textPaint.setFakeBoldText(true);
 
                 // get text layout
                 BoringLayout layout = layouts[i];

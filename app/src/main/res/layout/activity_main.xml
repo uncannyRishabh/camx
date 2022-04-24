@@ -106,7 +106,7 @@
         android:id="@+id/zoom_slider"
         android:layout_width="210dp"
         android:layout_height="30dp"
-        android:layout_above="@id/aux_cam_switch"
+        android:layout_above="@id/aux_videoMode_holder"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="6dp"
         android:elevation="2dp"
@@ -123,31 +123,48 @@
         app:trackHeight="4dp" />
 
     <LinearLayout
-        android:id="@+id/aux_cam_switch"
-        android:layout_width="wrap_content"
+        android:id="@+id/aux_videoMode_holder"
+        android:layout_width="292dp"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:layout_above="@id/relative_layout_button_dock"
-        android:paddingHorizontal="5dp"
-        android:paddingVertical="4dp"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="6dp"
-        android:background="@drawable/rounded_aux_dock"
         >
+        <LinearLayout
+            android:id="@+id/aux_cam_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="5dp"
+            android:paddingVertical="4dp"
+            android:background="@drawable/rounded_aux_dock"
+            android:layout_gravity="center"
+            >
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/main_wide"
-            android:layout_width="@dimen/aux_param"
-            android:layout_height="@dimen/aux_param"
-            android:layout_gravity="center_vertical"
-            android:paddingBottom="2dp"
-            android:layout_weight="1"
-            android:background="@drawable/circular_textview"
-            android:clickable="true"
-            android:focusable="true"
-            android:gravity="center"
-            android:text="1×"
-            android:fontFamily="@font/poppins"
-            android:textSize="16dp" />
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/main_wide"
+                android:layout_width="@dimen/aux_param"
+                android:layout_height="@dimen/aux_param"
+                android:layout_gravity="center_vertical"
+                android:paddingBottom="2dp"
+                android:layout_weight="1"
+                android:background="@drawable/circular_textview"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="1×"
+                android:fontFamily="@font/poppins"
+                android:textSize="16dp" />
+        </LinearLayout>
+
+        <com.uncanny.camx.UI.Views.ViewFinder.VideoMode
+            android:id="@+id/video_mode_picker"
+            android:layout_width="292dp"
+            android:layout_height="42dp"
+            android:visibility="gone"
+            android:layout_marginTop="14dp"
+            android:paddingHorizontal="2dp"
+            android:paddingVertical="3dp"
+            />
     </LinearLayout>
 
     <RelativeLayout
@@ -187,15 +204,15 @@
 
         <androidx.appcompat.widget.AppCompatImageButton
             android:id="@+id/front_back_switch"
-            android:layout_width="46dp"
-            android:layout_height="46dp"
+            android:layout_width="54dp"
+            android:layout_height="54dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:layout_marginEnd="40dp"
             android:background="#00020202"
-            android:padding="1dp"
-            android:scaleType="centerCrop"
-            android:src="@drawable/ic_front_switch" />
+            android:padding="2dp"
+            android:scaleType="fitXY"
+            android:src="@drawable/ic_round_flip_camera_android_24" />
     </RelativeLayout>
 
     <com.uncanny.camx.UI.Views.HorizontalPicker

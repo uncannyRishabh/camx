@@ -7,7 +7,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.AnticipateOvershootInterpolator;
@@ -212,7 +211,6 @@ abstract class Slider extends View{
                 return true;
             }
             case MotionEvent.ACTION_MOVE:{
-                Log.e("TAG", "onTouchEvent: VERTICAL SLIDER MOVED");
                 setPosition(event.getY());
                 onTrackingGesture();
                 invalidate();
@@ -240,7 +238,6 @@ abstract class Slider extends View{
             setPosition( normalize(setPosition
                     , THUMB_PADDING+thumbRadius, height-thumbRadius-THUMB_PADDING
                     , getMinValue(), getMaxValue()) );
-            Log.e("TAG", "onDraw: requestSetPosition "+position);
         }
 
         //TRACK

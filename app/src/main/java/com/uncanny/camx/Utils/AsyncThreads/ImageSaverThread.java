@@ -1,4 +1,4 @@
-package com.uncanny.camx.Utils.NonUIThread;
+package com.uncanny.camx.Utils.AsyncThreads;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
