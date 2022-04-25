@@ -54,7 +54,7 @@ public class VideoMode extends ModePicker{
     }
 }
 
-class ModePicker extends View {
+abstract class ModePicker extends View {
     private Paint bgPaint;
     private Paint sPaint;
     private Paint tPaint;

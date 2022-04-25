@@ -93,11 +93,10 @@
 
     <com.uncanny.camx.UI.Views.ViewFinder.VerticalSlider
         android:id="@+id/exposureControl"
-        android:layout_width="30dp"
+        android:layout_width="44dp"
         android:layout_height="255dp"
         android:layout_above="@id/relative_layout_button_dock"
         android:layout_alignParentEnd="true"
-        android:layout_marginEnd="14dp"
         android:layout_marginBottom="136dp"
         android:visibility="gone"
         />
@@ -138,6 +137,7 @@
             android:paddingVertical="4dp"
             android:background="@drawable/rounded_aux_dock"
             android:layout_gravity="center"
+            android:visibility="gone"
             >
 
             <com.google.android.material.textview.MaterialTextView

@@ -17,7 +17,6 @@
  import android.hardware.camera2.CameraConstrainedHighSpeedCaptureSession;
  import android.hardware.camera2.CameraDevice;
  import android.hardware.camera2.CameraManager;
- import android.hardware.camera2.CameraMetadata;
  import android.hardware.camera2.CaptureFailure;
  import android.hardware.camera2.CaptureRequest;
  import android.hardware.camera2.CaptureResult;
@@ -286,12 +285,15 @@ public class CameraActivity extends AppCompatActivity {
         @Override
         public void run() {
             if(characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_BACK){
-                if(getState() == CamState.SLOMO
-                        || getState() == CamState.HIRES || getState() == CamState.VIDEO_PROGRESSED
+                if(getState() == CamState.HIRES || getState() == CamState.VIDEO_PROGRESSED
+                        || getState() == CamState.HSVIDEO_PROGRESSED
                         || getState() == CamState.PORTRAIT){
                     auxDock.setVisibility(View.GONE);
                 }
-                else{
+                else if(getState() == CamState.SLOMO){
+                    auxDock.setVisibility(View.INVISIBLE);
+                }
+                else if(auxCameraList.size()>0){
                     auxDock.setVisibility(View.VISIBLE);
                 }
             }
@@ -369,6 +371,7 @@ public class CameraActivity extends AppCompatActivity {
         gestureBar = findViewById(R.id.gesture_bar);
         btn_grid1 = findViewById(R.id.top_bar_0);
         btn_grid2 = findViewById(R.id.top_bar_1);
+        vi_info = findViewById(R.id.vi_indicator);
         resolutionSelector = findViewById(R.id.resolution_selector);
         exposureControl = findViewById(R.id.exposureControl);
         videoModePicker = findViewById(R.id.video_mode_picker);
@@ -383,9 +386,7 @@ public class CameraActivity extends AppCompatActivity {
         mModePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
         mModePicker.setOnItemSelectedListener(index -> {
             mModePicker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
-            vi_info = findViewById(R.id.vi_indicator);
-            auxDock.post(hideAuxDock);
-            zoomText.post(hideZoomText);
+            exposureControl.post(hideExposureControl);
             tvPreview.setOnTouchListener(null);
             exposureControl.post(this::setExposureRange);
             switch (index){
@@ -420,11 +421,13 @@ public class CameraActivity extends AppCompatActivity {
                     break;
             }
 
-            /*
-             * For hiding and displaying fps info chip
-             */
-            videoModePicker.setVisibility(getState() == CamState.VIDEO ? View.VISIBLE : View.GONE);
-            vi_info.setVisibility(getState() == CamState.VIDEO || state == CamState.SLOMO || state == CamState.TIMEWARP ?
+            auxDock.post(hideAuxDock);
+            zoomText.post(hideZoomText);
+            if(getState() == CamState.VIDEO && lensData.hasSloMoCapabilities(getCameraId()))
+                videoModePicker.setVisibility(View.VISIBLE);
+            else videoModePicker.setVisibility(View.GONE);
+//            videoModePicker.setVisibility(getState() == CamState.VIDEO ? View.VISIBLE : View.GONE);
+            vi_info.setVisibility(getState() == CamState.VIDEO || getState() == CamState.SLOMO || getState() == CamState.TIMEWARP ?
                     View.VISIBLE : View.INVISIBLE);
         });
 
@@ -638,6 +641,9 @@ public class CameraActivity extends AppCompatActivity {
                 default:
                     break;
             }
+            videoModePicker.setVisibility(getState() == CamState.VIDEO
+                    || getState() == CamState.SLOMO
+                    || getState() == CamState.TIMEWARP? View.VISIBLE : View.GONE);
             resolutionSelector.setState(getState());
         });
 
@@ -647,6 +653,7 @@ public class CameraActivity extends AppCompatActivity {
             if (!getCameraId().equals(BACK_CAMERA_ID)) {
                 closeCamera();
                 tvPreview.setOnTouchListener(null);
+                zoomText.post(hideZoomText);
                 setCameraId(BACK_CAMERA_ID);
                 openCamera();
                 if(getState()==CamState.VIDEO) addCapableVideoResolutions();
@@ -682,8 +689,6 @@ public class CameraActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         zSlider.addOnChangeListener((slider, value, fromUser) -> {
-            zoomText.removeCallbacks(hideZoomText);
-            auxDock.removeCallbacks(hideAuxDock);
             try {
                 ZOOM_LEVEL = value * 4.5f;
                 setZoom(mZoom,  (int) ZOOM_LEVEL);
@@ -695,6 +700,7 @@ public class CameraActivity extends AppCompatActivity {
             @SuppressLint("RestrictedApi")
             @Override
             public void onStartTrackingTouch(@NonNull Slider slider) {
+                zoomText.removeCallbacks(hideZoomText);
                 zSlider.removeCallbacks(hideZoomSlider);
             }
             @SuppressLint("RestrictedApi")
@@ -710,7 +716,6 @@ public class CameraActivity extends AppCompatActivity {
         exposureControl.setOnSliderChangeListener(new VerticalSlider.OnSliderChangeListener() {
             @Override
             public void onProgressChanged(VerticalSlider seekBar, float progress) {
-                Log.e(TAG, "onStartTrackingTouch: GESTURE TRACKING"+progress);
                 adjustExposure(progress);
             }
 
@@ -721,7 +726,15 @@ public class CameraActivity extends AppCompatActivity {
 
             @Override
             public void onStopTrackingTouch(VerticalSlider seekBar) {
+                if(getState() == CamState.CAMERA || getState() == CamState.PORTRAIT
+                        || getState() == CamState.NIGHT || getState() == CamState.HIRES)
                 exposureControl.postDelayed(hideExposureControl,3000);
+                exposureControl.postDelayed(() -> {
+                    resetAE();
+                    resetFocus();
+                },3000);
+
+//                else exposureControl.postDelayed(hideExposureControl,3000);
             }
         });
 
@@ -732,6 +745,7 @@ public class CameraActivity extends AppCompatActivity {
 
         videoModePicker.setIndex(1);
         videoModePicker.setOnClickListener((view, Position) -> {
+            auxDock.post(hideAuxDock);
             switch (Position){
                 case 0:{
                     if(getState() != CamState.SLOMO) {
@@ -874,6 +888,7 @@ public class CameraActivity extends AppCompatActivity {
     private void addAuxButtons() {
         final float param= getResources().getDimension(R.dimen.aux_param);
         if(auxCameraList.size()>0){
+            auxDock.setVisibility(View.VISIBLE);
             for (int i=0 ; i< auxCameraList.size() ; i++) {
                 modeMap.put(auxCameraList.get(i),2+i);
                 LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams((int) param
@@ -895,6 +910,7 @@ public class CameraActivity extends AppCompatActivity {
                         closeCamera();
                         setCameraId(aux_btn.getId() + "");
                         openCamera();
+                        zoomText.post(hideZoomText);
                         if (getState() == CamState.VIDEO) addCapableVideoResolutions();
                         else if (getState() == CamState.SLOMO) addCapableSloMoResolutions();
                         exposureControl.post(this::setExposureRange);
@@ -1037,19 +1053,17 @@ public class CameraActivity extends AppCompatActivity {
             zoomText.post(hideZoomText);
             exposureControl.post(() -> setExposureRange());
             closeCamera();
+            auxDock.post(hideAuxDock);
             if (characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_BACK) {
                 setCameraId(FRONT_CAMERA_ID);
                 if(getState() != CamState.PORTRAIT) openCamera();
-                auxDock.post(hideAuxDock);
                 front_switch.animate().rotation(180f).setDuration(300);
             } else {
                 setCameraId(BACK_CAMERA_ID);
                 if(getState() != CamState.PORTRAIT) openCamera();
                 wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview));
-                auxDock.post(hideAuxDock);
                 front_switch.animate().rotation(-180f).setDuration(300);
             }
-            Log.e(TAG, "SWITCH CAMERA: getState : " + getState());
             applyModeChange(getState());
         }
     };
@@ -1208,7 +1222,6 @@ public class CameraActivity extends AppCompatActivity {
      */
 
     private void doubleTapZoom() throws CameraAccessException {
-        auxDock.removeCallbacks(hideAuxDock);
         zoomText.removeCallbacks(hideZoomText);
         zSlider.removeCallbacks(hideZoomSlider);
         float maxZoom = 1;
@@ -1235,10 +1248,8 @@ public class CameraActivity extends AppCompatActivity {
             ZOOM_LEVEL = 1f;
             zSlider.setValue(0f);
         }
-        auxDock.post(hideAuxDock);
         zSlider.setVisibility(View.VISIBLE);
 
-        auxDock.postDelayed(hideAuxDock,2000);
         zSlider.postDelayed(hideZoomSlider,2000);
         zoomText.postDelayed(hideZoomText,2000);
         setVfStates(VFStates.IDLE);
@@ -1247,7 +1258,6 @@ public class CameraActivity extends AppCompatActivity {
 
     private void pinchToZoom(MotionEvent event){
         setVfStates(VFStates.SLIDE_ZOOM);
-        auxDock.removeCallbacks(hideAuxDock); //TODO: CHECK REDUNDANT
 
         try {
             float maxzoom = ZoomControls.getMaxZoom(getCameraCharacteristics());
@@ -1259,11 +1269,9 @@ public class CameraActivity extends AppCompatActivity {
 
                 if(current_finger_spacing > finger_spacing &&  ZOOM_LEVEL < maxzoom){
                     ZOOM_LEVEL +=0.5f;
-                    auxDock.post(hideAuxDock);
                     zSlider.setValue((float) getZoomValueSingleDecimal((ZOOM_LEVEL /4.5f)));
                 } else if (current_finger_spacing < finger_spacing && ZOOM_LEVEL > 1){
                     ZOOM_LEVEL -=0.5f;
-                    auxDock.post(hideAuxDock);
                     zSlider.setValue((float) getZoomValueSingleDecimal((ZOOM_LEVEL /4.5f)));
                 }
                 setZoom(maxzoom, (int) ZOOM_LEVEL);
@@ -1330,22 +1338,15 @@ public class CameraActivity extends AppCompatActivity {
                  halfTouchHeight * 2,
                  MeteringRectangle.METERING_WEIGHT_MAX - 1);
 
-         //first stop the existing repeating request
-//        try {
-//            cameraCaptureSessions.stopRepeating();
-//        } catch (CameraAccessException e) {
-//            e.printStackTrace();
-//        }
 
-         //cancel any existing AF trigger (repeated touches, etc.)
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
-//        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
-         buildPreview();
+         resetAE();
+         resetFocus();
+
          previewCaptureRequest.set(CaptureRequest.CONTROL_AF_REGIONS, new MeteringRectangle[]{focusAreaTouch});
          previewCaptureRequest.set(CaptureRequest.CONTROL_AE_REGIONS, new MeteringRectangle[]{focusAreaTouch});
-         previewCaptureRequest.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
+         previewCaptureRequest.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
          previewCaptureRequest.set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_ON);
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
 
          //set focus area repeating,else cam forget after one frame where it should focus
          //trigger af start only once. cam starts focusing till its focused or failed
@@ -1355,11 +1356,41 @@ public class CameraActivity extends AppCompatActivity {
 
          previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE);
          previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE);
-
-         previewCaptureRequest.setTag("FOCUS_TAG"); //we'll capture this later for resuming the preview
-
          buildPreview();
-//
+
+     }
+
+     private void resetFocus(){
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
+         buildPreview();
+     }
+
+     private void lockFocus(){
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START);
+         buildPreview();
+     }
+
+     private void unlockFocus(){
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
+         buildPreview();
+     }
+
+     private void resetAE(){
+//         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
+         adjustExposure(0);
+         exposureControl.setPosition(0);
+
+         previewCaptureRequest.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_ON);
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE);
+         previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE);
+
+         try {
+             camSession.setRepeatingRequest(previewCaptureRequest.build(),null,focusHandler);
+         } catch (CameraAccessException e) {
+             e.printStackTrace();
+         }
      }
 
      private void buildPreview(){
@@ -1374,17 +1405,6 @@ public class CameraActivity extends AppCompatActivity {
          @Override
          public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
              super.onCaptureCompleted(session, request, result);
-             if (request.getTag() == "FOCUS_TAG") {
-                 //the focus trigger is complete -
-                 //resume repeating (preview surface will get frames), clear AF trigger
-//                mBackgroundHandler.postDelayed(() ->
-//                        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
-//                        ,3000);
-
-                 Log.e(TAG, "onCaptureCompleted: FOCUS COMPLETED ");
-//                previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE);
-//                previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE);
-             }
          }
          @Override
          public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
@@ -1421,8 +1441,23 @@ public class CameraActivity extends AppCompatActivity {
             if(getState() == CamState.HSVIDEO_PROGRESSED)
                 highSpeedCaptureSession.createHighSpeedRequestList(previewCaptureRequest.build());
             else
-                camSession
-                        .setRepeatingRequest(previewCaptureRequest.build(), null, mBackgroundHandler);
+                camSession.setRepeatingRequest(previewCaptureRequest.build(), new CameraCaptureSession.CaptureCallback() {
+                    @Override
+                    public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
+                        super.onCaptureCompleted(session, request, result);
+                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AF_MODE)); //1 AFMODEAUTO
+                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AE_MODE)); //1 AEMODEON
+                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AE_STATE)); //2 AESTATEPRECONVERGED
+                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AE_ANTIBANDING_MODE)); //3 ANITBANDINGMODEAUTO
+                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AF_TRIGGER)); //0 AFTRIGGERIDLE
+                        Log.e(TAG, "onCaptureCompleted: AE LOCK _________________________________________________________");
+                    }
+                    @Override
+                    public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
+                        super.onCaptureFailed(session, request, failure);
+                        Log.e(TAG, "Manual AF failure: " + failure);
+                    }
+                }, mBackgroundHandler);
         } catch (CameraAccessException | NullPointerException e) {
             e.printStackTrace();
         }
@@ -2150,6 +2185,18 @@ public class CameraActivity extends AppCompatActivity {
         @Override
         public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
             super.onCaptureCompleted(session, request, result);
+
+//            Log.e(TAG, "onCaptureCompleted: PREVIEW "+result.get(CaptureResult.CONTROL_MODE)); //1 CONTROLMODEAUTO
+//            Log.e(TAG, "onCaptureCompleted: PREVIEW "+result.get(CaptureResult.CONTROL_AF_MODE)); //4 AFMODECONTINUOUSPICTURE
+//            Log.e(TAG, "onCaptureCompleted: PREVIEW "+result.get(CaptureResult.CONTROL_AE_MODE)); //1 AEMODEON
+//            Log.e(TAG, "onCaptureCompleted: PREVIEW "+result.get(CaptureResult.CONTROL_AE_PRECAPTURE_TRIGGER)); //0 AE_PRECAPTURE_TRIGGER_IDLE
+//            Log.e(TAG, "onCaptureCompleted: PREVIEW "+result.get(CaptureResult.CONTROL_AF_TRIGGER)); //0 CONTROL_AF_TRIGGER_IDLE
+//            Log.e(TAG, "onCaptureCompleted: PREVIEW "+result.get(CaptureResult.CONTROL_AE_STATE)); //1 CONTROL_AE_STATE_SEARCHING
+//            Log.e(TAG, "onCaptureCompleted: PREVIEW "+result.get(CaptureResult.CONTROL_AF_TRIGGER)); //0 AFTRIGGERIDLE
+//            Log.e(TAG, "onCaptureCompleted: PREVIEW "+ Arrays.toString(result.get(CaptureResult.CONTROL_AE_REGIONS))); //[(x:0, y:0, w:0, h:0, wt:0)]
+//            Log.e(TAG, "onCaptureCompleted: PREVIEW "+ Arrays.toString(result.get(CaptureResult.CONTROL_AF_REGIONS))); //[(x:1400, y:1050, w:1200, h:916, wt:0)]
+//            Log.e(TAG, "onCaptureCompleted: PREVIEW _________________________________________________________");
+
 //            Face[] faces = result.get(CaptureResult.STATISTICS_FACES);
 //            Log.e(TAG, "onCaptureCompleted: FACES : "+faces.length);
 //            if(faces.length > 0){
