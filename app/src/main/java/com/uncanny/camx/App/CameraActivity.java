@@ -52,6 +52,7 @@
  import android.view.animation.AccelerateInterpolator;
  import android.view.animation.DecelerateInterpolator;
  import android.widget.ImageButton;
+ import android.widget.ImageView;
  import android.widget.LinearLayout;
  import android.widget.RelativeLayout;
  import android.widget.TextView;
@@ -186,6 +187,7 @@ public class CameraActivity extends AppCompatActivity {
     private RelativeLayout parent;
     private VerticalSlider exposureControl;
     private VideoMode videoModePicker;
+    private ImageView AEAFlock;
 
     private int resultCode = 1;
     private long lastClickTime = 0;
@@ -209,10 +211,11 @@ public class CameraActivity extends AppCompatActivity {
     private boolean isSLRecording = false;
     private boolean isVideoPaused = false;
     private boolean viewfinderGesture = false;
-    private float vfPointerX,vfPointerY;
+    private boolean AE_AF_LOCK = false;
     private boolean mflash = false;
     private boolean ASPECT_RATIO_43 = true;
     private static boolean ASPECT_RATIO_169 = false;
+    private float vfPointerX,vfPointerY;
     private int timer_cc = 1;
     private int gridClick = 0;
     private String zText = "";
@@ -277,6 +280,7 @@ public class CameraActivity extends AppCompatActivity {
         public void run() {
             if(exposureControl.getVisibility() == View.VISIBLE) {
                 exposureControl.setVisibility(View.GONE);
+                AEAFlock.setVisibility(View.GONE);
             }
         }
     };
@@ -303,7 +307,12 @@ public class CameraActivity extends AppCompatActivity {
         }
     };
 
-    private Map<Integer,Integer> modeMap = new HashMap<>(); //cameraId,modeIndex
+    private Runnable resetAEAF = () -> {
+        resetAE();
+        resetFocus();
+    };
+
+     private Map<Integer,Integer> modeMap = new HashMap<>(); //cameraId,modeIndex
     private String[][] CachedCameraModes = new String[10][];
 
     @Override
@@ -375,6 +384,7 @@ public class CameraActivity extends AppCompatActivity {
         resolutionSelector = findViewById(R.id.resolution_selector);
         exposureControl = findViewById(R.id.exposureControl);
         videoModePicker = findViewById(R.id.video_mode_picker);
+        AEAFlock = findViewById(R.id.ae_af_lock);
 
         btn_grid1.getLayoutTransition().enableTransitionType(LayoutTransition.CHANGING);
         btn_grid2.getLayoutTransition().enableTransitionType(LayoutTransition.CHANGING);
@@ -384,52 +394,7 @@ public class CameraActivity extends AppCompatActivity {
         mModePicker.setValues(new String[] {"Night", "Portrait", "Camera", "Video", "Pro"});
         mModePicker.setSelectedItem(2);
         mModePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        mModePicker.setOnItemSelectedListener(index -> {
-            mModePicker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
-            exposureControl.post(hideExposureControl);
-            tvPreview.setOnTouchListener(null);
-            exposureControl.post(this::setExposureRange);
-            switch (index){
-                case 0:{
-                    setState(CamState.NIGHT);
-                    modeNight();
-                    Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[3]);
-                    break;
-                }
-                case 1:{
-                    setState( CamState.PORTRAIT);
-                    modePortrait();
-                    Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[2]);
-                    break;
-                }
-                case 2:{
-                    setState(CamState.CAMERA);
-                    modeCamera();
-                    Log.e(TAG, "onItemSelected: CAMERA MODE");
-                    break;
-                }
-                case 3:{
-                    setState(CamState.VIDEO);
-                    modeVideo();
-                    Log.e(TAG, "onItemSelected: VIDEO MODE");
-                    break;
-                }
-                case 4:
-                    setState(CamState.PRO);
-                    modePro();
-                    Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[4]);
-                    break;
-            }
-
-            auxDock.post(hideAuxDock);
-            zoomText.post(hideZoomText);
-            if(getState() == CamState.VIDEO && lensData.hasSloMoCapabilities(getCameraId()))
-                videoModePicker.setVisibility(View.VISIBLE);
-            else videoModePicker.setVisibility(View.GONE);
-//            videoModePicker.setVisibility(getState() == CamState.VIDEO ? View.VISIBLE : View.GONE);
-            vi_info.setVisibility(getState() == CamState.VIDEO || getState() == CamState.SLOMO || getState() == CamState.TIMEWARP ?
-                    View.VISIBLE : View.INVISIBLE);
-        });
+        mModePicker.setOnItemSelectedListener(this::switchMode);
 
         //Timer button
         button1.setOnClickListener(v -> {
@@ -721,19 +686,17 @@ public class CameraActivity extends AppCompatActivity {
 
             @Override
             public void onStartTrackingTouch(VerticalSlider seekBar,float progress) {
+                unlockAE_AF();
                 exposureControl.removeCallbacks(hideExposureControl);
             }
 
             @Override
             public void onStopTrackingTouch(VerticalSlider seekBar) {
                 if(getState() == CamState.CAMERA || getState() == CamState.PORTRAIT
-                        || getState() == CamState.NIGHT || getState() == CamState.HIRES)
-                exposureControl.postDelayed(hideExposureControl,3000);
-                exposureControl.postDelayed(() -> {
-                    resetAE();
-                    resetFocus();
-                },3000);
-
+                        || getState() == CamState.NIGHT || getState() == CamState.HIRES) {
+                    exposureControl.postDelayed(hideExposureControl, 3000);
+                    exposureControl.postDelayed(resetAEAF, 3000);
+                }
 //                else exposureControl.postDelayed(hideExposureControl,3000);
             }
         });
@@ -770,6 +733,18 @@ public class CameraActivity extends AppCompatActivity {
                     }
                     break;
                 }
+            }
+        });
+
+        AEAFlock.setOnClickListener(v -> {
+            if(AE_AF_LOCK) {
+                focusHandler.post(resetAEAF);
+                unlockAE_AF();
+            }
+            else {
+                exposureControl.removeCallbacks(hideExposureControl);
+                exposureControl.removeCallbacks(resetAEAF);
+                lockAE_AF();
             }
         });
 
@@ -881,6 +856,54 @@ public class CameraActivity extends AppCompatActivity {
         front_switch.setVisibility(lensData.hasCamera2api() ? View.VISIBLE : View.INVISIBLE);
     }
 
+    private void switchMode(int index){
+        mModePicker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
+        exposureControl.post(hideExposureControl);
+        tvPreview.setOnTouchListener(null);
+        exposureControl.post(this::setExposureRange);
+        switch (index){
+            case 0:{
+                setState(CamState.NIGHT);
+                tvPreview.setOnTouchListener(touchListener);
+                modeNight();
+                Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[3]);
+                break;
+            }
+            case 1:{
+                setState( CamState.PORTRAIT);
+                modePortrait();
+                Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[2]);
+                break;
+            }
+            case 2:{
+                setState(CamState.CAMERA);
+                modeCamera();
+                Log.e(TAG, "onItemSelected: CAMERA MODE");
+                break;
+            }
+            case 3:{
+                setState(CamState.VIDEO);
+                modeVideo();
+                Log.e(TAG, "onItemSelected: VIDEO MODE");
+                break;
+            }
+            case 4:
+                setState(CamState.PRO);
+                tvPreview.setOnTouchListener(touchListener);
+                modePro();
+                Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[4]);
+                break;
+        }
+
+        auxDock.post(hideAuxDock);
+        zoomText.post(hideZoomText);
+        if(getState() == CamState.VIDEO && lensData.hasSloMoCapabilities(getCameraId()))
+            videoModePicker.setVisibility(View.VISIBLE);
+        else videoModePicker.setVisibility(View.GONE);
+//            videoModePicker.setVisibility(getState() == CamState.VIDEO ? View.VISIBLE : View.GONE);
+        vi_info.setVisibility(getState() == CamState.VIDEO || getState() == CamState.SLOMO || getState() == CamState.TIMEWARP ?
+                View.VISIBLE : View.INVISIBLE);
+    }
     /**
      * UI CHANGES
      */
@@ -1132,6 +1155,30 @@ public class CameraActivity extends AppCompatActivity {
                         pinchToZoom(event);
                         break;
                     }
+
+                    /*
+                     * SWIPE GESTURES
+                     */
+                    if (getState() == CamState.VIDEO_PROGRESSED || getState() == CamState.HSVIDEO_PROGRESSED) return true;
+                    if(vfPointerX - event.getX() > getScreenWidth()/4f){
+                        Log.e("TAG", "onTouchEvent: FLING RIGHT");
+                        vfPointerX = event.getX();
+                        if(mModePicker.getSelectedItem() >= 0 && mModePicker.getSelectedItem()<mModePicker.getItems()-1) {
+                            mModePicker.setSelectedItem(mModePicker.getSelectedItem() + 1);
+                            switchMode(mModePicker.getSelectedItem());
+                            return true;
+                        }
+                    }
+                    else if(vfPointerX - event.getX() < -getScreenWidth()/4f) {
+                        Log.e("TAG", "onTouchEvent: FLING LEFT");
+                        vfPointerX = event.getX();
+                        if(mModePicker.getSelectedItem() > 0 && mModePicker.getSelectedItem()<mModePicker.getItems()) {
+                            mModePicker.setSelectedItem(mModePicker.getSelectedItem() - 1);
+                            switchMode(mModePicker.getSelectedItem());
+                        }
+                        return true;
+                    }
+
                     return true;
                 }
                 case MotionEvent.ACTION_POINTER_UP:{
@@ -1160,21 +1207,21 @@ public class CameraActivity extends AppCompatActivity {
                         /*
                          * TOUCH TO FOCUS
                          */
-                        Log.e(TAG, "onClick: viewfinderGesture = "+viewfinderGesture);
                         setVfStates(VFStates.FOCUS);
                         exposureControl.removeCallbacks(hideExposureControl);
                         exposureControl.setVisibility(View.VISIBLE);
+                        AEAFlock.setVisibility(View.VISIBLE);
                         exposureControl.postDelayed(hideExposureControl,3000);
 //                        focus.setFocus(v,event);
                         focus(v.getHeight(),v.getWidth(),event);
                         lastClickTime = System.currentTimeMillis();
-                        Log.e("** SINGLE  TAP **", " First Tap time  " + lastClickTime);
                         return false;
                     }
                     lastClickTime = clickTime;
                     v.performClick();
                 }
             }
+
 
             return true;
         }
@@ -1306,114 +1353,114 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
-     private void focus(int height, int width, @Nullable MotionEvent event) {
-         focusCircle.removeCallbacks(hideFocusCircle);
-         float h;
-         float w;
-         if(Objects.equals(event,null)){
-             h = width/2f;
-             w = height/2f;
-         }
-         else {
-             h = event.getX();
-             w = event.getY();
-         }
+    private void focus(int height, int width, @Nullable MotionEvent event) {
+        focusCircle.removeCallbacks(hideFocusCircle);
+        float h;
+        float w;
+        if(Objects.equals(event,null)){
+            h = width/2f;
+            w = height/2f;
+        }
+        else {
+            h = event.getX();
+            w = event.getY();
+        }
+        focusCircle.setVisibility(View.VISIBLE);
+        focusCircle.setPosition((int)h,(int)w);
+        focusCircle.postDelayed(hideFocusCircle,1200);
+        Log.e(TAG, "touchToFocus: F O C U S I N G");
+        final Rect sensorArraySize = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+        final int y = (int)((h / (float)width)  * (float)sensorArraySize.height());
+        final int x = (int)((w / (float)height) * (float)sensorArraySize.width());
+        final int halfTouchWidth  = 150;
+        final int halfTouchHeight = 150;
+        MeteringRectangle focusAreaTouch = new MeteringRectangle(Math.max(x - halfTouchWidth,  0),
+                Math.max(y - halfTouchHeight, 0),
+                halfTouchWidth  * 2,
+                halfTouchHeight * 2,
+                MeteringRectangle.METERING_WEIGHT_MAX - 1);
+        resetAE();
+        resetFocus();
+        if(AE_AF_LOCK) unlockAE_AF();
 
-         focusCircle.setVisibility(View.VISIBLE);
-         focusCircle.setPosition((int)h,(int)w);
-         focusCircle.postDelayed(hideFocusCircle,1200);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_REGIONS, new MeteringRectangle[]{focusAreaTouch});
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AE_REGIONS, new MeteringRectangle[]{focusAreaTouch});
+        previewCaptureRequest.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_ON);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
+        //set focus area repeating,else cam forget after one frame where it should focus
+        //trigger af start only once. cam starts focusing till its focused or failed
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START);
 
-         Log.e(TAG, "touchToFocus: F O C U S I N G");
-         final Rect sensorArraySize = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+        buildPreview();
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE);
 
-         final int y = (int)((h / (float)width)  * (float)sensorArraySize.height());
-         final int x = (int)((w / (float)height) * (float)sensorArraySize.width());
+        buildPreview();
+    }
 
-         final int halfTouchWidth  = 150;
-         final int halfTouchHeight = 150;
+    private void resetFocus(){
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
+        buildPreview();
+    }
 
-         MeteringRectangle focusAreaTouch = new MeteringRectangle(Math.max(x - halfTouchWidth,  0),
-                 Math.max(y - halfTouchHeight, 0),
-                 halfTouchWidth  * 2,
-                 halfTouchHeight * 2,
-                 MeteringRectangle.METERING_WEIGHT_MAX - 1);
+    private void lockAE_AF(){
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AE_LOCK, true);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START);
 
+        exposureControl.removeCallbacks(hideExposureControl);
+        AE_AF_LOCK = true;
+        AEAFlock.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_ae_af_lock_24));
+        buildPreview();
+    }
 
-         resetAE();
-         resetFocus();
+    private void unlockAE_AF(){
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AE_LOCK, false);
+//        resetAE();
 
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_REGIONS, new MeteringRectangle[]{focusAreaTouch});
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AE_REGIONS, new MeteringRectangle[]{focusAreaTouch});
-         previewCaptureRequest.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_ON);
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
+        exposureControl.postDelayed(hideExposureControl,3000);
+        AE_AF_LOCK = false;
+        AEAFlock.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_ae_af_unlock_24));
+        buildPreview();
+    }
 
-         //set focus area repeating,else cam forget after one frame where it should focus
-         //trigger af start only once. cam starts focusing till its focused or failed
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START);
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START);
-         buildPreview();
+    private void resetAE(){
+        adjustExposure(0);
+        exposureControl.setPosition(0);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_ON);
+        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+//        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE);
+//        previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE);
+        try {
+            camSession.setRepeatingRequest(previewCaptureRequest.build(),null,focusHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
 
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE);
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE);
-         buildPreview();
+    private void buildPreview(){
+        try {
+            camSession.capture(previewCaptureRequest.build(), captureCallbackHandler, focusHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
 
-     }
+    private CameraCaptureSession.CaptureCallback captureCallbackHandler = new CameraCaptureSession.CaptureCallback() {
+        @Override
+        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
+            super.onCaptureCompleted(session, request, result);
+        }
+        @Override
+        public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
+            super.onCaptureFailed(session, request, failure);
+            Log.e(TAG, "Manual AF failure: " + failure);
+        }
+    };
 
-     private void resetFocus(){
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
-         buildPreview();
-     }
-
-     private void lockFocus(){
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START);
-         buildPreview();
-     }
-
-     private void unlockFocus(){
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
-         buildPreview();
-     }
-
-     private void resetAE(){
-//         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
-         adjustExposure(0);
-         exposureControl.setPosition(0);
-
-         previewCaptureRequest.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_ON);
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE);
-         previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE);
-
-         try {
-             camSession.setRepeatingRequest(previewCaptureRequest.build(),null,focusHandler);
-         } catch (CameraAccessException e) {
-             e.printStackTrace();
-         }
-     }
-
-     private void buildPreview(){
-         try {
-             camSession.capture(previewCaptureRequest.build(), captureCallbackHandler, focusHandler);
-         } catch (CameraAccessException e) {
-             e.printStackTrace();
-         }
-     }
-
-     private CameraCaptureSession.CaptureCallback captureCallbackHandler = new CameraCaptureSession.CaptureCallback() {
-         @Override
-         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
-             super.onCaptureCompleted(session, request, result);
-         }
-         @Override
-         public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
-             super.onCaptureFailed(session, request, failure);
-             Log.e(TAG, "Manual AF failure: " + failure);
-         }
-     };
-
-     private double getZoomValueSingleDecimal(float zoom_level) {
+    private double getZoomValueSingleDecimal(float zoom_level) {
         BigDecimal bd = new BigDecimal(Double.toString(zoom_level));
         bd = bd.setScale(1, RoundingMode.HALF_DOWN);
         return bd.doubleValue();

@@ -23,6 +23,7 @@
 
     </RelativeLayout>
 
+
     <com.uncanny.camx.UI.Views.GestureBar
         android:id="@+id/gesture_bar"
         android:layout_width="match_parent"
@@ -91,13 +92,24 @@
             android:visibility="gone" />
     </RelativeLayout>
 
+    <ImageView
+        android:id="@+id/ae_af_lock"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_above="@id/exposureControl"
+        android:layout_alignParentEnd="true"
+        android:src="@drawable/ic_ae_af_unlock_24"
+        android:padding="8dp"
+        android:visibility="gone"
+        android:contentDescription="@string/ae_af_lock" />
+
     <com.uncanny.camx.UI.Views.ViewFinder.VerticalSlider
         android:id="@+id/exposureControl"
         android:layout_width="44dp"
         android:layout_height="255dp"
         android:layout_above="@id/relative_layout_button_dock"
         android:layout_alignParentEnd="true"
-        android:layout_marginBottom="136dp"
+        android:layout_marginBottom="120dp"
         android:visibility="gone"
         />
 

@@ -721,6 +721,10 @@ public class HorizontalPicker extends View {
 
     }
 
+    public int getItems(){
+        return values.length;
+    }
+
     @Override
     protected void onRestoreInstanceState(Parcelable state) {
 
