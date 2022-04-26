@@ -3,7 +3,7 @@
 <p align="center">
   <a href="https://android-arsenal.com/api?level=24"><img src="https://img.shields.io/badge/API-24%2B-blue.svg?style=flat" border="0" alt="API"></a>
   <a href="https://developer.android.com/training/camera2"><img src="https://img.shields.io/badge/Camera2api-%F0%9F%93%B8-FF4081.svg" border="0" alt="camera2api"></a>
-  <a href="https://github.com/uncannyRishabh/camx"><img src="https://img.shields.io/badge/ActiveDevelopment-%F0%9F%9A%B4-b69cff.svg" border="0" alt="camera2api"></a>
+  <a href="https://github.com/uncannyRishabh/camx"><img src="https://img.shields.io/badge/ActiveDevelopment-%F0%9F%94%A5-edcb1f.svg" border="0" alt="camera2api"></a>
   <a href="https://github.com/uncannyRishabh/camx/issues"><img src="https://img.shields.io/badge/Report%20Bugs-%F0%9F%90%9E-c5ff59.svg" border="0" alt="camera2api"></a>
 
 </p>
