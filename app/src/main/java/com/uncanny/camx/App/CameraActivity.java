@@ -88,6 +88,7 @@
  import com.uncanny.camx.UI.Views.ViewFinder.VideoMode;
  import com.uncanny.camx.Utils.AsyncThreads.ImageDecoderThread;
  import com.uncanny.camx.Utils.AsyncThreads.ImageSaverThread;
+ import com.uncanny.camx.Utils.AsyncThreads.MainThreadExecutor;
  import com.uncanny.camx.Utils.AsyncThreads.SerialExecutor;
  import com.uncanny.camx.Utils.CompareSizeByArea;
 
@@ -245,7 +246,7 @@ public class CameraActivity extends AppCompatActivity {
     private HandlerThread mBackgroundThread;
     private Handler vfHandler = HandlerCompat.createAsync(Looper.getMainLooper());
     private Executor executor = new SerialExecutor(Executors.newCachedThreadPool());
-
+    private MainThreadExecutor mainThreadExecutor = new MainThreadExecutor(); //UI UPDATION SHIT ONLY
 //    private Executor executor1 = new SerialExecutor(Executors.newFixedThreadPool(2));
 
     private Runnable hideFocusCircle = new Runnable() {
@@ -527,35 +528,24 @@ public class CameraActivity extends AppCompatActivity {
             switch (getState()) {
                 case CAMERA:
                 case HIRES:
-                case PORTRAIT:
+                case PORTRAIT: {
                     captureImage();
                     shutter.animateInnerCircle(getState());
                     MediaActionSound sound = new MediaActionSound();
                     sound.play(MediaActionSound.SHUTTER_CLICK);
-                    //TODO : ADD SEMAPHORE
                     break;
-                case VIDEO:
-                    if(!isVRecording) {
+                }
+                case VIDEO: {
+                    if (!isVRecording) {
                         startRecording();
-                        chronometer.start();
-                        setState(CamState.VIDEO_PROGRESSED);
-                        thumbPreview.setImageDrawable(ResourcesCompat.getDrawable(getResources()
-                                ,R.drawable.ic_video_snapshot,null));
-                        thumbPreview.setOnClickListener(captureSnapshot);
-                        front_switch.setImageDrawable(ResourcesCompat.getDrawable(getResources()
-                                ,R.drawable.ic_video_pause,null));
-                        front_switch.setOnClickListener(play_pauseVideo);
-                        shutter.animateInnerCircle(getState());
-
-                        auxDock.post(hideAuxDock);
-                        mModePicker.setVisibility(View.INVISIBLE);
-                        chronometer.setBase(SystemClock.elapsedRealtime());
-                        chronometer.setVisibility(View.VISIBLE);
+                        mainThreadExecutor.execute(this::modifyUIonVideoShutter);
+//                        mHandler.post(this::modifyUIonVideoShutter);
                         isVRecording = true;
                     }
                     break;
-                case VIDEO_PROGRESSED:
-                    if(isVRecording){
+                }
+                case VIDEO_PROGRESSED: {
+                    if (isVRecording) {
                         isVRecording = false;
                         chronometer.stop();
                         chronometer.setVisibility(View.INVISIBLE);
@@ -564,7 +554,7 @@ public class CameraActivity extends AppCompatActivity {
                         mMediaRecorder.stop(); //TODO: handle stop before preview is generated
                         mMediaRecorder.reset();
                         setState(CamState.VIDEO);
-                        createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId())
+                        createVideoPreview(tvPreview.getHeight(), (lensData.is1080pCapable(getCameraId())
                                 ? 1080 : 720));
 //                            Intent mediaStoreUpdateIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
 
@@ -574,13 +564,14 @@ public class CameraActivity extends AppCompatActivity {
                         thumbPreview.setOnClickListener(openGallery);
                         displayMediaThumbnailFromGallery();
                         front_switch.setImageDrawable(ResourcesCompat.getDrawable(getResources()
-                                ,R.drawable.ic_front_switch,null));
+                                , R.drawable.ic_front_switch, null));
                         front_switch.setOnClickListener(switchFrontCamera);
-
+                        videoModePicker.setIndex(1);
                     }
                     break;
-                case SLOMO:
-                    if(!isSLRecording){
+                }
+                case SLOMO: {
+                    if (!isSLRecording) {
                         setState(CamState.HSVIDEO_PROGRESSED);
                         startSloMoRecording();
                         mModePicker.setVisibility(View.INVISIBLE);
@@ -594,7 +585,8 @@ public class CameraActivity extends AppCompatActivity {
                         front_switch.setVisibility(View.INVISIBLE);
                     }
                     break;
-                case HSVIDEO_PROGRESSED:
+                }
+                case HSVIDEO_PROGRESSED: {
                     if (isSLRecording) {
                         isSLRecording = false;
                         setState(CamState.SLOMO);
@@ -613,14 +605,17 @@ public class CameraActivity extends AppCompatActivity {
                         thumbPreview.setVisibility(View.VISIBLE);
                         front_switch.setVisibility(View.VISIBLE);
                         createSloMoPreview(sloMoPair.first.getWidth(), sloMoPair.first.getHeight());
+                        videoModePicker.setIndex(0);
                     }
                     break;
+                }
                 default:
                     break;
             }
             videoModePicker.setVisibility(getState() == CamState.VIDEO
                     || getState() == CamState.SLOMO
                     || getState() == CamState.TIMEWARP? View.VISIBLE : View.GONE);
+
             resolutionSelector.setState(getState());
         });
 
@@ -877,6 +872,7 @@ public class CameraActivity extends AppCompatActivity {
         exposureControl.post(this::setExposureRange);
         switch (index){
             case 0:{
+                if(getState() == CamState.NIGHT) break;
                 setState(CamState.NIGHT);
                 tvPreview.setOnTouchListener(touchListener);
                 modeNight();
@@ -884,29 +880,36 @@ public class CameraActivity extends AppCompatActivity {
                 break;
             }
             case 1:{
+                if(getState() == CamState.PORTRAIT) break;
                 setState( CamState.PORTRAIT);
                 modePortrait();
                 Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[2]);
                 break;
             }
             case 2:{
+                if(getState() == CamState.CAMERA) break;
                 setState(CamState.CAMERA);
                 modeCamera();
                 Log.e(TAG, "onItemSelected: CAMERA MODE");
                 break;
             }
             case 3:{
+                if(getState() == CamState.VIDEO || getState() == CamState.SLOMO ||
+                    getState() == CamState.TIMEWARP || getState() == CamState.VIDEO_PROGRESSED ||
+                    getState() == CamState.HSVIDEO_PROGRESSED) break;
                 setState(CamState.VIDEO);
                 modeVideo();
                 Log.e(TAG, "onItemSelected: VIDEO MODE");
                 break;
             }
-            case 4:
+            case 4: {
+                if(getState() == CamState.NIGHT) break;
                 setState(CamState.PRO);
                 tvPreview.setOnTouchListener(touchListener);
                 modePro();
-                Log.e(TAG, "onItemSelected: "+mModePicker.getValues()[4]);
+                Log.e(TAG, "onItemSelected: " + mModePicker.getValues()[4]);
                 break;
+            }
         }
 
         auxDock.post(hideAuxDock);
@@ -1080,6 +1083,22 @@ public class CameraActivity extends AppCompatActivity {
 
         }
     }
+
+     private void modifyUIonVideoShutter(){
+         chronometer.start();
+         setState(CamState.VIDEO_PROGRESSED);
+         thumbPreview.setImageDrawable(ResourcesCompat.getDrawable(getResources()
+                 , R.drawable.ic_video_snapshot, null));
+         thumbPreview.setOnClickListener(captureSnapshot);
+         front_switch.setImageDrawable(ResourcesCompat.getDrawable(getResources()
+                 , R.drawable.ic_video_pause, null));
+         front_switch.setOnClickListener(play_pauseVideo);
+         shutter.animateInnerCircle(getState());
+         auxDock.post(hideAuxDock);
+         mModePicker.setVisibility(View.INVISIBLE);
+         chronometer.setBase(SystemClock.elapsedRealtime());
+         chronometer.setVisibility(View.VISIBLE);
+     }
 
     private void update_chip_text(String size,String fps){
         chip_Text = size+"p | "+fps+"fps";
@@ -1458,7 +1477,10 @@ public class CameraActivity extends AppCompatActivity {
 //        previewCaptureRequest.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE);
 //        previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE);
         try {
-            camSession.setRepeatingRequest(previewCaptureRequest.build(),null,focusHandler);
+            if(getState()==CamState.HSVIDEO_PROGRESSED)
+                highSpeedCaptureSession.createHighSpeedRequestList(previewCaptureRequest.build());
+            else
+                camSession.setRepeatingRequest(previewCaptureRequest.build(),null,focusHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -1466,7 +1488,10 @@ public class CameraActivity extends AppCompatActivity {
 
     private void buildPreview(){
         try {
-            camSession.capture(previewCaptureRequest.build(), captureCallbackHandler, focusHandler);
+            if(getState()==CamState.HSVIDEO_PROGRESSED)
+                highSpeedCaptureSession.createHighSpeedRequestList(previewCaptureRequest.build());
+            else
+                camSession.capture(previewCaptureRequest.build(), captureCallbackHandler, focusHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -1530,6 +1555,9 @@ public class CameraActivity extends AppCompatActivity {
                     }
                 }, mBackgroundHandler);
         } catch (CameraAccessException | NullPointerException e) {
+            e.printStackTrace();
+        }
+        catch (IllegalStateException e) {
             e.printStackTrace();
         }
     }
@@ -1671,6 +1699,12 @@ public class CameraActivity extends AppCompatActivity {
 
                                 focus = new FocusControls(getCameraCharacteristics(),focusCircle,hideFocusCircle,getState(),session
                                         ,previewCaptureRequest,highSpeedCaptureSession,mBackgroundHandler);
+
+                                if(!isVRecording){
+                                    CamcorderProfile camcorderProfile = CamcorderProfile.get(getCameraId().equals("0") ? 0 : 1
+                                            ,CamcorderProfile.QUALITY_HIGH);
+                                    setupMediaRecorder(camcorderProfile);
+                                }
                                 tvPreview.setOnTouchListener(touchListener);
                             } catch (CameraAccessException e) {
                                 e.printStackTrace();
@@ -1724,40 +1758,37 @@ public class CameraActivity extends AppCompatActivity {
 
     private void startRecording(){
         try {
-            //TODO: ADD CHECKS FOR FRONT AND BACK ONLY
-            int id = (getCameraId().equals("0") ? 0 : 1);
-            CamcorderProfile camcorderProfile = CamcorderProfile.get(id
-                    ,CamcorderProfile.QUALITY_HIGH);
-            if(!isVRecording){
-                setupMediaRecorder(camcorderProfile);
-                mMediaRecorder.start();
-            }
             SurfaceTexture surfaceTexture = tvPreview.getSurfaceTexture();
             surfaceTexture.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
             Surface previewSurface = new Surface(surfaceTexture); //TODO : free surface with #release
-            Surface recordSurface = mMediaRecorder.getSurface();
-            previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-            previewCaptureRequest.addTarget(previewSurface);
-            previewCaptureRequest.addTarget(recordSurface);
-//            previewCaptureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_OFF);
-            camDevice.createCaptureSession(Arrays.asList(previewSurface, recordSurface, snapshotImageReader.getSurface()),
-                    new CameraCaptureSession.StateCallback() {
-                        @Override
-                        public void onConfigured(CameraCaptureSession session) {
-                            camSession = session;
-                            try {
-                                camSession.setRepeatingRequest(
-                                        previewCaptureRequest.build(),null, null
-                                );
-                            } catch (CameraAccessException e) {
-                                e.printStackTrace();
+
+            if(!isVRecording){
+                mMediaRecorder.start();
+                Surface recordSurface = mMediaRecorder.getSurface();
+                previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+                previewCaptureRequest.addTarget(previewSurface);
+                previewCaptureRequest.addTarget(recordSurface);
+
+                camDevice.createCaptureSession(Arrays.asList(previewSurface, recordSurface, snapshotImageReader.getSurface()),
+                        new CameraCaptureSession.StateCallback() {
+                            @Override
+                            public void onConfigured(CameraCaptureSession session) {
+                                camSession = session;
+                                try {
+                                    camSession.setRepeatingRequest(
+                                            previewCaptureRequest.build(),null, mBackgroundHandler
+                                    );
+                                } catch (CameraAccessException e) {
+                                    e.printStackTrace();
+                                }
                             }
-                        }
-                        @Override
-                        public void onConfigureFailed(CameraCaptureSession session) {
-                            Log.d(TAG, "onConfigureFailed: startRecord");
-                        }
-                    }, null);
+                            @Override
+                            public void onConfigureFailed(CameraCaptureSession session) {
+                                Log.d(TAG, "onConfigureFailed: startRecord");
+                            }
+                        }, mHandler);
+            }
+
         }
         catch (IllegalStateException | CameraAccessException e){
             e.printStackTrace();
@@ -2110,11 +2141,13 @@ public class CameraActivity extends AppCompatActivity {
     protected void startBackgroundThread() {
         mBackgroundThread = new HandlerThread("Camera Background");
         mBackgroundThread.start();
-        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+//        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+        mBackgroundHandler = HandlerCompat.createAsync(mBackgroundThread.getLooper());
 
         focusHandlerThread =new HandlerThread("Focus Thread");
         focusHandlerThread.start();
-        focusHandler = new Handler(focusHandlerThread.getLooper());
+//        focusHandler = new Handler(focusHandlerThread.getLooper());
+        focusHandler = HandlerCompat.createAsync(focusHandlerThread.getLooper());
     }
 
     protected void stopBackgroundThread() {
