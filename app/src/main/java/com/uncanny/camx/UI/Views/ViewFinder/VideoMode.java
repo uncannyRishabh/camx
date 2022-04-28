@@ -117,11 +117,11 @@ abstract class ModePicker extends View {
 
         tSize = (float) (13.5 * density);
 
-        bgPaint.setColor(0x80000000);
+        bgPaint.setColor(0x40000000);
         bgPaint.setAntiAlias(true);
         bgPaint.setStyle(Paint.Style.FILL);
 
-        sPaint.setColor(Color.DKGRAY);
+        sPaint.setColor(0x99000000);
         sPaint.setAntiAlias(true);
         sPaint.setStyle(Paint.Style.FILL);
 

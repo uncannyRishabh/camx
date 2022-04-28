@@ -290,15 +290,27 @@ public class CameraActivity extends AppCompatActivity {
         public void run() {
             if(characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_BACK){
                 if(getState() == CamState.HIRES || getState() == CamState.VIDEO_PROGRESSED
-                        || getState() == CamState.HSVIDEO_PROGRESSED
-                        || getState() == CamState.PORTRAIT){
+                        || getState() == CamState.HSVIDEO_PROGRESSED){
                     auxDock.setVisibility(View.GONE);
                 }
                 else if(getState() == CamState.SLOMO){
                     auxDock.setVisibility(View.INVISIBLE);
                 }
-                else if(auxCameraList.size()>0){
+                else if(getState() == CamState.VIDEO){
+                    if(!lensData.hasSloMoCapabilities(getCameraId())){
+                        videoModePicker.setVisibility(View.GONE);
+                    }
+                    else {
+                        videoModePicker.setVisibility(View.VISIBLE);
+                    }
                     auxDock.setVisibility(View.VISIBLE);
+                }
+                else{
+                    auxDock.setVisibility(View.VISIBLE);
+                }
+
+                if(auxCameraList.isEmpty()){
+                    auxDock.setVisibility(View.GONE);
                 }
             }
             else{                                       //FIXME: HANDLE FOR MULTIPLE FRONT CAMERA
@@ -312,7 +324,7 @@ public class CameraActivity extends AppCompatActivity {
         resetFocus();
     };
 
-     private Map<Integer,Integer> modeMap = new HashMap<>(); //cameraId,modeIndex
+    private Map<Integer,Integer> modeMap = new HashMap<>(); //cameraId,modeIndex
     private String[][] CachedCameraModes = new String[10][];
 
     @Override
@@ -631,6 +643,7 @@ public class CameraActivity extends AppCompatActivity {
                 }
                 wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview));
                 wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
+                wide_lens.post(hideAuxDock);
             }
         });
 
@@ -686,7 +699,6 @@ public class CameraActivity extends AppCompatActivity {
 
             @Override
             public void onStartTrackingTouch(VerticalSlider seekBar,float progress) {
-                unlockAE_AF();
                 exposureControl.removeCallbacks(hideExposureControl);
             }
 
@@ -694,8 +706,10 @@ public class CameraActivity extends AppCompatActivity {
             public void onStopTrackingTouch(VerticalSlider seekBar) {
                 if(getState() == CamState.CAMERA || getState() == CamState.PORTRAIT
                         || getState() == CamState.NIGHT || getState() == CamState.HIRES) {
-                    exposureControl.postDelayed(hideExposureControl, 3000);
-                    exposureControl.postDelayed(resetAEAF, 3000);
+                    if(!AE_AF_LOCK) {
+                        exposureControl.postDelayed(hideExposureControl, 3000);
+                        exposureControl.postDelayed(resetAEAF, 3000);
+                    }
                 }
 //                else exposureControl.postDelayed(hideExposureControl,3000);
             }
@@ -704,6 +718,18 @@ public class CameraActivity extends AppCompatActivity {
         exposureControl.post(() -> {
             exposureControl.disableTapToMove(true);
             setExposureRange();
+        });
+
+        AEAFlock.setOnClickListener(v -> {
+            if(AE_AF_LOCK) {
+                focusHandler.post(resetAEAF);
+                unlockAE_AF();
+            }
+            else {
+                exposureControl.removeCallbacks(hideExposureControl);
+                exposureControl.removeCallbacks(resetAEAF);
+                lockAE_AF();
+            }
         });
 
         videoModePicker.setIndex(1);
@@ -733,18 +759,6 @@ public class CameraActivity extends AppCompatActivity {
                     }
                     break;
                 }
-            }
-        });
-
-        AEAFlock.setOnClickListener(v -> {
-            if(AE_AF_LOCK) {
-                focusHandler.post(resetAEAF);
-                unlockAE_AF();
-            }
-            else {
-                exposureControl.removeCallbacks(hideExposureControl);
-                exposureControl.removeCallbacks(resetAEAF);
-                lockAE_AF();
             }
         });
 
@@ -904,6 +918,7 @@ public class CameraActivity extends AppCompatActivity {
         vi_info.setVisibility(getState() == CamState.VIDEO || getState() == CamState.SLOMO || getState() == CamState.TIMEWARP ?
                 View.VISIBLE : View.INVISIBLE);
     }
+
     /**
      * UI CHANGES
      */
@@ -934,24 +949,17 @@ public class CameraActivity extends AppCompatActivity {
                         setCameraId(aux_btn.getId() + "");
                         openCamera();
                         zoomText.post(hideZoomText);
-                        if (getState() == CamState.VIDEO) addCapableVideoResolutions();
+                        if (getState() == CamState.VIDEO) {
+                            addCapableVideoResolutions();
+                            mBackgroundHandler.post(hideAuxDock);
+                        }
                         else if (getState() == CamState.SLOMO) addCapableSloMoResolutions();
                         exposureControl.post(this::setExposureRange);
                         wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
                         wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-//                        wide_lens.setTextColor(Color.WHITE);
-                        for (int id : auxCameraList) {
-                            if ((id + "").equals(getCameraId())) {
-                                continue;
-                            }
-                            tv = auxDock.findViewById(id);
-                            tv.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
-                            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-                            tv.setTextColor(Color.WHITE);
-                        }
-//                        aux_btn.setTextColor(ContextCompat.getColor(getApplicationContext(),R.color.purple_200));
                         aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
                         aux_btn.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview));
+                        resetAuxDock();
                     }
                 });
             }
@@ -1059,6 +1067,20 @@ public class CameraActivity extends AppCompatActivity {
         btn_grid2.findViewById(R.id.resolution_selector).setVisibility(View.GONE);
     }
 
+    private void resetAuxDock(){
+        for (int id : auxCameraList) {
+            //RESET LENS ATTRIBUTES
+            if ((id + "").equals(getCameraId())) {
+                continue;
+            }
+            tv = auxDock.findViewById(id);
+            tv.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
+            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            tv.setTextColor(Color.WHITE);
+
+        }
+    }
+
     private void update_chip_text(String size,String fps){
         chip_Text = size+"p | "+fps+"fps";
         vi_info.setText(chip_Text);
@@ -1076,7 +1098,6 @@ public class CameraActivity extends AppCompatActivity {
             zoomText.post(hideZoomText);
             exposureControl.post(() -> setExposureRange());
             closeCamera();
-            auxDock.post(hideAuxDock);
             if (characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_BACK) {
                 setCameraId(FRONT_CAMERA_ID);
                 if(getState() != CamState.PORTRAIT) openCamera();
@@ -1085,9 +1106,12 @@ public class CameraActivity extends AppCompatActivity {
                 setCameraId(BACK_CAMERA_ID);
                 if(getState() != CamState.PORTRAIT) openCamera();
                 wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview));
+                wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
                 front_switch.animate().rotation(-180f).setDuration(300);
+                resetAuxDock();
             }
             applyModeChange(getState());
+            front_switch.post(hideAuxDock);
         }
     };
 
@@ -1492,12 +1516,12 @@ public class CameraActivity extends AppCompatActivity {
                     @Override
                     public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
                         super.onCaptureCompleted(session, request, result);
-                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AF_MODE)); //1 AFMODEAUTO
-                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AE_MODE)); //1 AEMODEON
-                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AE_STATE)); //2 AESTATEPRECONVERGED
-                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AE_ANTIBANDING_MODE)); //3 ANITBANDINGMODEAUTO
-                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AF_TRIGGER)); //0 AFTRIGGERIDLE
-                        Log.e(TAG, "onCaptureCompleted: AE LOCK _________________________________________________________");
+//                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AF_MODE)); //1 AFMODEAUTO
+//                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AE_MODE)); //1 AEMODEON
+//                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AE_STATE)); //2 AESTATEPRECONVERGED
+//                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AE_ANTIBANDING_MODE)); //3 ANITBANDINGMODEAUTO
+//                        Log.e(TAG, "onCaptureCompleted: AE LOCK "+result.get(CaptureResult.CONTROL_AF_TRIGGER)); //0 AFTRIGGERIDLE
+//                        Log.e(TAG, "onCaptureCompleted: AE LOCK _________________________________________________________");
                     }
                     @Override
                     public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
@@ -1663,7 +1687,7 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
-     private void setupMediaRecorder(CamcorderProfile camcorderProfile) {
+    private void setupMediaRecorder(CamcorderProfile camcorderProfile) {
          try {
              mVideoFileName = "CamX" + System.currentTimeMillis() + "_" + getCameraId() + ".mp4";
              Log.e(TAG, "setupMediaRecorder: CP : h : " + camcorderProfile.videoFrameHeight
@@ -1698,7 +1722,7 @@ public class CameraActivity extends AppCompatActivity {
          }
      }
 
-     private void startRecording(){
+    private void startRecording(){
         try {
             //TODO: ADD CHECKS FOR FRONT AND BACK ONLY
             int id = (getCameraId().equals("0") ? 0 : 1);

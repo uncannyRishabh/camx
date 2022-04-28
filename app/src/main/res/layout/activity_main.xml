@@ -165,6 +165,7 @@
                 android:gravity="center"
                 android:text="1×"
                 android:fontFamily="@font/poppins"
+                android:textColor="#FFFFFF"
                 android:textSize="16dp" />
         </LinearLayout>
 
