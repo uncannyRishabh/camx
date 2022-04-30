@@ -13,31 +13,31 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-public class VideoMode extends ModePicker{
+public class VideoModePicker extends ModePicker{
 
     public interface OnCLickListener {
         /**
          * @param view ModePicker View
          * @param Position Position of the element, starting from 0.
          */
-        void onClick(VideoMode view, int Position);
+        void onClick(VideoModePicker view, int Position);
     }
 
     private OnCLickListener onCLickListener;
 
-    public VideoMode(Context context) {
+    public VideoModePicker(Context context) {
         super(context);
     }
 
-    public VideoMode(Context context, @Nullable @org.jetbrains.annotations.Nullable AttributeSet attrs) {
+    public VideoModePicker(Context context, @Nullable @org.jetbrains.annotations.Nullable AttributeSet attrs) {
         super(context, attrs);
     }
 
-    public VideoMode(Context context, @Nullable @org.jetbrains.annotations.Nullable AttributeSet attrs, int defStyleAttr) {
+    public VideoModePicker(Context context, @Nullable @org.jetbrains.annotations.Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }
 
-    public VideoMode(Context context, @Nullable @org.jetbrains.annotations.Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public VideoModePicker(Context context, @Nullable @org.jetbrains.annotations.Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
 

@@ -44,7 +44,7 @@ public class AestheticLayout {
                 | View.SYSTEM_UI_FLAG_FULLSCREEN
         );
 
-        if(is720p() || is169()){
+        if(is169()){
             Log.e("AestheticLayout", "setLayout: Resolution "+Resources.getSystem().getDisplayMetrics().heightPixels
                     +" x "+Resources.getSystem().getDisplayMetrics().widthPixels);
             activity.getWindow().getDecorView().setSystemUiVisibility(

@@ -169,7 +169,7 @@
                 android:textSize="16dp" />
         </LinearLayout>
 
-        <com.uncanny.camx.UI.Views.ViewFinder.VideoMode
+        <com.uncanny.camx.UI.Views.ViewFinder.VideoModePicker
             android:id="@+id/video_mode_picker"
             android:layout_width="292dp"
             android:layout_height="42dp"
@@ -186,7 +186,7 @@
         android:layout_height="158dp"
         android:layout_above="@id/mode_picker_view"
         android:background="#00FFFFFF"
-        android:minHeight="122dp"
+        android:minHeight="108dp"
         android:paddingTop="20dp">
 
         <com.google.android.material.imageview.ShapeableImageView
