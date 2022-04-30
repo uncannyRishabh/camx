@@ -6,7 +6,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black"
-    android:animateLayoutChanges="true"
     tools:context=".App.CameraActivity">
 
     <RelativeLayout
@@ -157,14 +156,14 @@
                 android:layout_width="@dimen/aux_param"
                 android:layout_height="@dimen/aux_param"
                 android:layout_gravity="center_vertical"
-                android:paddingBottom="2dp"
                 android:layout_weight="1"
                 android:background="@drawable/circular_textview"
                 android:clickable="true"
                 android:focusable="true"
-                android:gravity="center"
-                android:text="1×"
                 android:fontFamily="@font/poppins"
+                android:gravity="center"
+                android:paddingBottom="2dp"
+                android:text="1×"
                 android:textColor="#FFFFFF"
                 android:textSize="16dp" />
         </LinearLayout>

@@ -338,9 +338,6 @@ public class CameraActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        parent = findViewById(R.id.root);
-        parent.getLayoutTransition().enableTransitionType(LayoutTransition.CHANGING);
-
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
             checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
             checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ) {
@@ -348,6 +345,7 @@ public class CameraActivity extends AppCompatActivity {
             requestPermissions(PERMISSION_STRING,REQUEST_PERMISSIONS);
         }
 
+        parent = findViewById(R.id.root);
         appbar = findViewById(R.id.appbar);
         thumbPreview = findViewById(R.id.img_gal);
         tvPreview = findViewById(R.id.preview);
@@ -375,10 +373,8 @@ public class CameraActivity extends AppCompatActivity {
     @Override
     protected void onPostCreate(@Nullable Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-
-//        tvPreview.setClipToOutline(true); //TODO: test in API 24
-
         addAuxButtons();
+
         button1 = findViewById(R.id.btn_1);
         button2 = findViewById(R.id.btn_2);
         button3 = findViewById(R.id.btn_3);
@@ -541,8 +537,15 @@ public class CameraActivity extends AppCompatActivity {
                 case VIDEO: {
                     if (!isVRecording) {
                         setState(CamState.VIDEO_PROGRESSED);
-                        startRecording();
                         mainThreadExecutor.execute(this::modifyUIonVideoShutter);
+                        try {
+                            camSession.abortCaptures();
+                        }
+                        catch (CameraAccessException e){
+                            e.printStackTrace();
+                        }
+                        startRecording();
+
                         isVRecording = true;
                     }
                     break;
