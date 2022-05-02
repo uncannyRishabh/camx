@@ -3,6 +3,7 @@
  import android.Manifest;
  import android.animation.LayoutTransition;
  import android.annotation.SuppressLint;
+ import android.app.Activity;
  import android.content.Context;
  import android.content.Intent;
  import android.content.pm.PackageManager;
@@ -62,7 +63,6 @@
 
  import androidx.annotation.NonNull;
  import androidx.annotation.Nullable;
- import androidx.appcompat.app.AppCompatActivity;
  import androidx.appcompat.widget.AppCompatImageButton;
  import androidx.core.app.ActivityCompat;
  import androidx.core.content.ContextCompat;
@@ -117,7 +117,7 @@
 
  @SuppressWarnings({"FieldMayBeFinal",
         "FieldCanBeLocal"})
-public class CameraActivity extends AppCompatActivity {
+public class CameraActivity extends Activity {
     private static final String TAG = "CameraActivity";
     private final String BACK_CAMERA_ID = "0";
     private final String FRONT_CAMERA_ID = "1";
@@ -318,7 +318,19 @@ public class CameraActivity extends AppCompatActivity {
                 }
             }
             else{                                       //FIXME: HANDLE FOR MULTIPLE FRONT CAMERA
+                if(getState() == CamState.HIRES || getState() == CamState.VIDEO_PROGRESSED
+                        || getState() == CamState.HSVIDEO_PROGRESSED) {
+                    videoModePicker.setVisibility(View.GONE);
+                }
+                else if(getState() == CamState.VIDEO) {
+                    if (!lensData.hasSloMoCapabilities(getCameraId())) {
+                        videoModePicker.setVisibility(View.GONE);
+                    } else {
+                        videoModePicker.setVisibility(View.VISIBLE);
+                    }
+                }
                 auxDock.setVisibility(View.GONE);
+
             }
         }
     };
@@ -538,6 +550,7 @@ public class CameraActivity extends AppCompatActivity {
                     if (!isVRecording) {
                         setState(CamState.VIDEO_PROGRESSED);
                         mainThreadExecutor.execute(this::modifyUIonVideoShutter);
+                        auxDock.post(hideAuxDock);
                         try {
                             camSession.abortCaptures();
                         }
@@ -556,6 +569,7 @@ public class CameraActivity extends AppCompatActivity {
                         mMediaRecorder.stop(); //TODO: handle stop before preview is generated
 //                        mMediaRecorder.reset();
                         mainThreadExecutor.execute(this::modifyUIonVideoShutter);
+                        auxDock.post(hideAuxDock);
                         createVideoPreview(tvPreview.getHeight(), (lensData.is1080pCapable(getCameraId())
                                 ? 1080 : 720));
                         isVRecording = false;
@@ -946,7 +960,7 @@ public class CameraActivity extends AppCompatActivity {
                         zoomText.post(hideZoomText);
                         if (getState() == CamState.VIDEO) {
                             addCapableVideoResolutions();
-                            mBackgroundHandler.post(hideAuxDock);
+                            vfHandler.post(hideAuxDock);
                         }
                         else if (getState() == CamState.SLOMO) addCapableSloMoResolutions();
                         exposureControl.post(this::setExposureRange);
@@ -1080,7 +1094,6 @@ public class CameraActivity extends AppCompatActivity {
             chronometer.stop();
             chronometer.setVisibility(View.INVISIBLE);
             shutter.animateInnerCircle(getState());
-            auxDock.post(hideAuxDock);
             mModePicker.setVisibility(View.VISIBLE);
 
 //            try {
@@ -1123,7 +1136,6 @@ public class CameraActivity extends AppCompatActivity {
 //                e.printStackTrace();
 //            }
 
-
             thumbPreview.setImageDrawable(null);
             thumbPreview.setOnClickListener(openGallery);
             displayMediaThumbnailFromGallery();
@@ -1142,12 +1154,10 @@ public class CameraActivity extends AppCompatActivity {
                     , R.drawable.ic_video_pause, null));
             front_switch.setOnClickListener(play_pauseVideo);
             shutter.animateInnerCircle(getState());
-            auxDock.post(hideAuxDock);
             mModePicker.setVisibility(View.INVISIBLE);
             chronometer.setBase(SystemClock.elapsedRealtime());
             chronometer.setVisibility(View.VISIBLE);
         }
-
     }
 
     private void update_chip_text(String size,String fps){
@@ -1674,6 +1684,7 @@ public class CameraActivity extends AppCompatActivity {
             captureRequest.set(CaptureRequest.JPEG_ORIENTATION,getJpegOrientation());
 //            captureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_OFF);
 
+//            captureRequest.addTarget(surfaceList.get(0));
             captureRequest.addTarget(surfaceList.get(1));
             if(mflash) {
                 captureRequest.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE);
@@ -1816,7 +1827,6 @@ public class CameraActivity extends AppCompatActivity {
                 previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
                 previewCaptureRequest.addTarget(previewSurface);
                 previewCaptureRequest.addTarget(recordSurface);
-
 
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                     OutputConfiguration previewConfiguration = new OutputConfiguration(previewSurface);
