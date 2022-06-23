@@ -77,8 +77,8 @@ public class SettingsActivity extends AppCompatActivity {
 
         collapsingToolbarLayout = findViewById(R.id.collapsingToolBar);
         collapsingToolbarLayout.setCollapsedTitleTextColor(Color.WHITE);
-        collapsingToolbarLayout.setExpandedTitleTextAppearance(R.style.TextAppearance_AppCompat_Display2);
-        collapsingToolbarLayout.setCollapsedTitleTextAppearance(R.style.TextAppearance_AppCompat_Large);
+        collapsingToolbarLayout.setExpandedTitleTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Display2);
+        collapsingToolbarLayout.setCollapsedTitleTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Large);
         collapsingToolbarLayout.setExpandedTitleColor(DEVICE_ACCENT);
 
         s_description = findViewById(R.id.s_c);

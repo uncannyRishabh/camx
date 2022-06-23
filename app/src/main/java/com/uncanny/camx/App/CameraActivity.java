@@ -156,13 +156,13 @@ public class CameraActivity extends Activity {
         CAMERA,VIDEO,VIDEO_PROGRESSED,HSVIDEO_PROGRESSED,PORTRAIT,PRO,NIGHT,SLOMO,TIMEWARP,HIRES
     }
     public enum VFStates{
-        IDLE,FOCUS,DOUBLE_TAP,SLIDE_ZOOM,SLIDE_EXPOSURE;
+        IDLE,FOCUS,DOUBLE_TAP,SLIDE_ZOOM,SLIDE_EXPOSURE
     }
 
     private CamState state = CamState.CAMERA;
     private VFStates vfStates = VFStates.IDLE;
 
-    private Vector<Surface> surfaceList = new Vector<>();
+    private List<Surface> surfaceList = new ArrayList<>();
     private Vector<Surface> hfrSurfaceList = new Vector<>();
     private Handler mHandler = new Handler();
     private RelativeLayout appbar;
@@ -250,7 +250,7 @@ public class CameraActivity extends Activity {
     private Handler vfHandler = HandlerCompat.createAsync(Looper.getMainLooper());
     private Executor executor = new SerialExecutor(Executors.newCachedThreadPool());
     private MainThreadExecutor mainThreadExecutor = new MainThreadExecutor(); //UI UPDATION SHIT ONLY
-//    private Executor executor1 = new SerialExecutor(Executors.newFixedThreadPool(2));
+    private Executor executor1 = new SerialExecutor(Executors.newFixedThreadPool(2));
 
     private Runnable hideFocusCircle = new Runnable() {
         @Override
@@ -520,12 +520,12 @@ public class CameraActivity extends Activity {
 
         resolutionSelector.setOnClickListener(v -> {
             if(getState() == CamState.VIDEO) {
-                int width = translateResolution(resolutionSelector.getHeaderText());
-                resolutionSelector
-                        .postDelayed(() -> createVideoPreview(tvPreview.getHeight(), width),300);
+                mVideoRecordSize = translateResolution(resolutionSelector.getHeaderText());
+//                mVideoRecordSize = getPreviewResolution(width);
+                resolutionSelector.postDelayed(this::createVideoPreviewWithAptResolution,300);
             }
             else if(getState() == CamState.SLOMO){
-                int width = translateResolution(resolutionSelector.getHeaderAndFooterText().split("P")[0]);
+                int width = translateResolution(resolutionSelector.getHeaderAndFooterText().split("P")[0]).getWidth();
                 sFPS = Integer.parseInt(resolutionSelector.getHeaderAndFooterText()
                         .split("_")[1].split("FPS")[0]);
                 createSloMoPreview(correspondingHeight(width),width);
@@ -570,8 +570,7 @@ public class CameraActivity extends Activity {
 //                        mMediaRecorder.reset();
                         mainThreadExecutor.execute(this::modifyUIonVideoShutter);
                         auxDock.post(hideAuxDock);
-                        createVideoPreview(tvPreview.getHeight(), (lensData.is1080pCapable(getCameraId())
-                                ? 1080 : 720));
+                        createVideoPreviewWithAptResolution();
                         isVRecording = false;
                     }
                     break;
@@ -812,7 +811,9 @@ public class CameraActivity extends Activity {
         lensData.getFpsResolutionPair_video(getCameraId());
         shutter.animateInnerCircle(getState());
         requestVideoPermissions();
-        createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId()) ? 1080 : 720));
+
+        createVideoPreviewWithAptResolution();
+//        createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId()) ? 1080 : 720));
         modifyMenuForVideo();
         if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
     }
@@ -1648,20 +1649,21 @@ public class CameraActivity extends Activity {
         tvPreview.measure(previewSize.getHeight(), previewSize.getWidth());
         stPreview.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
 
+        imgReader = ImageReader.newInstance(imageSize.getHeight(), imageSize.getWidth(), ImageFormat.JPEG, 5);
+        imgReader.setOnImageAvailableListener(snapshotImageCallback, mBackgroundHandler);
+
         surfaceList.clear();
         surfaceList.add(new Surface(stPreview));
-
-        imgReader = ImageReader.newInstance(imageSize.getWidth(), imageSize.getHeight(), ImageFormat.JPEG, 5);
-        imgReader.setOnImageAvailableListener(snapshotImageCallback, mBackgroundHandler);
         surfaceList.add(imgReader.getSurface());
 
         //RESET ZOOM
-        zSlider.setValue(0f);
+        if(previewCaptureRequest!=null) zSlider.setValue(0f);
         ZOOM_LEVEL = 0;
-        Log.e(TAG, "openCamera: ImageReader preview size " + previewSize.getWidth() + "x" + previewSize.getHeight());
-        Log.e(TAG, "openCamera: ImageReader capture size " + imageSize.getWidth() + "x" + imageSize.getHeight());
+        Log.e(TAG, "openCamera: ImageReader preview size " + previewSize);
+        Log.e(TAG, "openCamera: ImageReader capture size " + imageSize);
 
-        //Init focus controller
+
+        mVideoRecordSize = null;
 
         try {
             if (ActivityCompat.checkSelfPermission(CameraActivity.this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -1721,21 +1723,35 @@ public class CameraActivity extends Activity {
      * VIDEO M E T H O D S
      */
 
+    private void createVideoPreviewWithAptResolution(){
+        if(lensData.is1080pCapable(getCameraId())) createVideoPreview(1920,1080);
+        else createVideoPreview(1280,720);
+    }
+
     private void createVideoPreview(int height,int width){
         if (!resumed || !surface)
             return;
 
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-        Log.e(TAG, "createVideoPreview: "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
+//        Log.e(TAG, "createVideoPreview: "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
 
-        mVideoPreviewSize = getPreviewResolution(map.getOutputSizes(MediaRecorder.class),width,false);
+        mVideoPreviewSize = new Size(height, width);
+        if(mVideoRecordSize == null) {
+            Size t = getPreviewResolution(map.getOutputSizes(MediaRecorder.class)
+                    , width, false);
+            mVideoRecordSize = new Size(t.getHeight(), t.getWidth());
+        }
 
-        snapshotImageReader = ImageReader.newInstance(width,height,ImageFormat.JPEG,10);
+        snapshotImageReader = ImageReader.newInstance(mVideoRecordSize.getWidth()
+                , mVideoRecordSize.getHeight()
+                , ImageFormat.JPEG,5);
         snapshotImageReader.setOnImageAvailableListener(videoSnapshotCallback,mHandler);
 
-        update_chip_text(mVideoPreviewSize.getHeight()+"",vFPS+"");
+        update_chip_text(mVideoRecordSize.getWidth()+"",vFPS+"");
 
-        Log.e(TAG, "createVideoPreview: mVideoSize : "+ mVideoPreviewSize);
+        Log.e(TAG, "createVideoPreview: mVideoPreviewSize : "+ mVideoPreviewSize);
+        Log.e(TAG, "createVideoPreview: mVideoRecordSize : "+ mVideoRecordSize);
+
         stPreview.setDefaultBufferSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
         tvPreview.setAspectRatio(mVideoPreviewSize.getHeight(), mVideoPreviewSize.getWidth());
         Surface previewSurface = new Surface(stPreview);
@@ -1783,11 +1799,9 @@ public class CameraActivity extends Activity {
     private void setupMediaRecorder(CamcorderProfile camcorderProfile) {
          try {
              mVideoFileName = "CamX" + System.currentTimeMillis() + "_" + getCameraId() + ".mp4";
-             Log.e(TAG, "setupMediaRecorder: CP : h : " + camcorderProfile.videoFrameHeight
+             Log.e(TAG, "setupMediaRecorder: MAX PERMITTED RES BY MediaRecorder : h : " + camcorderProfile.videoFrameHeight
                      + " w : " + camcorderProfile.videoFrameWidth);
-             Log.e(TAG, "setupMediaRecorder: mVideo : h : " + mVideoPreviewSize.getHeight()
-                     + " w : " + mVideoPreviewSize.getWidth());
-             Log.e(TAG, "setupMediaRecorder: vBR : " + camcorderProfile.videoBitRate);
+             Log.e(TAG, "setupMediaRecorder: Video BitRate : " + camcorderProfile.videoBitRate);
 
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(getApplicationContext());
              else mMediaRecorder = new MediaRecorder();
@@ -1799,13 +1813,13 @@ public class CameraActivity extends Activity {
              mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
              mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
              mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-             mMediaRecorder.setVideoSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
+             mMediaRecorder.setVideoSize(mVideoRecordSize.getHeight(), mVideoRecordSize.getWidth());
              mMediaRecorder.setVideoFrameRate(vFPS);
              mMediaRecorder.setOrientationHint(90);      //TODO : CHANGE ACCORDING TO SENSOR ORIENTATION
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                  mMediaRecorder.setOutputFile(new File("//storage//emulated//0//DCIM//Camera//" + mVideoFileName));
              } else {
-                 mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//" + mVideoFileName);
+                 mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//" + mVideoFileName); //TODO : CLEANUP FILE
              }
              mMediaRecorder.setVideoEncodingBitRate(16400000);
              mMediaRecorder.prepare();           //FIXME : prepare fails on emulator(sdk24)
@@ -1813,7 +1827,7 @@ public class CameraActivity extends Activity {
          catch (IOException e){
              e.printStackTrace();
          }
-     }
+    }
 
     private void startRecording(){
         try {
@@ -1901,7 +1915,7 @@ public class CameraActivity extends Activity {
             return Collections.min(sizeArrayList,new CompareSizeByArea());
         }
         else{
-//            Log.e(TAG, "getPreviewResolution: OTHER WAY ROUND");
+//            Log.e(TAG, "getPreviewResolution: FINAL ELSE");
             return outputSizes[0];
         }
     }
@@ -2118,21 +2132,21 @@ public class CameraActivity extends Activity {
         return rotationCompensation;
     }
 
-    private int translateResolution(String selectedItem) {
+    private Size translateResolution(String selectedItem) {
         switch (selectedItem) {
             case "HD":
             case "720":
-                return 720;
+                return new Size(720, 1280);
             case "FHD":
             case "1080":
-                return 1080;
+                return new Size(1080, 1920);
             case "4K":
             case "2160":
-                return 2160;
+                return new Size(2160, 3840);
             case "8K":
-                return 4320;
+                return new Size(4320, 7680);
         }
-        return 0;
+        return new Size(720, 1280);
     }
 
     private int correspondingHeight(int width) {
@@ -2225,7 +2239,8 @@ public class CameraActivity extends Activity {
         Completable.fromRunnable(idt = new ImageDecoderThread())
                 .subscribeOn(Schedulers.from(executor))
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(() -> thumbPreview.setImageBitmap(idt.getBitmap()));
+                .andThen(Completable.fromRunnable(() -> thumbPreview.setImageBitmap(idt.getBitmap())))
+                .subscribe();
     }
 
     private void requestVideoPermissions() {
@@ -2328,15 +2343,30 @@ public class CameraActivity extends Activity {
             camDevice = cameraDevice;
             try {
                 if(getState() == CamState.VIDEO){
-                    createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId())
-                            ? 1080 : 720));
+                    createVideoPreviewWithAptResolution();
                     return;
                 }
                 if(getState() == CamState.SLOMO){
                     createSloMoPreview(sloMoPair.first.getWidth(), sloMoPair.first.getHeight());
                     return;
                 }
-                camDevice.createCaptureSession(surfaceList,stateCallback, mBackgroundHandler);
+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    List<OutputConfiguration> outputs = new ArrayList<>();
+                    outputs.add(new OutputConfiguration(surfaceList.get(0)));
+                    outputs.add(new OutputConfiguration(surfaceList.get(1)));
+
+                    SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
+                            outputs,
+                            getMainExecutor(),
+                            stateCallback);
+
+                    camDevice.createCaptureSession(sessionConfiguration);
+                }
+                else{
+                    camDevice.createCaptureSession(surfaceList,stateCallback, mBackgroundHandler);
+                }
+
                 tvPreview.setAspectRatio(previewSize.getHeight(), previewSize.getWidth());
                 Log.e(TAG, "onOpened: tvPreview.SetAspectRatio : h : "+ previewSize.getHeight() + " w : "+ previewSize.getWidth());
 
