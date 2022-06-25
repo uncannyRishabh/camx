@@ -1,1 +1,7 @@
 /build
+
+/build/generated
+/build/intermediates
+build/outputs/apk/debug/output-metadata.json
+build/outputs/logs
+build/tmp
