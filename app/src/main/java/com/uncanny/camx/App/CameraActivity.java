@@ -2517,7 +2517,6 @@ public class CameraActivity extends Activity {
     protected void onDestroy() {
         super.onDestroy();
         stopBackgroundThread();
-//        rs.destroy();
     }
 
     @Override

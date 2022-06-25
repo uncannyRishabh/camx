@@ -17,19 +17,21 @@ android {
         def releaseBuild=0
         Properties versionProps = new Properties()
         if (!versionPropsFile.exists()) {
-            versionProps['VERSION_PATCH'] = "0"
-            versionProps['VERSION_NUMBER'] = "0"
             versionProps['VERSION_BUILD'] = "-1"
+            versionProps['VERSION_NUMBER'] = "0"
+            versionProps['VERSION_PATCH'] = "0"
             versionProps.store(versionPropsFile.newWriter(), null)
         }
 
         def runTasks = gradle.startParameter.taskNames
         if ('assembleDebug' in runTasks) {
             debugBuild = 1
+            versionProps['VERSION_BUILD'] = 0
         }
 
         if ('assembleRelease' in runTasks) {
             releaseBuild = 1
+            versionProps['VERSION_NUMBER'] = 0
         }
 
         def mVersionName = ""
@@ -37,18 +39,18 @@ android {
         if (versionPropsFile.canRead()) {
             versionProps.load(new FileInputStream(versionPropsFile))
 
-            versionProps['VERSION_PATCH'] = (versionProps['VERSION_PATCH'].toInteger() + debugBuild).toString()
-            versionProps['VERSION_NUMBER'] = (versionProps['VERSION_NUMBER'].toInteger() + debugBuild).toString()
             versionProps['VERSION_BUILD'] = (versionProps['VERSION_BUILD'].toInteger() + 1).toString()
+            versionProps['VERSION_NUMBER'] = (versionProps['VERSION_NUMBER'].toInteger() + debugBuild).toString()   //BUG
+            versionProps['VERSION_PATCH'] = (versionProps['VERSION_PATCH'].toInteger() + releaseBuild).toString()   //BUG
 
             versionProps.store(versionPropsFile.newWriter(), null)
 
-            // 1: change major and minor version here
-            mVersionName = "0.3.${versionProps['VERSION_PATCH']}"
+            //MAJOR.MINOR.PATCH.BUILD
+            mVersionName = "0.3.${versionProps['VERSION_PATCH']}.${versionProps['VERSION_BUILD']}"
 
         }
 
-        versionCode versionProps['VERSION_NUMBER'] != null ? versionProps['VERSION_NUMBER'].toInteger() : 1 //1
+        versionCode versionProps['VERSION_NUMBER'] < 1 ? versionProps['VERSION_NUMBER'].toInteger() : 1 //1
         versionName "${mVersionName}-αlphα" //"0.3.5-αlphα"
         renderscriptTargetApi 24
         renderscriptSupportModeEnabled false
@@ -74,8 +76,6 @@ android {
     namespace 'com.uncanny.camx'
 }
 
-
-
 dependencies {
     configurations.all {
         resolutionStrategy { force 'androidx.core:core:1.6.0' }
@@ -90,7 +90,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.1'
     implementation 'com.google.mlkit:segmentation-selfie:16.0.0-beta4'
 
-    implementation 'io.reactivex.rxjava3:rxjava:3.1.2'
+    implementation 'io.reactivex.rxjava3:rxjava:3.1.5'
     implementation 'io.reactivex.rxjava3:rxandroid:3.0.0'
 
     testImplementation 'junit:junit:4.13.2'
