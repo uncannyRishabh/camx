@@ -3,13 +3,13 @@ plugins {
 }
 
 android {
-    compileSdkVersion 31
+    compileSdkVersion 32
     buildToolsVersion "30.0.3"
 
     defaultConfig {
         applicationId 'com.uncanny.camx'
         minSdkVersion 24
-        targetSdkVersion 31
+        targetSdkVersion 32
         multiDexEnabled true
 
         def versionPropsFile = file('version.properties')
