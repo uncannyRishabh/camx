@@ -31,14 +31,17 @@
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/rounded_corners.xml" value="0.2203125" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/rounded_ctb.xml" value="0.2203125" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/rounded_relative_layout.xml" value="0.2203125" />
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/setting_switch_thumb.xml" value="0.17" />
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/setting_switch_track.xml" value="0.16" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/settings_header.xml" value="0.1395" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/splash.xml" value="0.2203125" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/drawable/white_circumcircle.xml" value="0.2203125" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/font/roboto.xml" value="0.5" />
-        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/layout/activity_main.xml" value="0.22" />
-        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/layout/activity_settings.xml" value="0.17028985507246377" />
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/layout/activity_main.xml" value="0.1" />
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/layout/activity_settings.xml" value="0.2620320855614973" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/layout/button_group.xml" value="0.25" />
-        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/layout/settings_content.xml" value="0.12364130434782608" />
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/layout/settings_content.xml" value="0.3914780292942743" />
+        <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/layout/settings_tab_description.xml" value="0.36341161928306553" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" value="0.1295" />
         <entry key="..\:/Users/Rishabh Raj Gupta/AndroidStudioProjects/camx/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" value="0.1" />
       </map>

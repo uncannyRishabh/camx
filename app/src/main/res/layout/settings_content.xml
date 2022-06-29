@@ -2,11 +2,12 @@
 <RelativeLayout android:id="@+id/rl1"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:paddingVertical="15dp"
     android:paddingStart="46dp"
     android:paddingEnd="18dp"
-    android:elevation="4dp"
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+
     <TextView
         android:id="@+id/s_heading"
         android:layout_width="wrap_content"
@@ -14,27 +15,40 @@
         android:ellipsize="marquee"
         android:marqueeRepeatLimit="marquee_forever"
         android:text="Whatever"
-        android:textSize="20sp"
-        />
+        android:textColor="@color/md3_setting_headline"
+        android:textSize="19sp" />
+
     <TextView
         android:id="@+id/s_description"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="whatever what ever what ever what ever whate ver what ever what ever what ever"
-        android:layout_toStartOf="@id/custom_switch"
-        android:textSize="15sp"
+        android:layout_below="@id/s_heading"
+        android:layout_toStartOf="@id/divider"
+        android:layout_alignStart="@id/s_heading"
         android:paddingStart="0dp"
         android:paddingEnd="6dp"
-        android:layout_below="@id/s_heading"
-        />
+        android:text="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+        android:textColor="@android:color/secondary_text_dark"
+        android:textSize="14sp" />
+
+    <com.google.android.material.divider.MaterialDivider
+        android:id="@+id/divider"
+        android:layout_width="1dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="12dp"
+        android:layout_toStartOf="@id/custom_switch" />
+
     <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/custom_switch"
-        android:layout_width="48dp"
-        android:layout_height="30dp"
-        android:layout_marginTop="14dp"
-        app:track="@drawable/ic_switch_track"
-        android:thumb="@drawable/ic_switch_thumb"
         style="@style/Widget.AppCompat.CompoundButton.Switch"
+        android:layout_width="48dp"
+        android:layout_height="24dp"
         android:layout_alignParentEnd="true"
-        />
+        android:layout_marginTop="10dp"
+        android:checked="false"
+        android:thumb="@drawable/ic_switch_thumb"
+        app:thumbTint="@drawable/setting_switch_thumb"
+        app:track="@drawable/ic_switch_track"
+        app:trackTint="@drawable/setting_switch_track" />
 </RelativeLayout>

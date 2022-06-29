@@ -43,7 +43,8 @@
             android:id="@+id/preview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:clipToOutline="true" />
+            android:clipToOutline="true"
+            android:layout_centerHorizontal="true"/>
 
         <TextView
             android:id="@+id/zoom_text"

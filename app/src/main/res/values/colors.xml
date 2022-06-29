@@ -11,4 +11,13 @@
     <color name="transparent">#00FFFFFF</color>
     <color name="light_black">#9A000000</color>
     <color name="dark_white">#222222</color>
+
+    <!--   NON-MATERIAL YOU COLORS -->
+    <color name="md3_bg" >@color/black</color>
+    <color name="md3_toolbar" >@color/light_black</color>
+    <color name="md3_switch_thumb" >#D1C4E9</color>
+    <color name="md3_switch_thumb_disabled" >@color/white</color>
+    <color name="md3_switch_track" >@color/purple_200</color>
+    <color name="md3_switch_track_disabled" >#5E5E5E</color>
+    <color name="md3_setting_headline" >@color/white</color>
 </resources>

@@ -1,9 +1,6 @@
 package com.uncanny.camx.App;
 
-import android.annotation.SuppressLint;
-import android.content.res.ColorStateList;
 import android.graphics.Color;
-import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.widget.RelativeLayout;
@@ -12,7 +9,6 @@ import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ContextThemeWrapper;
-import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.WindowCompat;
 
@@ -32,7 +28,6 @@ public class SettingsActivity extends AppCompatActivity {
     private AppBarLayout appBarLayout;
     private TextView camera2status,camera2text;
 
-    private ColorStateList thumbStateList,trackStateList;
     private int DEVICE_ACCENT;
 
     @Override
@@ -45,31 +40,13 @@ public class SettingsActivity extends AppCompatActivity {
 
         DEVICE_ACCENT = getDeviceAccent();
 
-        getWindow().setStatusBarColor(Color.parseColor("#101010"));
+        getWindow().setStatusBarColor(Color.parseColor("#141415"));
         Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
 
         c2status = getIntent().getStringExtra("c2api");
 
-        int[][] thumbStates = new int[][] {
-                new int[] { android.R.attr.state_checked}, // enabled
-                new int[] {-android.R.attr.state_checked}, // disabled
-        };
-        int[] thumbColors = new int[] {
-                DEVICE_ACCENT,
-                Color.WHITE
-        };
-        thumbStateList = new ColorStateList(thumbStates, thumbColors);
-
-        int[][] trackStates = new int[][] {
-                new int[] { android.R.attr.state_checked}, // enabled
-        };
-        int[] trackColors = new int[] {
-                DEVICE_ACCENT,
-        };
-        trackStateList = new ColorStateList(trackStates, trackColors);
     }
 
-    @SuppressLint("CutPasteId")
     @Override
     protected void onPostCreate(@Nullable Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
@@ -77,21 +54,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         collapsingToolbarLayout = findViewById(R.id.collapsingToolBar);
         collapsingToolbarLayout.setCollapsedTitleTextColor(Color.WHITE);
-        collapsingToolbarLayout.setExpandedTitleTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Display2);
-        collapsingToolbarLayout.setCollapsedTitleTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Large);
-        collapsingToolbarLayout.setExpandedTitleColor(DEVICE_ACCENT);
-
-        s_description = findViewById(R.id.s_c);
-        SwitchCompat switch_1 = s_description.findViewById(R.id.custom_switch);
-
-        //TODO: DO THE FOLLOWING IN XML
-        switch_1.setThumbTintList(thumbStateList);
-        switch_1.setTrackTintList(thumbStateList);
-        switch_1.setTrackTintMode(PorterDuff.Mode.MULTIPLY);
-
-        s_description = findViewById(R.id.s_c1);
-        SwitchCompat switch_2 = s_description.findViewById(R.id.custom_switch);
-        switch_2.setThumbTintList(thumbStateList);
+        collapsingToolbarLayout.setExpandedTitleColor(DEVICE_ACCENT); //TODO : ADD CONDITIONS FOR DYNAMIC THEMING
 
         camera2status = findViewById(R.id.c2api_check_status);
         c2status =  camera2status.getText() + c2status;

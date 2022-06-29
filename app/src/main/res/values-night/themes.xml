@@ -38,4 +38,14 @@
         <item name="android:colorControlHighlight">@android:color/transparent</item>
         <item name="android:colorControlActivated">@android:color/transparent</item>
     </style>
+
+    <style name="SettingsTitleBarExpanded">
+        <item name="android:textSize">36sp</item>
+        <!--        <item name="android:textColor">?attr/textColorPrimary</item>-->
+    </style>
+
+    <style name="SettingsTitleBarCollapsed">
+        <item name="android:textSize">20sp</item>
+        <!--        <item name="android:textColor">?attr/textColorPrimary</item>-->
+    </style>
 </resources>

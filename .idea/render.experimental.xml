@@ -2,6 +2,6 @@
 <project version="4">
   <component name="RenderSettings">
     <option name="quality" value="0.75" />
-    <option name="useLiveRendering" value="true" />
+    <option name="showDecorations" value="true" />
   </component>
 </project>

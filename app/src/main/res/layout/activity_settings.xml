@@ -4,18 +4,17 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/black"
+    android:background="@color/md3_bg"
     tools:context=".App.SettingsActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appbar_layout"
         android:layout_width="match_parent"
-        android:layout_height="240dp"
+        android:layout_height="220dp"
         android:fitsSystemWindows="true"
-        android:background="#101010"
+        android:background="@color/md3_bg"
         app:expandedTitleMarginBottom="30dp"
         app:expandedTitleMarginStart="72dp"
-        android:elevation="6dp"
         >
         <com.google.android.material.appbar.CollapsingToolbarLayout
             android:id="@+id/collapsingToolBar"
@@ -23,14 +22,16 @@
             android:layout_height="match_parent"
             app:layout_scrollFlags="scroll|exitUntilCollapsed"
             app:collapsedTitleGravity="start"
-            app:title="Settings"
-            app:expandedTitleMarginBottom="40dp"
+            app:titleCollapseMode="scale"
+            app:expandedTitleTextAppearance="@style/SettingsTitleBarExpanded"
+            app:collapsedTitleTextAppearance="@style/SettingsTitleBarCollapsed"
+            app:title="Camera settings"
+            app:contentScrim="@color/md3_toolbar"
             >
             <androidx.appcompat.widget.Toolbar
                 android:id="@+id/custom_toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="68dp"
-                app:contentInsetStart="22dp"
+                android:layout_height="58dp"
                 app:layout_collapseMode="pin"
                 />
         </com.google.android.material.appbar.CollapsingToolbarLayout>
@@ -39,18 +40,24 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_gravity="fill_vertical"
-        android:background="@color/black"
-        android:fitsSystemWindows="true"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginVertical="22dp">
+            android:paddingTop="22dp"
+            >
             <!--GENERAL SETTINGS -->
-            <include
+            <TextView
                 android:id="@+id/s_dc"
-                layout="@layout/settings_tab_description" />
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="18dp"
+                android:text="General"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:paddingStart="46dp"
+                />
+
             <TextView
                 android:id="@+id/c2api_check_status"
                 android:layout_width="match_parent"
@@ -61,7 +68,6 @@
                 android:paddingEnd="18dp"
                 android:textSize="20sp"
                 android:layout_marginBottom="6dp"
-
                 />
 
             <TextView
@@ -81,89 +87,86 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/c2api_check_text"
-                android:layout_marginBottom="22dp"
+
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c"
-                android:layout_marginBottom="22dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c1"
-                android:layout_marginBottom="22dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c2"
-                android:layout_marginBottom="22dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c4"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c3"
-                android:layout_marginBottom="22dp"
                 layout="@layout/settings_content"/>
             <!--CAMERA SETTINGS -->
-            <include
+            <TextView
                 android:id="@+id/s_dc1"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_width="match_parent"
                 android:layout_below="@id/s_c4"
-                android:layout_marginTop="14dp"
-                layout="@layout/settings_tab_description"
-                />
+                android:layout_marginVertical="18dp"
+                android:paddingStart="46dp"
+                android:text="General"
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
             <include
                 android:id="@+id/s_c11"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_dc1"
-                android:layout_marginBottom="12dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c12"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c11"
-                android:layout_marginBottom="12dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c13"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c12"
-                android:layout_marginBottom="12dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c14"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c13"
-                android:layout_marginBottom="12dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c15"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c14"
-                android:layout_marginBottom="12dp"
                 layout="@layout/settings_content"/>
             <!--VIDEO SETTINGS -->
-            <include
+            <TextView
                 android:id="@+id/s_dc2"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_width="match_parent"
+                android:layout_marginBottom="12dp"
                 android:layout_below="@id/s_c15"
-                android:layout_marginTop="14dp"
-                layout="@layout/settings_tab_description"
+                android:layout_marginVertical="18dp"
+                android:text="General"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:paddingStart="46dp"
                 />
 
             <include
@@ -171,47 +174,42 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_dc2"
-                android:layout_marginBottom="12dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c22"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c21"
-                android:layout_marginBottom="12dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c23"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c22"
-                android:layout_marginBottom="12dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c24"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c23"
-                android:layout_marginBottom="12dp"
                 layout="@layout/settings_content"/>
             <include
                 android:id="@+id/s_c25"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c24"
-                android:layout_marginBottom="12dp"
                 layout="@layout/settings_content"/>
 
             <com.google.android.material.button.MaterialButton
                 android:layout_width="match_parent"
                 android:layout_height="68dp"
                 android:layout_marginBottom="108dp"
-                android:layout_marginStart="22dp"
+                android:layout_marginHorizontal="22dp"
                 android:layout_below="@id/s_c25"
-                app:backgroundTint="@color/black"
+                app:backgroundTint="@color/md3_bg"
                 app:iconTint="@color/white"
                 android:textColor="@color/white"
-                android:text="About     "
+                android:text="About"
                 app:icon="@drawable/ic_about_info"
                 />
 
