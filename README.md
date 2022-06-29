@@ -51,7 +51,7 @@ For queries,contribution,bug fixes... [contact](mailto:rishabhrajgupta2000@gmail
 
 <h2>Try Out</h2>
 
-[Try out](https://github.com/uncannyRishabh/camx/blob/master/camx.apk?raw=true)
+[Download](https://github.com/uncannyRishabh/camx/blob/master/app/release/app-release.apk?raw=true)
 
 <h2>License</h2>
 
