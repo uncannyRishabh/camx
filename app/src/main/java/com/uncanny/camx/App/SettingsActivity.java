@@ -1,6 +1,5 @@
 package com.uncanny.camx.App;
 
-import android.os.Build;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.View;
@@ -12,41 +11,29 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ContextThemeWrapper;
 import androidx.core.view.WindowCompat;
 
-import com.google.android.material.appbar.CollapsingToolbarLayout;
-import com.google.android.material.appbar.MaterialToolbar;
 import com.uncanny.camx.R;
 
 import java.util.Objects;
 
 public class SettingsActivity extends AppCompatActivity {
     private static final String TAG = "SettingsActivity";
-    private int DEVICE_ACCENT;
     private String c2status;
-
-    private CollapsingToolbarLayout collapsingToolbarLayout;
-    private MaterialToolbar toolbar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
-        toolbar = findViewById(R.id.custom_toolbar);
-        setSupportActionBar(toolbar);
+        setSupportActionBar(findViewById(R.id.custom_toolbar));
+
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
 
-        DEVICE_ACCENT = getDeviceAccent();
         c2status = getIntent().getStringExtra("c2api");
     }
 
     @Override
     protected void onPostCreate(@Nullable Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-
-        collapsingToolbarLayout = findViewById(R.id.collapsingToolBar);
-        if(Build.VERSION.SDK_INT<=Build.VERSION_CODES.S)
-            collapsingToolbarLayout.setExpandedTitleColor(DEVICE_ACCENT); //TODO : ADD CONDITIONS FOR DYNAMIC THEMING
-
         RelativeLayout s0 = findViewById(R.id.s_c0);
         setDescriptionFromIncludeId(s0,"Camera 2API status", c2status);
 

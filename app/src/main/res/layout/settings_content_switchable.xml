@@ -28,7 +28,7 @@
         android:paddingStart="0dp"
         android:paddingEnd="6dp"
         android:text="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-        android:textColor="@android:color/secondary_text_dark"
+        android:textColor="@color/md3_setting_description"
         android:textSize="14sp" />
 
     <com.google.android.material.divider.MaterialDivider
