@@ -20,4 +20,5 @@
     <color name="md3_switch_track" >@color/purple_200</color>
     <color name="md3_switch_track_disabled" >#5E5E5E</color>
     <color name="md3_setting_headline" >@color/white</color>
+    <color name="md3_setting_header" >@color/white</color>
 </resources>

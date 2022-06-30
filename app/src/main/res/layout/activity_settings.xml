@@ -5,12 +5,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/md3_bg"
+    android:fitsSystemWindows="true"
     tools:context=".App.SettingsActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appbar_layout"
         android:layout_width="match_parent"
-        android:layout_height="220dp"
+        android:layout_height="wrap_content"
         android:fitsSystemWindows="true"
         android:background="@color/md3_bg"
         app:expandedTitleMarginBottom="30dp"
@@ -19,19 +20,23 @@
         <com.google.android.material.appbar.CollapsingToolbarLayout
             android:id="@+id/collapsingToolBar"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="220dp"
             app:layout_scrollFlags="scroll|exitUntilCollapsed"
             app:collapsedTitleGravity="start"
-            app:titleCollapseMode="scale"
+            app:titleCollapseMode="fade"
             app:expandedTitleTextAppearance="@style/SettingsTitleBarExpanded"
             app:collapsedTitleTextAppearance="@style/SettingsTitleBarCollapsed"
             app:title="Camera settings"
             app:contentScrim="@color/md3_toolbar"
+            app:statusBarScrim="@color/md3_toolbar"
+            app:expandedTitleTextColor="@color/md3_setting_header"
+            app:scrimAnimationDuration="0"
             >
-            <androidx.appcompat.widget.Toolbar
+            <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/custom_toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="58dp"
+                android:layout_height="?attr/actionBarSize"
+                android:fitsSystemWindows="false"
                 app:layout_collapseMode="pin"
                 />
         </com.google.android.material.appbar.CollapsingToolbarLayout>
@@ -46,7 +51,9 @@
             android:layout_height="match_parent"
             android:paddingTop="22dp"
             >
+
             <!--GENERAL SETTINGS -->
+
             <TextView
                 android:id="@+id/s_dc"
                 android:layout_width="wrap_content"
@@ -58,62 +65,46 @@
                 android:paddingStart="46dp"
                 />
 
-            <TextView
-                android:id="@+id/c2api_check_status"
-                android:layout_width="match_parent"
+            <include
+                android:id="@+id/s_c0"
                 android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
                 android:layout_below="@+id/s_dc"
-                android:text="Camera2 API level  ::::  "
-                android:paddingStart="46dp"
-                android:paddingEnd="18dp"
-                android:textSize="20sp"
-                android:layout_marginBottom="6dp"
-                />
-
-            <TextView
-                android:id="@+id/c2api_check_text"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_below="@+id/c2api_check_status"
-                android:paddingStart="46dp"
-                android:paddingEnd="18dp"
-                android:textSize="14sp"
-                android:layout_marginBottom="14dp"
-
-                />
+                layout="@layout/settings_content_multiple_options" />
 
             <include
                 android:id="@+id/s_c"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/c2api_check_text"
-
-                layout="@layout/settings_content"/>
+                android:layout_below="@id/s_c0"
+                layout="@layout/settings_content_switchable" />
             <include
                 android:id="@+id/s_c1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c"
-                layout="@layout/settings_content"/>
+                layout="@layout/settings_content_switchable"/>
             <include
                 android:id="@+id/s_c2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c1"
-                layout="@layout/settings_content"/>
+                layout="@layout/settings_content_switchable"/>
             <include
                 android:id="@+id/s_c3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c2"
-                layout="@layout/settings_content"/>
+                layout="@layout/settings_content_switchable"/>
             <include
                 android:id="@+id/s_c4"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c3"
-                layout="@layout/settings_content"/>
+                layout="@layout/settings_content_switchable"/>
+
             <!--CAMERA SETTINGS -->
+
             <TextView
                 android:id="@+id/s_dc1"
                 android:layout_width="wrap_content"
@@ -130,32 +121,34 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_dc1"
-                layout="@layout/settings_content"/>
+                layout="@layout/settings_content_switchable"/>
             <include
                 android:id="@+id/s_c12"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c11"
-                layout="@layout/settings_content"/>
+                layout="@layout/settings_content_switchable"/>
             <include
                 android:id="@+id/s_c13"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c12"
-                layout="@layout/settings_content"/>
+                layout="@layout/settings_content_switchable"/>
             <include
                 android:id="@+id/s_c14"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c13"
-                layout="@layout/settings_content"/>
+                layout="@layout/settings_content_switchable"/>
             <include
                 android:id="@+id/s_c15"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c14"
-                layout="@layout/settings_content"/>
+                layout="@layout/settings_content_switchable"/>
+
             <!--VIDEO SETTINGS -->
+
             <TextView
                 android:id="@+id/s_dc2"
                 android:layout_width="wrap_content"
@@ -174,31 +167,31 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_dc2"
-                layout="@layout/settings_content"/>
+                layout="@layout/settings_content_switchable"/>
             <include
                 android:id="@+id/s_c22"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c21"
-                layout="@layout/settings_content"/>
+                layout="@layout/settings_content_switchable"/>
             <include
                 android:id="@+id/s_c23"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c22"
-                layout="@layout/settings_content"/>
+                layout="@layout/settings_content_switchable"/>
             <include
                 android:id="@+id/s_c24"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c23"
-                layout="@layout/settings_content"/>
+                layout="@layout/settings_content_switchable"/>
             <include
                 android:id="@+id/s_c25"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/s_c24"
-                layout="@layout/settings_content"/>
+                layout="@layout/settings_content_switchable"/>
 
             <com.google.android.material.button.MaterialButton
                 android:layout_width="match_parent"
