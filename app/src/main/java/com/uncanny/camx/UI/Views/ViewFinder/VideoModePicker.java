@@ -12,6 +12,9 @@ import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+
+import com.uncanny.camx.R;
 
 public class VideoModePicker extends ModePicker{
 
@@ -117,11 +120,13 @@ abstract class ModePicker extends View {
 
         tSize = (float) (13.5 * density);
 
-        bgPaint.setColor(0x40000000);
+//        bgPaint.setColor(0x40000000);
+        bgPaint.setColor(ContextCompat.getColor(getContext(), R.color.md3_neutral2_800));
         bgPaint.setAntiAlias(true);
         bgPaint.setStyle(Paint.Style.FILL);
 
-        sPaint.setColor(0x99000000);
+//        sPaint.setColor(0x99000000);
+        sPaint.setColor(ContextCompat.getColor(getContext(),R.color.md3_accent2_100));
         sPaint.setAntiAlias(true);
         sPaint.setStyle(Paint.Style.FILL);
 
@@ -181,6 +186,8 @@ abstract class ModePicker extends View {
         if(modes!=null){
             canvas.drawRoundRect(sRect,50,50,sPaint);
             for(int i=0; i<modes.length; i++){
+                if(i==getIndex()) tPaint.setColor(ContextCompat.getColor(getContext(),R.color.md3_neutral1_900));
+                else tPaint.setColor(0xFFFFFFFF);
                 canvas.drawText(modes[i]
                         ,((float)divisionSize*i)+((float)divisionSize-tPaint.measureText(modes[i]))/2
                         ,(getHeight()+ tSize)/2f-5

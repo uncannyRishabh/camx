@@ -43,8 +43,8 @@
             android:id="@+id/preview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:clipToOutline="true"
-            android:layout_centerHorizontal="true"/>
+            android:layout_centerHorizontal="true"
+            android:clipToOutline="true" />
 
         <TextView
             android:id="@+id/zoom_text"
@@ -165,7 +165,7 @@
                 android:gravity="center"
                 android:paddingBottom="2dp"
                 android:text="1×"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/md3_neutral1_900"
                 android:textSize="16dp" />
         </LinearLayout>
 

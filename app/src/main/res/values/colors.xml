@@ -13,14 +13,14 @@
     <color name="dark_white">#222222</color>
 
     <!--   NON-MATERIAL YOU COLORS -->
-    <color name="md3_bg" >#212226</color>
-    <color name="md3_toolbar" >#3B3C40</color>
-    <color name="md3_switch_thumb" >#D2DFFF</color>
-    <color name="md3_switch_thumb_disabled" >@color/white</color>
-    <color name="md3_switch_track" >#707A8C</color>
-    <color name="md3_switch_track_disabled" >#5E5E5E</color>
-    <color name="md3_setting_header" >@color/white</color>
+    <color name="md3_neutral1_900" >#212226</color>
+    <color name="md3_neutral1_700" >#3B3C40</color>
+    <color name="md3_accent2_100" >#D2DFFF</color>
+    <color name="md3_neutral1_400" >@color/white</color>
+    <color name="md3_accent2_500" >#707A8C</color>
+    <color name="md3_neutral2_50" >@color/white</color>
     <color name="md3_setting_category" >#CEDAF2</color>
-    <color name="md3_setting_headline" >#ebecf1</color>
-    <color name="md3_setting_description" >#ebecf1</color>
+    <color name="md3_neutral1_50" >#ebecf1</color>
+    <color name="md3_neutral2_200" >#ebecf1</color>
+    <color name="md3_neutral2_800" >#2B3237</color>
 </resources>

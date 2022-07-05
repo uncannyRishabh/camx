@@ -2,7 +2,6 @@ package com.uncanny.camx.UI.Views;
 
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -11,6 +10,9 @@ import android.view.View;
 import android.view.animation.AnticipateOvershootInterpolator;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+
+import com.uncanny.camx.R;
 
 /**
  * @author uncannyRishabh (17/5/2021)
@@ -39,7 +41,8 @@ public class GestureBar extends View {
         thickness = 3f * density + .5f;
         delta = 18f * density + .5f;
         Log.e("TAG", "init: thickness : "+thickness);
-        paint.setColor(Color.WHITE);
+//        paint.setColor(Color.WHITE);
+        paint.setColor(ContextCompat.getColor(getContext(), R.color.md3_accent2_100));
         paint.setStrokeWidth(thickness);
         paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setAntiAlias(true);

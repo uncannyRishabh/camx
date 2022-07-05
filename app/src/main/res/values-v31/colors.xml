@@ -13,14 +13,14 @@
     <color name="dark_white">#222222</color>
 
     <!--   MATERIAL YOU COLORS -->
-    <color name="md3_bg" tools:targetApi="s">@android:color/system_neutral1_900</color>
-    <color name="md3_toolbar" tools:targetApi="s">@android:color/system_neutral1_700</color>
-    <color name="md3_switch_thumb" tools:targetApi="s">@android:color/system_accent2_100</color>
-    <color name="md3_switch_thumb_disabled" tools:targetApi="s">@android:color/system_neutral1_400</color>
-    <color name="md3_switch_track" tools:targetApi="s">@android:color/system_accent2_500</color>
-    <color name="md3_switch_track_disabled" tools:targetApi="s">@android:color/system_neutral1_700</color>
-    <color name="md3_setting_header" tools:targetApi="s">@android:color/system_neutral2_50</color>
+    <color name="md3_neutral1_900" tools:targetApi="s">@android:color/system_neutral1_900</color>
+    <color name="md3_neutral1_700" tools:targetApi="s">@android:color/system_neutral1_700</color>
+    <color name="md3_accent2_100" tools:targetApi="s">@android:color/system_accent2_100</color>
+    <color name="md3_neutral1_400" tools:targetApi="s">@android:color/system_neutral1_400</color>
+    <color name="md3_accent2_500" tools:targetApi="s">@android:color/system_accent2_500</color>
+    <color name="md3_neutral2_50" tools:targetApi="s">@android:color/system_neutral2_50</color>
     <color name="md3_setting_category" tools:targetApi="s">@android:color/system_accent2_100</color>
-    <color name="md3_setting_headline" tools:targetApi="s">@android:color/system_neutral1_50</color>
-    <color name="md3_setting_description" tools:targetApi="s">@android:color/system_neutral2_200</color>
+    <color name="md3_neutral1_50" tools:targetApi="s">@android:color/system_neutral1_50</color>
+    <color name="md3_neutral2_200" tools:targetApi="s">@android:color/system_neutral2_200</color>
+    <color name="md3_neutral2_800" tools:targetApi="s">@android:color/system_neutral2_800</color>
 </resources>

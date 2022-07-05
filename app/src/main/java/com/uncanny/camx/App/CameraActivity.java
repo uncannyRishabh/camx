@@ -165,6 +165,8 @@ public class CameraActivity extends Activity {
     private List<Surface> surfaceList = new ArrayList<>();
     private Vector<Surface> hfrSurfaceList = new Vector<>();
     private Handler mHandler = new Handler();
+    private Context context;
+
     private RelativeLayout appbar;
     private AutoFitPreviewView tvPreview;
     private CaptureButton shutter;
@@ -370,7 +372,8 @@ public class CameraActivity extends Activity {
         mModePicker = findViewById(R.id.mode_picker_view);
         setAestheticLayout();
 
-        lensData = new LensData(getApplicationContext());
+        context = getApplicationContext();
+        lensData = new LensData(context);
         cameraList =  lensData.getPhysicalCameras();
         auxCameraList = lensData.getAuxiliaryCameras();
 
@@ -443,12 +446,12 @@ public class CameraActivity extends Activity {
             gridClick+=1;
 
             if(grids.getVisibility()==View.VISIBLE && gridClick>2){
-                button2.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.white)
+                button2.setColorFilter(ContextCompat.getColor(context,R.color.white)
                         , PorterDuff.Mode.MULTIPLY);
                 grids.setVisibility(View.INVISIBLE);
             }
             else{
-                button2.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.purple_200)
+                button2.setColorFilter(ContextCompat.getColor(context,R.color.purple_200)
                         , PorterDuff.Mode.MULTIPLY);
                 grids.setLines((gridClick == 1 ? 3 : 4));
                 grids.setVisibility(View.VISIBLE);
@@ -495,7 +498,7 @@ public class CameraActivity extends Activity {
                 closeCamera();
                 openCamera();
 
-                button23.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.purple_200)
+                button23.setColorFilter(ContextCompat.getColor(context,R.color.purple_200)
                         , PorterDuff.Mode.MULTIPLY);
             } else if (ASPECT_RATIO_169) {
                 ASPECT_RATIO_43 = true;
@@ -506,7 +509,7 @@ public class CameraActivity extends Activity {
                 tvPreview.measure(previewSize.getHeight(), previewSize.getWidth());
 
 
-                button23.setColorFilter(ContextCompat.getColor(getApplicationContext(),R.color.white)
+                button23.setColorFilter(ContextCompat.getColor(context,R.color.white)
                         , PorterDuff.Mode.MULTIPLY);
             }
         });
@@ -638,10 +641,10 @@ public class CameraActivity extends Activity {
                 exposureControl.post(this::setExposureRange);
                 for(int id : auxCameraList){
                     tv = auxDock.findViewById(id);
-                    tv.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
+                    tv.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview_small));
                     tv.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
                 }
-                wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview));
+                wide_lens.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview));
                 wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
                 wide_lens.post(hideAuxDock);
             }
@@ -791,7 +794,7 @@ public class CameraActivity extends Activity {
     }
 
     private boolean flashSupported() {
-        return getApplicationContext().getPackageManager()
+        return context.getPackageManager()
                 .hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH);
     }
 
@@ -946,9 +949,10 @@ public class CameraActivity extends Activity {
                 aux_btn.setLayoutParams(layoutParams);
                 aux_btn.setId(auxCameraList.get(i));
                 aux_btn.setGravity(Gravity.CENTER);
+                aux_btn.setTextColor(ContextCompat.getColor(context,R.color.md3_neutral1_900));
                 aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
                 aux_btn.setText(auxCameraList.get(i).toString());
-                aux_btn.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
+                aux_btn.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview_small));
                 auxDock.addView(aux_btn);
 
                 aux_btn.setOnClickListener(v -> {
@@ -965,11 +969,14 @@ public class CameraActivity extends Activity {
                         }
                         else if (getState() == CamState.SLOMO) addCapableSloMoResolutions();
                         exposureControl.post(this::setExposureRange);
-                        wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
+                        wide_lens.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview_small));
+//                        wide_lens.setTextColor(0xFFFFFFFF);
                         wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
                         aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-                        aux_btn.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview));
+                        aux_btn.setTextColor(ContextCompat.getColor(context,R.color.md3_neutral1_900));
+                        aux_btn.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview));
                         resetAuxDock();
+
                     }
                 });
             }
@@ -1082,10 +1089,9 @@ public class CameraActivity extends Activity {
                 continue;
             }
             tv = auxDock.findViewById(id);
-            tv.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview_small));
+            tv.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview_small));
             tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-            tv.setTextColor(Color.WHITE);
-
+            tv.setTextColor(ContextCompat.getColor(context,R.color.md3_neutral1_900));
         }
     }
 
@@ -1141,7 +1147,7 @@ public class CameraActivity extends Activity {
             thumbPreview.setOnClickListener(openGallery);
             displayMediaThumbnailFromGallery();
             front_switch.setImageDrawable(ResourcesCompat.getDrawable(getResources()
-                    , R.drawable.ic_front_switch, null));
+                    , R.drawable.ic_round_flip_camera_android_24, null));
             front_switch.setOnClickListener(switchFrontCamera);
             videoModePicker.setIndex(1);
         }
@@ -1185,7 +1191,7 @@ public class CameraActivity extends Activity {
             } else {
                 setCameraId(BACK_CAMERA_ID);
                 if(getState() != CamState.PORTRAIT) openCamera();
-                wide_lens.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.circular_textview));
+                wide_lens.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview));
                 wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
                 front_switch.animate().rotation(-180f).setDuration(300);
                 resetAuxDock();
@@ -1515,7 +1521,7 @@ public class CameraActivity extends Activity {
 
         exposureControl.removeCallbacks(hideExposureControl);
         AE_AF_LOCK = true;
-        AEAFlock.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_ae_af_lock_24));
+        AEAFlock.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_ae_af_lock_24));
         buildPreview();
     }
 
@@ -1525,7 +1531,7 @@ public class CameraActivity extends Activity {
 
         exposureControl.postDelayed(hideExposureControl,3000);
         AE_AF_LOCK = false;
-        AEAFlock.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_ae_af_unlock_24));
+        AEAFlock.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_ae_af_unlock_24));
         buildPreview();
     }
 
@@ -1803,7 +1809,7 @@ public class CameraActivity extends Activity {
                      + " w : " + camcorderProfile.videoFrameWidth);
              Log.e(TAG, "setupMediaRecorder: Video BitRate : " + camcorderProfile.videoBitRate);
 
-             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(getApplicationContext());
+             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(context);
              else mMediaRecorder = new MediaRecorder();
              mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
              mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
@@ -1936,7 +1942,7 @@ public class CameraActivity extends Activity {
         else {
             hfrSurfaceList.clear();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                mMediaRecorder = new MediaRecorder(getApplicationContext());
+                mMediaRecorder = new MediaRecorder(context);
             }
             else {
                 mMediaRecorder = new MediaRecorder();
@@ -2385,7 +2391,7 @@ public class CameraActivity extends Activity {
 
         @Override
         public void onError(@NonNull CameraDevice cameraDevice, int i) {
-            Log.e(TAG, "onError: camera failed: " + i);
+            Log.e(TAG, "onError: camera failed: " + i); // FIXME: err code 5 on stock android 12
             camDevice = null;
             finish();
         }

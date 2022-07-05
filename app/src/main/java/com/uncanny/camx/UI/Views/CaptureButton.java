@@ -109,10 +109,11 @@ public class CaptureButton extends View {
                 icRadius = screenWidth/16f;
                 oPaint.setStyle(Paint.Style.FILL);
                 tPaint.setPathEffect(new CornerPathEffect(14f));
+                tPaint.setStyle(Paint.Style.FILL);
                 paint.setStrokeWidth(2f);
                 paint.setPathEffect(new CornerPathEffect(14f));
-                paint.setStrokeJoin(Paint.Join.ROUND);
                 paint.setColor(Color.parseColor("#FDDDDC"));
+                paint.setStyle(Paint.Style.FILL);
                 break;
             default:
                 break;
@@ -153,23 +154,23 @@ public class CaptureButton extends View {
 
     private void drawTriangle(Canvas canvas, int side){
         int halfWidth = side / 2;
-        float padding = side / 3f;
+        float padding = side / 2.8f;
 
         Path path = new Path();
         path.moveTo(padding                , (side-halfWidth)*.62f); // Top
         path.lineTo(padding                , side - (side-halfWidth)*.62f); // Bottom
         path.lineTo(padding + padding*.7f,side/2f); // Center
         path.lineTo(padding                , (side-halfWidth)*.62f); // Back to Top
-
+        path.lineTo(padding                , side - (side-halfWidth)*.62f);
         canvas.drawPath(path, paint);
 
-        Path path1 = new Path();
-        path1.moveTo(halfWidth               , (side-halfWidth)*.62f); // Top
-        path1.lineTo(halfWidth               , side - (side-halfWidth)*.62f); // Bottom
-        path1.lineTo(halfWidth + padding*.7f,side/2f); // Center
-        path1.lineTo(halfWidth               , (side-halfWidth)*.62f); // Back to Top
-
-        canvas.drawPath(path1, tPaint);
+        path.reset();
+        path.moveTo(halfWidth               , (side-halfWidth)*.62f); // Top
+        path.lineTo(halfWidth               , side - (side-halfWidth)*.62f); // Bottom
+        path.lineTo(halfWidth + padding*.7f,side/2f); // Center
+        path.lineTo(halfWidth               , (side-halfWidth)*.62f); // Back to Top
+        path.lineTo(halfWidth               , side - (side-halfWidth)*.62f);
+        canvas.drawPath(path, tPaint);
     }
 
     @Override

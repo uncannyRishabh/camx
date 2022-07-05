@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/md3_bg"
+    android:background="@color/md3_neutral1_900"
     android:fitsSystemWindows="true"
     tools:context=".App.SettingsActivity">
 
@@ -13,7 +13,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:fitsSystemWindows="true"
-        android:background="@color/md3_bg"
+        android:background="@color/md3_neutral1_900"
         app:expandedTitleMarginBottom="30dp"
         app:expandedTitleMarginStart="72dp"
         >
@@ -27,9 +27,9 @@
             app:expandedTitleTextAppearance="@style/SettingsTitleBarExpanded"
             app:collapsedTitleTextAppearance="@style/SettingsTitleBarCollapsed"
             app:title="Camera settings"
-            app:contentScrim="@color/md3_toolbar"
-            app:statusBarScrim="@color/md3_toolbar"
-            app:expandedTitleTextColor="@color/md3_setting_header"
+            app:contentScrim="@color/md3_neutral1_700"
+            app:statusBarScrim="@color/md3_neutral1_700"
+            app:expandedTitleTextColor="@color/md3_neutral2_50"
             app:scrimAnimationDuration="0"
             >
             <com.google.android.material.appbar.MaterialToolbar
@@ -202,7 +202,7 @@
                 android:layout_marginBottom="108dp"
                 android:layout_marginHorizontal="22dp"
                 android:layout_below="@id/s_c25"
-                app:backgroundTint="@color/md3_bg"
+                app:backgroundTint="@color/md3_neutral1_900"
                 app:iconTint="@color/white"
                 android:textColor="@color/white"
                 android:text="About"

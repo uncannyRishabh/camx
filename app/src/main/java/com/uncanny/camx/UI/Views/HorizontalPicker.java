@@ -49,6 +49,7 @@ import android.widget.OverScroller;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.core.content.ContextCompat;
 import androidx.core.text.TextDirectionHeuristicCompat;
 import androidx.core.text.TextDirectionHeuristicsCompat;
 import androidx.core.view.ViewCompat;
@@ -314,8 +315,10 @@ public class HorizontalPicker extends View {
                     background.left = itemClipBounds.left - 14 + margin;
                     background.right = itemClipBounds.right + 14 - margin;
 
-                    textPaint.setColor(Color.WHITE); //MODIFY SELECTED TEXT COLOR
-                    paint.setColor(Color.parseColor("#FF606060"));        //MODIFY BACKGROUND COLOR
+//                    textPaint.setColor(Color.WHITE); //MODIFY SELECTED TEXT COLOR
+//                    paint.setColor(Color.parseColor("#FF606060"));        //MODIFY BACKGROUND COLOR
+                    textPaint.setColor(ContextCompat.getColor(getContext(),R.color.md3_neutral1_900));
+                    paint.setColor(ContextCompat.getColor(getContext(),R.color.md3_accent2_100));
                     canvas.drawRoundRect(background, 100, 100, paint);
                 }
                 canvas.clipRect(clipBounds);

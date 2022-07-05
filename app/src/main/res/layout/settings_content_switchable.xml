@@ -15,7 +15,7 @@
         android:ellipsize="marquee"
         android:marqueeRepeatLimit="marquee_forever"
         android:text="Setting"
-        android:textColor="@color/md3_setting_headline"
+        android:textColor="@color/md3_neutral1_50"
         android:textSize="19sp" />
 
     <TextView
@@ -28,7 +28,7 @@
         android:paddingStart="0dp"
         android:paddingEnd="6dp"
         android:text="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-        android:textColor="@color/md3_setting_description"
+        android:textColor="@color/md3_neutral2_200"
         android:textSize="14sp" />
 
     <com.google.android.material.divider.MaterialDivider

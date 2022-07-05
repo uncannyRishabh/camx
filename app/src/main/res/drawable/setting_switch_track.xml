@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:color="@color/md3_switch_track" android:state_checked="true"/>
-    <item android:color="@color/md3_switch_track_disabled" android:state_checked="false"/>
+    <item android:color="@color/md3_accent2_500" android:state_checked="true"/>
+    <item android:color="@color/md3_neutral1_700" android:state_checked="false"/>
 </selector>
