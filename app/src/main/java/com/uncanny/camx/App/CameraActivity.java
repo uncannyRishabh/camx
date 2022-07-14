@@ -147,7 +147,8 @@ public class CameraActivity extends Activity {
     private SurfaceTexture stPreview;
 
     private static String cameraId = "0";
-    private String mVideoFileName;
+    private String mVideoFile = "//storage//emulated//0//DCIM//Camera//";
+    private String mVideoSuffix;
     private int vFPS = 30;
     private int sFPS = 120;
     private String chip_Text;
@@ -213,6 +214,7 @@ public class CameraActivity extends Activity {
     private List<Integer> cameraList;
     private List<Integer> auxCameraList;
 
+    private boolean shouldDeleteEmptyFile = false;
     private boolean isVRecording = false;
     private boolean isSLRecording = false;
     private boolean isVideoPaused = false;
@@ -382,6 +384,9 @@ public class CameraActivity extends Activity {
 
         tvPreviewParent.setClipToOutline(true);
 
+        if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
+            displayMediaThumbnailFromGallery();
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -773,9 +778,7 @@ public class CameraActivity extends Activity {
                 CachedCameraModes[i] = lensData.getAvailableModes(cameraList.get(i)+"");
             }
         }
-        if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
-            displayMediaThumbnailFromGallery();
-        }
+
     }
 
     @Override
@@ -909,6 +912,7 @@ public class CameraActivity extends Activity {
                     getState() == CamState.HSVIDEO_PROGRESSED) break;
                 setState(CamState.VIDEO);
                 modeVideo();
+
                 Log.e(TAG, "onItemSelected: VIDEO MODE");
                 break;
             }
@@ -922,6 +926,8 @@ public class CameraActivity extends Activity {
             }
         }
 
+        if(shouldDeleteEmptyFile) performFileCleanup();
+
         auxDock.post(hideAuxDock);
         zoomText.post(hideZoomText);
         if(getState() == CamState.VIDEO && lensData.hasSloMoCapabilities(getCameraId()))
@@ -932,7 +938,15 @@ public class CameraActivity extends Activity {
                 View.VISIBLE : View.INVISIBLE);
     }
 
-    /**
+     private void performFileCleanup() {
+         shouldDeleteEmptyFile = false;
+         Log.e(TAG, "performFileCleanup: DELETE STATUS : "+shouldDeleteEmptyFile);
+         File del = new File(mVideoFile);
+         boolean ds = del.delete();
+         Log.e(TAG, "performFileCleanup: DELETED ?? "+ds);
+     }
+
+     /**
      * UI CHANGES
      */
 
@@ -1804,7 +1818,8 @@ public class CameraActivity extends Activity {
 
     private void setupMediaRecorder(CamcorderProfile camcorderProfile) {
          try {
-             mVideoFileName = "CamX" + System.currentTimeMillis() + "_" + getCameraId() + ".mp4";
+             mVideoFile = "//storage//emulated//0//DCIM//Camera//";
+             mVideoSuffix = "CamX" + System.currentTimeMillis() + "_" + getCameraId() + ".mp4";
              Log.e(TAG, "setupMediaRecorder: MAX PERMITTED RES BY MediaRecorder : h : " + camcorderProfile.videoFrameHeight
                      + " w : " + camcorderProfile.videoFrameWidth);
              Log.e(TAG, "setupMediaRecorder: Video BitRate : " + camcorderProfile.videoBitRate);
@@ -1821,11 +1836,14 @@ public class CameraActivity extends Activity {
              mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
              mMediaRecorder.setVideoSize(mVideoRecordSize.getHeight(), mVideoRecordSize.getWidth());
              mMediaRecorder.setVideoFrameRate(vFPS);
-             mMediaRecorder.setOrientationHint(90);      //TODO : CHANGE ACCORDING TO SENSOR ORIENTATION
+             mMediaRecorder.setOrientationHint(getJpegOrientation()); //90   // TODO : CHANGE ACCORDING TO SENSOR ORIENTATION
+             mVideoFile += mVideoSuffix;
+             shouldDeleteEmptyFile = true;
+             Log.e(TAG, "setupMediaRecorder: DELETE STATUS : "+shouldDeleteEmptyFile);
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                 mMediaRecorder.setOutputFile(new File("//storage//emulated//0//DCIM//Camera//" + mVideoFileName));
+                 mMediaRecorder.setOutputFile(new File(mVideoFile));
              } else {
-                 mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//" + mVideoFileName); //TODO : CLEANUP FILE
+                 mMediaRecorder.setOutputFile(mVideoFile);
              }
              mMediaRecorder.setVideoEncodingBitRate(16400000);
              mMediaRecorder.prepare();           //FIXME : prepare fails on emulator(sdk24)
@@ -1836,6 +1854,8 @@ public class CameraActivity extends Activity {
     }
 
     private void startRecording(){
+        shouldDeleteEmptyFile = false;
+        Log.e(TAG, "startRecording: DELETE STATUS : "+shouldDeleteEmptyFile);
         try {
             SurfaceTexture surfaceTexture = tvPreview.getSurfaceTexture();
             surfaceTexture.setDefaultBufferSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
@@ -2054,7 +2074,7 @@ public class CameraActivity extends Activity {
     }
 
     private void setupMediaRecorder_SloMoe(Pair<Size,Range<Integer>> size) {
-        mVideoFileName = "CamX"+System.currentTimeMillis()+"_"+getCameraId()+".mp4";
+        mVideoSuffix = "CamX"+System.currentTimeMillis()+"_"+getCameraId()+".mp4";
         mMediaRecorder.reset();
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
 //        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
@@ -2062,10 +2082,10 @@ public class CameraActivity extends Activity {
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
 //        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            mMediaRecorder.setOutputFile(new File("//storage//emulated//0//DCIM//Camera//"+mVideoFileName));
+            mMediaRecorder.setOutputFile(new File("//storage//emulated//0//DCIM//Camera//"+ mVideoSuffix));
         }
         else {
-            mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//"+mVideoFileName);
+            mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//"+ mVideoSuffix);
         }
         mMediaRecorder.setVideoFrameRate(sFPS);
         mMediaRecorder.setVideoSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
@@ -2242,6 +2262,7 @@ public class CameraActivity extends Activity {
 
     private void displayMediaThumbnailFromGallery() {
         ImageDecoderThread idt;
+        // TODO: Optimize
         Completable.fromRunnable(idt = new ImageDecoderThread())
                 .subscribeOn(Schedulers.from(executor))
                 .observeOn(AndroidSchedulers.mainThread())
@@ -2509,6 +2530,7 @@ public class CameraActivity extends Activity {
         ready = false;
         resumed = false;
         tvPreview.setOnTouchListener(null);
+        performFileCleanup();
         if(getState() == CamState.CAMERA)
             closeCamera();
         else if(getState() == CamState.VIDEO) {
@@ -2522,6 +2544,7 @@ public class CameraActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        performFileCleanup();
         stopBackgroundThread();
     }
 

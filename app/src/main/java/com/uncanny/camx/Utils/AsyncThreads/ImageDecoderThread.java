@@ -43,7 +43,6 @@ public class ImageDecoderThread implements Runnable{
         if(Build.VERSION.SDK_INT<Build.VERSION_CODES.Q){
             File f = new File(dirPath);
             File[] dcimFiles = f.listFiles(FILENAME_FILTER);
-            /// FIXME : RECURSIVELY TRAVERSE FROM END IF UNABLE TO GENERATE THUMBNAIL
             List<File> filesList = new ArrayList<>(Arrays.asList(dcimFiles != null ? dcimFiles : new File[0]));
             if (!filesList.isEmpty()) {
                 filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
@@ -70,7 +69,8 @@ public class ImageDecoderThread implements Runnable{
                 File lastImage = filesList.get(0);
                 Log.e(TAG, "display_latest_image_from_gallery: latest : "+lastImage);
                 if(fileIsImage(String.valueOf(lastImage))){
-                    bitmap = BitmapFactory.decodeFile(String.valueOf(lastImage));
+                    bitmap = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(String.valueOf(lastImage))
+                            ,100,100);
                 }
                 else {
                     try {

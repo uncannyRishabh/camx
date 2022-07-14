@@ -191,8 +191,8 @@
 
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/img_gal"
-            android:layout_width="54dp"
-            android:layout_height="54dp"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:layout_marginStart="38dp"
@@ -217,13 +217,13 @@
 
         <androidx.appcompat.widget.AppCompatImageButton
             android:id="@+id/front_back_switch"
-            android:layout_width="54dp"
-            android:layout_height="54dp"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:layout_marginEnd="40dp"
             android:background="#00020202"
-            android:padding="2dp"
+            android:padding="4dp"
             android:scaleType="fitXY"
             android:src="@drawable/ic_round_flip_camera_android_24" />
     </RelativeLayout>

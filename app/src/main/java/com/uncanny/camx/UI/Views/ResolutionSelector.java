@@ -13,9 +13,11 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
 
 import com.uncanny.camx.App.CameraActivity.CamState;
+import com.uncanny.camx.R;
 
 import java.util.ArrayList;
 
@@ -62,7 +64,7 @@ public class ResolutionSelector extends View {
 
         paint.setAntiAlias(true);
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(Color.parseColor("#252525"));
+        paint.setColor(ContextCompat.getColor(getContext(), R.color.md3_neutral1_900));
 
         headerPaint.setColor(Color.WHITE);
         headerPaint.setTextAlign(Paint.Align.CENTER);
@@ -74,7 +76,7 @@ public class ResolutionSelector extends View {
         footerPaint.setAntiAlias(true);
         footerPaint.setTextSize(footerTextSize);
 
-        sPaint.setColor(Color.parseColor("#9883F0"));
+        sPaint.setColor(ContextCompat.getColor(getContext(),R.color.md3_accent2_100));
         sPaint.setStyle(Paint.Style.FILL);
         sPaint.setAntiAlias(true);
 
@@ -124,6 +126,10 @@ public class ResolutionSelector extends View {
                 valueAnimator.start();
             }
         }
+    }
+
+    public int getIndex(){
+        return (int) index;
     }
 
     public void clearHeaderItems(){
@@ -212,6 +218,8 @@ public class ResolutionSelector extends View {
             //HEADER TEXT
             headerPaint.setFakeBoldText(false);
             for(int i = 1; i<= headerItems.size(); i++){
+                if(i==getIndex()) headerPaint.setColor(ContextCompat.getColor(getContext(),R.color.md3_neutral1_900));
+                else headerPaint.setColor(0xFFFFFFFF);
                 canvas.drawText(headerItems.get(i-1)
                         ,((getWidth()/divisions)*(2*i - 1) + getPaddingStart() -getPaddingEnd())/2
                         ,(getHeight()+ headingTextSize)/2f-5
@@ -222,6 +230,8 @@ public class ResolutionSelector extends View {
             //HEADER TEXT
             headerPaint.setFakeBoldText(true);
             for(int i = 1; i<= headerAndFooterItems.size(); i++){
+                if(i==getIndex()) headerPaint.setColor(ContextCompat.getColor(getContext(),R.color.md3_neutral1_900));
+                else headerPaint.setColor(0xFFFFFFFF);
                 canvas.drawText(getHeader(headerAndFooterItems.get(i-1))
                         ,((getWidth()/divisions)*(2*i - 1) + getPaddingStart() -getPaddingEnd())/2
                         ,getHeight()/2f
@@ -230,6 +240,8 @@ public class ResolutionSelector extends View {
 
             //FOOTER TEXT
             for(int i = 1; i<= headerAndFooterItems.size(); i++){
+                if(i==getIndex()) footerPaint.setColor(ContextCompat.getColor(getContext(),R.color.md3_neutral1_900));
+                else footerPaint.setColor(0xFFFFFFFF);
                 canvas.drawText(getFooter(headerAndFooterItems.get(i-1))
                         ,((getWidth()/divisions)*(2*i - 1) + getPaddingStart() -getPaddingEnd())/2
                         ,(getHeight()/2f) + headingTextSize
