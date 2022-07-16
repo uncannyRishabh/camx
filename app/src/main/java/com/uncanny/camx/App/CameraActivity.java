@@ -1715,7 +1715,7 @@ public class CameraActivity extends Activity {
                 captureRequest.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF);
             }
 
-            if(ZOOM_LEVEL !=1) {
+            if(ZOOM_LEVEL !=0) {
                 captureRequest.set(CaptureRequest.SCALER_CROP_REGION, zoom);
             }
             camSession.capture(captureRequest.build(), snapshotCallback, mHandler);
@@ -2124,7 +2124,6 @@ public class CameraActivity extends Activity {
         CameraCharacteristics c = getCameraCharacteristics();
         int sensorOrientation =  c.get(CameraCharacteristics.SENSOR_ORIENTATION);
         int surfaceRotation = ORIENTATIONS.get(deviceOrientation);
-
 
 //        // Round device orientation to a multiple of 90
 //        deviceOrientation = (deviceOrientation + 45) / 90 * 90;
