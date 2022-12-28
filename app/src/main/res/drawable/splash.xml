@@ -6,7 +6,15 @@
         </shape>
     </item>
     <item
-        android:drawable="@drawable/ic_icon"
+        android:width="80dp"
+        android:height="80dp"
+        android:gravity="center">
+        <shape android:shape="oval">
+            <solid android:color="@color/white"/>
+        </shape>
+    </item>
+    <item
+        android:drawable="@drawable/ic_launcher_foreground"
         android:width ="180dp"
         android:height="180dp"
         android:gravity="center"

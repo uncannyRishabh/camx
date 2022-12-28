@@ -1,4 +1,4 @@
-package com.uncanny.camx.App;
+package com.uncanny.camx.Activity;
 
 import android.os.Bundle;
 import android.view.View;

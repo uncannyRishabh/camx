@@ -17,7 +17,7 @@ import android.view.View;
 
 import androidx.annotation.Nullable;
 
-import com.uncanny.camx.App.CameraActivity;
+import com.uncanny.camx.Activity.CameraActivity;
 import com.uncanny.camx.UI.Views.ViewFinder.FocusCircle;
 
 import java.util.Objects;

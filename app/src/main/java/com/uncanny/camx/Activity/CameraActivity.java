@@ -1,4 +1,4 @@
- package com.uncanny.camx.App;
+ package com.uncanny.camx.Activity;
 
  import android.Manifest;
  import android.animation.LayoutTransition;
@@ -804,6 +804,7 @@ public class CameraActivity extends Activity {
     /**
      * MODES
      */
+
     private void modeCamera(){
         shutter.animateInnerCircle(getState());
         closeCamera();

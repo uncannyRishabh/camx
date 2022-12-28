@@ -27,14 +27,15 @@
         android:requestLegacyExternalStorage="true"
         android:supportsRtl="true"
         android:theme="@style/splash">
-        <activity android:name=".App.SettingsActivity"
+        <activity android:name=".Activity.SettingsActivity"
             android:theme="@style/EdgeToEdge"
-            android:parentActivityName=".App.CameraActivity"/>
+            android:parentActivityName=".Activity.CameraActivity"/>
         <activity
-            android:name=".App.CameraActivity"
+            android:name=".Activity.CameraActivity"
             android:exported="true"
             android:resizeableActivity="true"
             android:screenOrientation="portrait"
+            android:theme="@style/Theme.camX"
             tools:ignore="LockedOrientationActivity,NonResizeableActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
