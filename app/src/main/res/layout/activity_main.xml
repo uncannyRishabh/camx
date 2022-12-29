@@ -191,8 +191,8 @@
 
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/img_gal"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:layout_marginStart="38dp"
@@ -204,7 +204,7 @@
             app:shapeAppearanceOverlay="@style/circularImageView"
             app:srcCompat="@drawable/solid_black"
             app:strokeColor="@color/white"
-            app:strokeWidth="2dp" />
+            app:strokeWidth="2.5dp" />
 
         <com.uncanny.camx.UI.Views.CaptureButton
             android:id="@+id/capture"

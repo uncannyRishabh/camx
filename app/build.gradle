@@ -5,7 +5,13 @@ plugins {
 android {
     signingConfigs {
         debug {
-            storeFile file('/Users/rishabhrajgupta/AndroidStudioProjects/$KeyStore/Camx_key0')
+            def os = System.getProperty("os.name").toLowerCase();
+            if(os.contains("win")){
+                storeFile file('C:\\Users\\Rishabh Raj Gupta\\AndroidStudioProjects\\keyStorePath\\Camx_key0')
+            }
+            else{
+                storeFile file('/Users/rishabhrajgupta/AndroidStudioProjects/$KeyStore/Camx_key0')
+            }
             keyAlias 'key0'
             storePassword 'Baloney@1'
             keyPassword 'Baloney@1'

@@ -52,7 +52,6 @@
  import android.view.View;
  import android.view.ViewGroup;
  import android.view.WindowManager;
- import android.view.animation.AccelerateInterpolator;
  import android.view.animation.DecelerateInterpolator;
  import android.widget.ImageButton;
  import android.widget.ImageView;
@@ -559,12 +558,12 @@ public class CameraActivity extends Activity {
                         setState(CamState.VIDEO_PROGRESSED);
                         mainThreadExecutor.execute(this::modifyUIonVideoShutter);
                         auxDock.post(hideAuxDock);
-                        try {
-                            camSession.abortCaptures();
-                        }
-                        catch (CameraAccessException e){
-                            e.printStackTrace();
-                        }
+//                        try {
+//                            camSession.abortCaptures();
+//                        }
+//                        catch (CameraAccessException e){
+//                            e.printStackTrace();
+//                        }
                         startRecording();
 
                         isVRecording = true;
@@ -1175,7 +1174,7 @@ public class CameraActivity extends Activity {
             thumbPreview.setOnClickListener(captureSnapshot);
             front_switch.setImageDrawable(ResourcesCompat.getDrawable(getResources()
                     , R.drawable.ic_video_pause, null));
-            front_switch.setOnClickListener(play_pauseVideo);
+            front_switch.setOnClickListener(pause_resume_Video);
             shutter.animateInnerCircle(getState());
             mModePicker.setVisibility(View.INVISIBLE);
             chronometer.setBase(SystemClock.elapsedRealtime());
@@ -1192,6 +1191,12 @@ public class CameraActivity extends Activity {
     /**
      * LISTENERS
      */
+
+    private View.OnClickListener openGallery = v -> {
+        Intent intent = new Intent(Intent.ACTION_VIEW, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivityForResult(intent, resultCode);
+    };
 
     private View.OnClickListener switchFrontCamera = new View.OnClickListener(){
         @Override
@@ -1217,12 +1222,6 @@ public class CameraActivity extends Activity {
         }
     };
 
-    private View.OnClickListener openGallery = v -> {
-        Intent intent = new Intent(Intent.ACTION_VIEW, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivityForResult(intent, resultCode);
-    };
-
     private View.OnClickListener captureSnapshot = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
@@ -1241,7 +1240,7 @@ public class CameraActivity extends Activity {
         }
     };
 
-    private View.OnClickListener play_pauseVideo = new View.OnClickListener() {
+    private View.OnClickListener pause_resume_Video = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
             if(isVideoPaused){
@@ -1685,8 +1684,8 @@ public class CameraActivity extends Activity {
         surfaceList.add(imgReader.getSurface());
 
         //RESET ZOOM
-        if(previewCaptureRequest!=null) zSlider.setValue(0f);
-        ZOOM_LEVEL = 0;
+//        if(previewCaptureRequest!=null) zSlider.setValue(0f);
+//        ZOOM_LEVEL = 0;
         Log.e(TAG, "openCamera: ImageReader preview size " + previewSize);
         Log.e(TAG, "openCamera: ImageReader capture size " + imageSize);
 
@@ -1751,6 +1750,8 @@ public class CameraActivity extends Activity {
      * VIDEO M E T H O D S
      */
 
+    Surface previewSurface;
+
     private void createVideoPreviewWithAptResolution(){
         if(lensData.is1080pCapable(getCameraId())) createVideoPreview(1920,1080);
         else createVideoPreview(1280,720);
@@ -1760,13 +1761,12 @@ public class CameraActivity extends Activity {
         if (!resumed || !surface)
             return;
 
-        StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 //        Log.e(TAG, "createVideoPreview: "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
+        StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
         mVideoPreviewSize = new Size(height, width);
         if(mVideoRecordSize == null) {
-            Size t = getPreviewResolution(map.getOutputSizes(MediaRecorder.class)
-                    , width, false);
+            Size t = getPreviewResolution(map.getOutputSizes(MediaRecorder.class), width, false);
             mVideoRecordSize = new Size(t.getHeight(), t.getWidth());
         }
 
@@ -1782,14 +1782,15 @@ public class CameraActivity extends Activity {
 
         stPreview.setDefaultBufferSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
         tvPreview.setAspectRatio(mVideoPreviewSize.getHeight(), mVideoPreviewSize.getWidth());
-        Surface previewSurface = new Surface(stPreview);
+        previewSurface = new Surface(stPreview);
         try {
-            previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
             previewCaptureRequest.addTarget(previewSurface);
-//            previewCaptureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_OFF);
-//            camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,new Range<>(24,60));
             previewCaptureRequest.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE
                     ,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON);
+
+//            previewCaptureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_OFF);
+//            camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,new Range<>(24,60));
 
             camDevice.createCaptureSession(Collections.singletonList(previewSurface)
                     , new CameraCaptureSession.StateCallback() {
@@ -1797,15 +1798,11 @@ public class CameraActivity extends Activity {
                         public void onConfigured(@NonNull CameraCaptureSession session) {
                             camSession = session;
                             try {
-                                camSession.setRepeatingRequest(previewCaptureRequest.build()
-                                        , null,mBackgroundHandler);
-
-                                focus = new FocusControls(getCameraCharacteristics(),focusCircle,hideFocusCircle,getState(),session
-                                        ,previewCaptureRequest,highSpeedCaptureSession,mBackgroundHandler);
+                                camSession.setRepeatingRequest(previewCaptureRequest.build(), null,mBackgroundHandler);
 
                                 if(!isVRecording){
-                                    CamcorderProfile camcorderProfile = CamcorderProfile.get(getCameraId().equals("0") ? 0 : 1
-                                            ,CamcorderProfile.QUALITY_HIGH);
+                                    CamcorderProfile camcorderProfile = CamcorderProfile
+                                            .get(getCameraId().equals("0") ? 0 : 1,CamcorderProfile.QUALITY_HIGH);
                                     setupMediaRecorder(camcorderProfile);
                                 }
                                 tvPreview.setOnTouchListener(touchListener);
@@ -1816,7 +1813,7 @@ public class CameraActivity extends Activity {
 
                         @Override
                         public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-
+                            Log.e(TAG, "onConfigureFailed: createVideoPreview()");
                         }
                     },null);
         } catch (CameraAccessException e) {
@@ -1834,17 +1831,22 @@ public class CameraActivity extends Activity {
 
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(context);
              else mMediaRecorder = new MediaRecorder();
-             mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-             mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
-             mMediaRecorder.setAudioSamplingRate(96);
-             mMediaRecorder.setAudioEncodingBitRate(96000); //FIXME : UNABLE TO SET HIGHER THAN 48kbits/sec
-             mMediaRecorder.setAudioEncodingBitRate(camcorderProfile.audioBitRate);
-             mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-             mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
-             mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-             mMediaRecorder.setVideoSize(mVideoRecordSize.getHeight(), mVideoRecordSize.getWidth());
-             mMediaRecorder.setVideoFrameRate(vFPS);
              mMediaRecorder.setOrientationHint(getJpegOrientation()); //90   // TODO : CHANGE ACCORDING TO SENSOR ORIENTATION
+//
+//             mediaRecorder.setAudioEncodingBitRate(64000);
+//             mMediaRecorder.setAudioChannels(1);
+//             mediaRecorder.setAudioSamplingRate(48000);
+
+             mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
+             mMediaRecorder.setAudioSamplingRate(48000);
+             mMediaRecorder.setAudioEncodingBitRate(64000);
+             mMediaRecorder.setAudioEncodingBitRate(camcorderProfile.audioBitRate);
+             mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+             mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+             mMediaRecorder.setVideoFrameRate(vFPS);
+             mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+             mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
+             mMediaRecorder.setVideoSize(mVideoRecordSize.getHeight(), mVideoRecordSize.getWidth());
              mVideoFile += mVideoSuffix;
              shouldDeleteEmptyFile = true;
              Log.e(TAG, "setupMediaRecorder: DELETE STATUS : "+shouldDeleteEmptyFile);
@@ -1853,7 +1855,7 @@ public class CameraActivity extends Activity {
              } else {
                  mMediaRecorder.setOutputFile(mVideoFile);
              }
-             mMediaRecorder.setVideoEncodingBitRate(16400000);
+             mMediaRecorder.setVideoEncodingBitRate(3000000);
              mMediaRecorder.prepare();           //FIXME : prepare fails on emulator(sdk24)
          }
          catch (IOException e){
@@ -1865,15 +1867,15 @@ public class CameraActivity extends Activity {
         shouldDeleteEmptyFile = false;
         Log.e(TAG, "startRecording: DELETE STATUS : "+shouldDeleteEmptyFile);
         try {
-            SurfaceTexture surfaceTexture = tvPreview.getSurfaceTexture();
-            surfaceTexture.setDefaultBufferSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
-            Surface previewSurface = new Surface(surfaceTexture); //TODO : free surface with #release
+//            SurfaceTexture surfaceTexture = tvPreview.getSurfaceTexture();
+//            surfaceTexture.setDefaultBufferSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
+//            Surface previewSurface = new Surface(surfaceTexture); //TODO : free surface with #release
 
             if(!isVRecording){
-                mMediaRecorder.start();
+
                 Surface recordSurface = mMediaRecorder.getSurface();
-                previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-                previewCaptureRequest.addTarget(previewSurface);
+//                previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+//                previewCaptureRequest.addTarget(previewSurface);
                 previewCaptureRequest.addTarget(recordSurface);
 
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
@@ -1881,11 +1883,13 @@ public class CameraActivity extends Activity {
                     OutputConfiguration recordConfiguration = new OutputConfiguration(recordSurface);
                     SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR
                             , Arrays.asList(previewConfiguration,recordConfiguration)
+//                            , Collections.singletonList(recordConfiguration)
                             , getMainExecutor()
                             , new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(@NonNull CameraCaptureSession session) {
                             camSession = session;
+                            mMediaRecorder.start();
                             try {
                                 camSession.setRepeatingRequest(previewCaptureRequest.build(),null, mBackgroundHandler);
                             } catch (CameraAccessException e) {
@@ -1909,6 +1913,7 @@ public class CameraActivity extends Activity {
                                     camSession = session;
                                     try {
                                         camSession.setRepeatingRequest(previewCaptureRequest.build(),null, mBackgroundHandler);
+                                        mMediaRecorder.start();
                                     } catch (CameraAccessException e) {
                                         e.printStackTrace();
                                     }
@@ -1921,7 +1926,6 @@ public class CameraActivity extends Activity {
                 }
 
             }
-
         }
         catch (IllegalStateException | CameraAccessException e){
             e.printStackTrace();
@@ -2520,6 +2524,7 @@ public class CameraActivity extends Activity {
     @Override
     public void onResume() {
         super.onResume();
+        if (previewSurface != null) previewSurface.release();
         setAestheticLayout();
         resumed = true;
         startBackgroundThread();
@@ -2551,6 +2556,7 @@ public class CameraActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (previewSurface != null) previewSurface.release();
         performFileCleanup();
         stopBackgroundThread();
     }
