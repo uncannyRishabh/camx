@@ -3,6 +3,14 @@ plugins {
 }
 
 android {
+    signingConfigs {
+        debug {
+            storeFile file('/Users/rishabhrajgupta/AndroidStudioProjects/$KeyStore/Camx_key0')
+            keyAlias 'key0'
+            storePassword 'Baloney@1'
+            keyPassword 'Baloney@1'
+        }
+    }
     compileSdkVersion 33
     buildToolsVersion "30.0.3"
 
@@ -87,7 +95,7 @@ dependencies {
     implementation 'com.google.mlkit:segmentation-selfie:16.0.0-beta4'
 
     implementation 'io.reactivex.rxjava3:rxjava:3.1.5'
-    implementation 'io.reactivex.rxjava3:rxandroid:3.0.0'
+    implementation 'io.reactivex.rxjava3:rxandroid:3.0.2'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.4'
