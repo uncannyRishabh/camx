@@ -432,16 +432,16 @@ public class CameraActivity extends Activity {
         button1.setOnClickListener(v -> {
             timer_cc+=1;
             if(timer_cc == 1){
-                button1.setImageResource(R.drawable.ic_timer_btn);
+                button1.setImageResource(R.drawable.ic_timer);
             }
             else if(timer_cc == 2){
-                button1.setImageResource(R.drawable.ic_timer_3_btn);
+                button1.setImageResource(R.drawable.ic_timer_3);
             }
             else if(timer_cc == 3){
-                button1.setImageResource(R.drawable.ic_timer_5_btn);
-            }
-            else if(timer_cc == 4){
-                button1.setImageResource(R.drawable.ic_timer_10_btn);
+//                button1.setImageResource(R.drawable.ic_timer_5_btn);
+//            }
+//            else if(timer_cc == 4){
+                button1.setImageResource(R.drawable.ic_timer_10);
                 timer_cc=0;
             }
         });
@@ -779,6 +779,7 @@ public class CameraActivity extends Activity {
             }
         }
 
+        setVfStates(VFStates.IDLE);
     }
 
     @Override
@@ -1019,12 +1020,12 @@ public class CameraActivity extends Activity {
                 tvPreview.setOnTouchListener(touchListener);
                 deflateButtonMenu();
             });
-            button5.animate().rotation(-90f).setInterpolator(new DecelerateInterpolator());
 
-            btn_grid1.animate().translationY(28f)
-                    .setInterpolator(new DecelerateInterpolator());
-            btn_grid2.animate().translationY(22f)
-                    .setInterpolator(new DecelerateInterpolator()).setStartDelay(100);
+            button5.animate().rotation(-90f).setInterpolator(new DecelerateInterpolator());
+//            btn_grid1.animate().translationY(28f)
+//                    .setInterpolator(new DecelerateInterpolator());
+//            btn_grid2.animate().translationY(22f)
+//                    .setInterpolator(new DecelerateInterpolator()).setStartDelay(100);
 
             RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
                     appbar.getWidth(), cachedHeight * 3);
@@ -1040,9 +1041,9 @@ public class CameraActivity extends Activity {
     private void deflateButtonMenu() {
         button5.animate().rotation(0f);
 
-        btn_grid1.animate().translationY(0f)
-                .setInterpolator(new AccelerateInterpolator(.1f));
-        btn_grid2.animate().translationY(0f);
+//        btn_grid1.animate().translationY(0f)
+//                .setInterpolator(new AccelerateInterpolator(.1f));
+//        btn_grid2.animate().translationY(0f);
 
         RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
                 appbar.getWidth(), cachedHeight);
@@ -1285,23 +1286,26 @@ public class CameraActivity extends Activity {
                      * SWIPE GESTURES
                      */
                     if (getState() == CamState.VIDEO_PROGRESSED || getState() == CamState.HSVIDEO_PROGRESSED) return true;
-                    if(vfPointerX - event.getX() > getScreenWidth()/4f){
-                        Log.e("TAG", "onTouchEvent: FLING RIGHT");
-                        vfPointerX = event.getX();
-                        if(mModePicker.getSelectedItem() >= 0 && mModePicker.getSelectedItem()<mModePicker.getItems()-1) {
-                            mModePicker.setSelectedItem(mModePicker.getSelectedItem() + 1);
-                            switchMode(mModePicker.getSelectedItem());
+                    if (getVfStates() == VFStates.IDLE) {
+                        if(vfPointerX - event.getX() > getScreenWidth()/4f){
+                            Log.e("TAG", "onTouchEvent: FLING RIGHT");
+                            vfPointerX = event.getX();
+                            if(mModePicker.getSelectedItem() >= 0 && mModePicker.getSelectedItem()<mModePicker.getItems()-1) {
+                                mModePicker.setSelectedItem(mModePicker.getSelectedItem() + 1);
+                                switchMode(mModePicker.getSelectedItem());
+                                return true;
+                            }
+                        }
+                        else if(vfPointerX - event.getX() < -getScreenWidth()/4f) {
+                            Log.e("TAG", "onTouchEvent: FLING LEFT");
+                            vfPointerX = event.getX();
+                            if(mModePicker.getSelectedItem() > 0 && mModePicker.getSelectedItem()<mModePicker.getItems()) {
+                                mModePicker.setSelectedItem(mModePicker.getSelectedItem() - 1);
+                                switchMode(mModePicker.getSelectedItem());
+                            }
                             return true;
                         }
-                    }
-                    else if(vfPointerX - event.getX() < -getScreenWidth()/4f) {
-                        Log.e("TAG", "onTouchEvent: FLING LEFT");
-                        vfPointerX = event.getX();
-                        if(mModePicker.getSelectedItem() > 0 && mModePicker.getSelectedItem()<mModePicker.getItems()) {
-                            mModePicker.setSelectedItem(mModePicker.getSelectedItem() - 1);
-                            switchMode(mModePicker.getSelectedItem());
-                        }
-                        return true;
+                        break;
                     }
 
                     return true;
@@ -1309,7 +1313,7 @@ public class CameraActivity extends Activity {
                 case MotionEvent.ACTION_POINTER_UP:{
                     zSlider.postDelayed(hideZoomSlider,2000);
                     zoomText.postDelayed(hideZoomText, 2000);
-                    vfHandler.postDelayed(() -> setVfStates(VFStates.IDLE), 700);
+//                    vfHandler.postDelayed(() -> setVfStates(VFStates.IDLE), 700);
                     break;
                 }
                 case MotionEvent.ACTION_UP:{
@@ -1328,7 +1332,8 @@ public class CameraActivity extends Activity {
                             e.printStackTrace();
                         }
                         lastClickTime = 0;
-                    } else if (getVfStates() != VFStates.DOUBLE_TAP && getVfStates() != VFStates.SLIDE_ZOOM && !viewfinderGesture) {
+                    }
+                    else if (getVfStates() != VFStates.DOUBLE_TAP && getVfStates() != VFStates.SLIDE_ZOOM && !viewfinderGesture) {
                         /*
                          * TOUCH TO FOCUS
                          */
@@ -1343,6 +1348,7 @@ public class CameraActivity extends Activity {
                         return false;
                     }
                     lastClickTime = clickTime;
+                    setVfStates(VFStates.IDLE);
                     v.performClick();
                 }
             }
@@ -1523,6 +1529,7 @@ public class CameraActivity extends Activity {
         previewCaptureRequest.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE);
 
         buildPreview();
+        setVfStates(VFStates.IDLE);
     }
 
     private void resetFocus(){
