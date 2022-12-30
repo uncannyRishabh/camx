@@ -412,6 +412,7 @@ public class CameraActivity extends Activity {
         btn_grid1 = findViewById(R.id.top_bar_0);
         btn_grid2 = findViewById(R.id.top_bar_1);
         vi_info = findViewById(R.id.vi_indicator);
+        chronometer = findViewById(R.id.chronometer);
         resolutionSelector = findViewById(R.id.resolution_selector);
         exposureControl = findViewById(R.id.exposureControl);
         videoModePicker = findViewById(R.id.video_mode_picker);
@@ -542,7 +543,6 @@ public class CameraActivity extends Activity {
         tvPreview.setSurfaceTextureListener(surfaceTextureListener);
 
         shutter.setOnClickListener(v -> {
-            chronometer = findViewById(R.id.chronometer);
             switch (getState()) {
                 case CAMERA:
                 case HIRES:
@@ -575,9 +575,9 @@ public class CameraActivity extends Activity {
                         setState(CamState.VIDEO);
                         mMediaRecorder.stop(); //TODO: handle stop before preview is generated
 //                        mMediaRecorder.reset();
+                        createVideoPreviewWithAptResolution();
                         mainThreadExecutor.execute(this::modifyUIonVideoShutter);
                         auxDock.post(hideAuxDock);
-                        createVideoPreviewWithAptResolution();
                         isVRecording = false;
                     }
                     break;
@@ -1676,12 +1676,11 @@ public class CameraActivity extends Activity {
         tvPreview.measure(previewSize.getHeight(), previewSize.getWidth());
         stPreview.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
 
-        imgReader = ImageReader.newInstance(imageSize.getHeight(), imageSize.getWidth(), ImageFormat.JPEG, 5);
+        imgReader = ImageReader.newInstance(imageSize.getWidth(), imageSize.getHeight(), ImageFormat.JPEG, 5);
         imgReader.setOnImageAvailableListener(snapshotImageCallback, mBackgroundHandler);
 
-        surfaceList.clear();
-        surfaceList.add(new Surface(stPreview));
-        surfaceList.add(imgReader.getSurface());
+        surfaceList.add(0,new Surface(stPreview));
+        surfaceList.add(1,imgReader.getSurface());
 
         //RESET ZOOM
 //        if(previewCaptureRequest!=null) zSlider.setValue(0f);
@@ -1782,7 +1781,7 @@ public class CameraActivity extends Activity {
 
         stPreview.setDefaultBufferSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
         tvPreview.setAspectRatio(mVideoPreviewSize.getHeight(), mVideoPreviewSize.getWidth());
-        previewSurface = new Surface(stPreview);
+        previewSurface = new Surface(tvPreview.getSurfaceTexture());
         try {
             previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
             previewCaptureRequest.addTarget(previewSurface);
@@ -1832,20 +1831,17 @@ public class CameraActivity extends Activity {
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(context);
              else mMediaRecorder = new MediaRecorder();
              mMediaRecorder.setOrientationHint(getJpegOrientation()); //90   // TODO : CHANGE ACCORDING TO SENSOR ORIENTATION
-//
-//             mediaRecorder.setAudioEncodingBitRate(64000);
 //             mMediaRecorder.setAudioChannels(1);
-//             mediaRecorder.setAudioSamplingRate(48000);
-
              mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
              mMediaRecorder.setAudioSamplingRate(48000);
-             mMediaRecorder.setAudioEncodingBitRate(64000);
+             mMediaRecorder.setAudioEncodingBitRate(96000);
              mMediaRecorder.setAudioEncodingBitRate(camcorderProfile.audioBitRate);
              mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
              mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
              mMediaRecorder.setVideoFrameRate(vFPS);
              mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
              mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
+             mMediaRecorder.setVideoEncodingBitRate(16400000);
              mMediaRecorder.setVideoSize(mVideoRecordSize.getHeight(), mVideoRecordSize.getWidth());
              mVideoFile += mVideoSuffix;
              shouldDeleteEmptyFile = true;
@@ -1855,7 +1851,6 @@ public class CameraActivity extends Activity {
              } else {
                  mMediaRecorder.setOutputFile(mVideoFile);
              }
-             mMediaRecorder.setVideoEncodingBitRate(3000000);
              mMediaRecorder.prepare();           //FIXME : prepare fails on emulator(sdk24)
          }
          catch (IOException e){
