@@ -1,62 +1,48 @@
 <h1 align="center">CAMX</h1>
 
-<p align="center">
-  <a href="https://android-arsenal.com/api?level=24"><img src="https://img.shields.io/badge/API-24%2B-blue.svg?style=flat" border="0" alt="API"></a>
-  <a href="https://developer.android.com/training/camera2"><img src="https://img.shields.io/badge/Camera2api-%F0%9F%93%B8-FF4081.svg" border="0" alt="camera2api"></a>
-  <a href="https://github.com/uncannyRishabh/camx"><img src="https://img.shields.io/badge/ActiveDevelopment-%F0%9F%94%A5-edcb1f.svg" border="0" alt="camera2api"></a>
-  <a href="https://github.com/uncannyRishabh/camx/issues"><img src="https://img.shields.io/badge/Report%20Bugs-%F0%9F%90%9E-c5ff59.svg" border="0" alt="camera2api"></a>
+<p align="center"> <a href="https://android-arsenal.com/api?level=24"><img src="https://img.shields.io/badge/API-24%2B-blue.svg?style=flat" border="0" alt="API"></a> <a href="https://developer.android.com/training/camera2"><img src="https://img.shields.io/badge/Camera2api-%F0%9F%93%B8-FF4081.svg" border="0" alt="camera2api"></a> <a href="https://github.com/uncannyRishabh/camx"><img src="https://img.shields.io/badge/ActiveDevelopment-%F0%9F%94%A5-edcb1f.svg" border="0" alt="camera2api"></a> <a href="https://github.com/uncannyRishabh/camx/issues"><img src="https://img.shields.io/badge/Report%20Bugs-%F0%9F%90%9E-c5ff59.svg" border="0" alt="camera2api"></a> </p>
 
-</p>
-An Open Source android camera with ability to utilize auxiliary cameras to its extent.<br/><br/>
+Camx is an open source camera app that combines advanced features with a user-friendly Material You design. Camx provides long term support with regular updates and compatibility with older devices [ android 7+].
 
-<h2>Features</h2>
+## Features
 
-* Ability to use all the Auxiliary cameras
-* Camera Modes - Photo/ Video/ Slo Motion/ ~~TimeLapse~~/ High resolution/ Portrait/ ~~Night~~/ ~~Pro~~
-* Autofocus / Touch to focus
-* 2 finger zoom/ Double tap to zoom
-* Ability to change aspect ratio/ flash / timer
-* Option to toggle between Grid modes
-* Animated capture button
-* 60 FPS recording and preview
-* ~~high resolution [48mp, 64mp ..etc] raw capture~~
-* ~~cutomizable front flash~~
-* ~~exposure slider~~
-* many more.. 
+-   Ability to use all the Auxiliary cameras
+-   Camera Modes - Photo/ Video/ Slo Motion/ TimeLapse/ High resolution/ Portrait/ Night/ Pro
+-   Autofocus / Touch to focus
+-   2 finger zoom/ Double tap to zoom
+-   Ability to change aspect ratio/ flash / timer
+-   Option to toggle between Grid modes
+-   Animated capture button
+-   60 FPS recording and preview
+-   high resolution [48mp, 64mp ..etc] raw capture
+-   cutomizable front flash
+-   exposure slider
+-   many more..
 
 **features enabled on the basis of availability
 
-For queries,contribution,bug fixes... [contact](mailto:rishabhrajgupta2000@gmail.com).
-✌😉
+For queries,contribution,bug fixes... [contact](mailto:rishabhrajgupta2000@gmail.com). ✌😉
 
-<h2>Preview</h2> <br /><br />
+## Preview
 
-<p align="center">
-  <img align="center" src="https://github.com/uncannyRishabh/camx/blob/master/screenshots/preview_compressed.gif"/>
-</p>
+<p align="center"> <img align="center" src="https://github.com/uncannyRishabh/camx/blob/master/screenshots/preview_compressed.gif"/> </p>
+
+## Libraries Used
+
+-   [MaterialComponents](https://github.com/material-components/material-components-android)
+-   [HorizontalPicker](https://github.com/blazsolar/HorizontalPicker)
+-   [RxJava](https://github.com/ReactiveX/RxJava)
+-   [RxAndroid](https://github.com/ReactiveX/RxAndroid)
 
 
-<h2>Libraries Used</h2>
+## Try Out
 
-* [MaterialComponents](https://github.com/material-components/material-components-android)
-* [HorizontalPicker](https://github.com/blazsolar/HorizontalPicker)
-* [RxJava](https://github.com/ReactiveX/RxJava)
-* [RxAndroid](https://github.com/ReactiveX/RxAndroid)
+[Download the latest release](https://github.com/uncannyRishabh/camx/blob/master/app/release/app-release.apk?raw=true)
 
-<!-- ![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss1.jpg) <br /><br />
-![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss2.jpg) <br /><br />
-![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss3.jpg) <br /><br />
-![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss4.jpg) <br /><br />
-![app preview](https://github.com/uncannyRishabh/camx/blob/master/screenshots/ss5.jpg) <br /><br /> -->
+## License
 
-<h2>Try Out</h2>
-
-[Download](https://github.com/uncannyRishabh/camx/blob/master/app/release/app-release.apk?raw=true)
-
-<h2>License</h2>
-
-    CAMX
-    Copyright (C) 2021 uncannyRishabh
+	CAMX 
+	Copyright (C) 2023 uncannyRishabh
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
