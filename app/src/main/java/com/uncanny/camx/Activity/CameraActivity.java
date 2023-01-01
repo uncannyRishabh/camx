@@ -816,7 +816,6 @@ public class CameraActivity extends Activity {
         shutter.animateInnerCircle(getState());
         closeCamera();
         openCamera();
-//        new Handler(Looper.myLooper()).post(getSensorSize);
         modifyMenuForPhoto();
         if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
     }
@@ -1873,9 +1872,9 @@ public class CameraActivity extends Activity {
     private void startRecording(){
         shouldDeleteEmptyFile = false;
         try {
-//            SurfaceTexture surfaceTexture = tvPreview.getSurfaceTexture();
-//            surfaceTexture.setDefaultBufferSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
-//            Surface previewSurface = new Surface(surfaceTexture); //TODO : free surface with #release
+            SurfaceTexture surfaceTexture = tvPreview.getSurfaceTexture();
+            surfaceTexture.setDefaultBufferSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
+// //   //            Surface previewSurface = new Surface(surfaceTexture); //TODO : free surface with #release
 
             if(!isVRecording){
 
