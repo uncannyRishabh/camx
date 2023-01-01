@@ -14,6 +14,7 @@ import android.provider.MediaStore;
 import com.uncanny.camx.Modes.Portrait;
 import com.uncanny.camx.Utils.BitmapUtils;
 import com.uncanny.camx.Utils.Blur;
+import com.uncanny.camx.Utils.FileHandler;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -36,6 +37,7 @@ public class ImageSaverThread implements Runnable {
     private final ContentResolver contentResolver;
     private Uri uri;
     private Context context;
+    private FileHandler fileHandler;
     private boolean isPortrait;
     private boolean isFlipped;
     private int rotation;
@@ -46,6 +48,7 @@ public class ImageSaverThread implements Runnable {
         this.mImage = image;
         this.cameraId = cameraId;
         this.contentResolver = contentResolver;
+        fileHandler = new FileHandler(context);
     }
 
     public ImageSaverThread(Context context, Image image, String cameraId
@@ -57,6 +60,7 @@ public class ImageSaverThread implements Runnable {
         this.isPortrait = isPortrait;
         this.rotation = rotation;
         this.isFlipped = isFlipped;
+        fileHandler = new FileHandler(context);
     }
 
     @Override
@@ -105,6 +109,8 @@ public class ImageSaverThread implements Runnable {
         else{
             saveByteBuffer(bytes,file);
         }
+
+//        fileHandler.performMediaScan(file.getName(),"image");
     }
 
     private void saveBitmap(Bitmap bitmap,int bitmapRotation) {

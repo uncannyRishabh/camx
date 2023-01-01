@@ -57,7 +57,7 @@ public class ImageDecoderThread implements Runnable{
                 }
 
             } else {
-                Log.e(TAG, "display_latest_image_from_gallery(): Could not find any Image Files [1]");
+                Log.e(TAG, "display_latest_image_from_gallery(): Could not find any Image Files");
             }
         }
         else {

@@ -30,7 +30,6 @@
  import android.media.ImageReader;
  import android.media.MediaActionSound;
  import android.media.MediaRecorder;
- import android.media.MediaScannerConnection;
  import android.os.Build;
  import android.os.Bundle;
  import android.os.Handler;
@@ -93,6 +92,7 @@
  import com.uncanny.camx.Utils.AsyncThreads.MainThreadExecutor;
  import com.uncanny.camx.Utils.AsyncThreads.SerialExecutor;
  import com.uncanny.camx.Utils.CompareSizeByArea;
+ import com.uncanny.camx.Utils.FileHandler;
 
  import java.io.File;
  import java.io.IOException;
@@ -132,7 +132,7 @@ public class CameraActivity extends Activity {
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
     private LensData lensData;
-
+    private FileHandler fileHandler;
 //    private final String [] camID= {"0","1","20","21","22","2","6","3"}; //0,1,2,3,4,5,6,7 in realme and stock android
                                   // 0   1   2    3    4    5   6   7
 
@@ -528,6 +528,7 @@ public class CameraActivity extends Activity {
         });
 
         resolutionSelector.setOnClickListener(v -> {
+            performFileCleanup();
             if(getState() == CamState.VIDEO) {
                 mVideoRecordSize = translateResolution(resolutionSelector.getHeaderText());
 //                mVideoRecordSize = getPreviewResolution(width);
@@ -579,6 +580,7 @@ public class CameraActivity extends Activity {
                         createVideoPreviewWithAptResolution();
                         mainThreadExecutor.execute(this::modifyUIonVideoShutter);
                         auxDock.post(hideAuxDock);
+                        fileHandler.performMediaScan(mVideoFile,"video");
                         isVRecording = false;
                     }
                     break;
@@ -619,6 +621,7 @@ public class CameraActivity extends Activity {
                         front_switch.setVisibility(View.VISIBLE);
                         createSloMoPreview(sloMoPair.first.getWidth(), sloMoPair.first.getHeight());
                         videoModePicker.setIndex(0);
+                        fileHandler.performMediaScan(mVideoFile,"video");
                     }
                     break;
                 }
@@ -635,6 +638,7 @@ public class CameraActivity extends Activity {
         thumbPreview.setOnClickListener(openGallery);
 
         wide_lens.setOnClickListener(v -> {
+            performFileCleanup();
             if (!getCameraId().equals(BACK_CAMERA_ID)) {
                 closeCamera();
                 tvPreview.setOnTouchListener(null);
@@ -743,6 +747,7 @@ public class CameraActivity extends Activity {
         videoModePicker.setIndex(1);
         videoModePicker.setOnClickListener((view, Position) -> {
             auxDock.post(hideAuxDock);
+            performFileCleanup();
             switch (Position){
                 case 0:{
                     if(getState() != CamState.SLOMO) {
@@ -780,6 +785,7 @@ public class CameraActivity extends Activity {
         }
 
         setVfStates(VFStates.IDLE);
+        fileHandler = new FileHandler(CameraActivity.this);
     }
 
     @Override
@@ -928,7 +934,7 @@ public class CameraActivity extends Activity {
             }
         }
 
-        if(shouldDeleteEmptyFile) performFileCleanup();
+        performFileCleanup();
 
         auxDock.post(hideAuxDock);
         zoomText.post(hideZoomText);
@@ -940,22 +946,16 @@ public class CameraActivity extends Activity {
                 View.VISIBLE : View.INVISIBLE);
     }
 
-     private void performFileCleanup() {
-         Log.e(TAG, "performFileCleanup: DELETE STATUS : "+shouldDeleteEmptyFile);
-//         File del = new File(mVideoFile);
-//         boolean ds = del.delete();
-         shouldDeleteEmptyFile = false;
-//         Log.e(TAG, "performFileCleanup: DELETED ?? "+ds);
-
-//         String mimeType = "image/jpeg";
-//         String mimeType = "video/mp4";
-         MediaScannerConnection.scanFile(context,
-                 new String[] { mVideoFile }, null,
-                 (path, uri) -> {
-                     Log.i("TAG", "Scanned " + path + ":");
-                     Log.i("TAG", "-> uri=" + uri);
-                 });
-     }
+    private void performFileCleanup() {
+        Log.e(TAG, "performFileCleanup: shouldDeleteEmptyFile : "+shouldDeleteEmptyFile);
+        boolean ds = false;
+        if(shouldDeleteEmptyFile) {
+            File del = new File(mVideoFile);
+            ds = del.delete();
+        }
+        shouldDeleteEmptyFile = false;
+        Log.e(TAG, "performFileCleanup: DELETED ?? "+ds);
+    }
 
      /**
      * UI CHANGES
@@ -982,6 +982,7 @@ public class CameraActivity extends Activity {
 
                 aux_btn.setOnClickListener(v -> {
                     if(!(aux_btn.getId()+"").equals(getCameraId())) {
+                        performFileCleanup();
                         tvPreview.setOnTouchListener(null);
                         setCameraId(aux_btn.getId() + "");
                         closeCamera();
@@ -1211,6 +1212,7 @@ public class CameraActivity extends Activity {
     private View.OnClickListener switchFrontCamera = new View.OnClickListener(){
         @Override
         public void onClick(View v) {
+            performFileCleanup();
             tvPreview.setOnTouchListener(null);
             zoomText.post(hideZoomText);
             exposureControl.post(() -> setExposureRange());
@@ -1245,8 +1247,7 @@ public class CameraActivity extends Activity {
             } catch (CameraAccessException e) {
                 e.printStackTrace();
             }
-            thumbPreview.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP
-                    ,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
+            thumbPreview.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
         }
     };
 
@@ -1672,16 +1673,13 @@ public class CameraActivity extends Activity {
             imageSize = (ASPECT_RATIO_43 ? lensData.getHighestResolution(getCameraId()) :
                     lensData.getHighestResolution169(getCameraId()));
         }
-        else if(getState() == CamState.HIRES){
-            imageSize = lensData.getBayerLensSize();
-        }
+        else if(getState() == CamState.HIRES) imageSize = lensData.getBayerLensSize();
 
         zoomRect = getCameraCharacteristics().get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
 
         StreamConfigurationMap map = getCameraCharacteristics().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         previewSize = getPreviewResolution(map.getOutputSizes(ImageFormat.JPEG)
-                ,(lensData.is1080pCapable(getCameraId())
-                        ? 1080 : 720),ASPECT_RATIO_43);
+                ,(lensData.is1080pCapable(getCameraId()) ? 1080 : 720),ASPECT_RATIO_43);
 
         tvPreview.measure(previewSize.getHeight(), previewSize.getWidth());
         stPreview.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
@@ -1697,7 +1695,6 @@ public class CameraActivity extends Activity {
 //        ZOOM_LEVEL = 0;
         Log.e(TAG, "openCamera: ImageReader preview size " + previewSize);
         Log.e(TAG, "openCamera: ImageReader capture size " + imageSize);
-
 
         mVideoRecordSize = null;
 
@@ -1724,16 +1721,11 @@ public class CameraActivity extends Activity {
 
 //            captureRequest.addTarget(surfaceList.get(0));
             captureRequest.addTarget(surfaceList.get(1));
-            if(mflash) {
-                captureRequest.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE);
-            }
-            else {
-                captureRequest.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF);
-            }
 
-            if(ZOOM_LEVEL !=0) {
-                captureRequest.set(CaptureRequest.SCALER_CROP_REGION, zoom);
-            }
+            if(mflash) captureRequest.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE);
+            else captureRequest.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF);
+            if(ZOOM_LEVEL !=0) captureRequest.set(CaptureRequest.SCALER_CROP_REGION, zoom);
+
             camSession.capture(captureRequest.build(), snapshotCallback, mHandler);
         } catch(Exception e) {
             Log.e(TAG, "captureImage: "+e);
@@ -1779,8 +1771,7 @@ public class CameraActivity extends Activity {
             mVideoRecordSize = new Size(t.getHeight(), t.getWidth());
         }
 
-        snapshotImageReader = ImageReader.newInstance(mVideoRecordSize.getWidth()
-                , mVideoRecordSize.getHeight()
+        snapshotImageReader = ImageReader.newInstance(mVideoRecordSize.getWidth(), mVideoRecordSize.getHeight()
                 , ImageFormat.JPEG,5);
         snapshotImageReader.setOnImageAvailableListener(videoSnapshotCallback,mHandler);
 
@@ -1810,8 +1801,22 @@ public class CameraActivity extends Activity {
                                 camSession.setRepeatingRequest(previewCaptureRequest.build(), null,mBackgroundHandler);
 
                                 if(!isVRecording){
-                                    CamcorderProfile camcorderProfile = CamcorderProfile
-                                            .get(getCameraId().equals("0") ? 0 : 1,CamcorderProfile.QUALITY_HIGH);
+                                    Log.e(TAG, "onConfigured: Video Recording Size : "+mVideoRecordSize);
+                                    int camcorderQuality = CamcorderProfile.QUALITY_HIGH;
+                                    if(mVideoRecordSize.getWidth() == 4320){
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                                            camcorderQuality = CamcorderProfile.QUALITY_8KUHD;
+                                    }
+                                    else if(mVideoRecordSize.getWidth() == 2160){
+                                        camcorderQuality = CamcorderProfile.QUALITY_2160P;
+                                    }
+                                    else if(mVideoRecordSize.getWidth() == 1080){
+                                        camcorderQuality = CamcorderProfile.QUALITY_1080P;
+                                    }
+                                    else if(mVideoRecordSize.getWidth() == 720){
+                                        camcorderQuality = CamcorderProfile.QUALITY_720P;
+                                    }
+                                    CamcorderProfile camcorderProfile = CamcorderProfile.get(getCameraId().equals("0") ? 0 : 1,camcorderQuality);
                                     setupMediaRecorder(camcorderProfile);
                                 }
                                 tvPreview.setOnTouchListener(touchListener);
@@ -1833,9 +1838,8 @@ public class CameraActivity extends Activity {
     private void setupMediaRecorder(CamcorderProfile camcorderProfile) {
          try {
              mVideoFile = "//storage//emulated//0//DCIM//Camera//";
-             mVideoSuffix = "CamX" + System.currentTimeMillis() + "_" + getCameraId() + ".mp4";
-             Log.e(TAG, "setupMediaRecorder: MAX PERMITTED RES BY MediaRecorder : h : " + camcorderProfile.videoFrameHeight
-                     + " w : " + camcorderProfile.videoFrameWidth);
+             mVideoSuffix = "CamX_" + System.currentTimeMillis() + "_" + getCameraId() + ".mp4";
+             Log.e(TAG, "setupMediaRecorder: MediaRecorder video size : h : " + camcorderProfile.videoFrameHeight + " w : " + camcorderProfile.videoFrameWidth);
              Log.e(TAG, "setupMediaRecorder: Video BitRate : " + camcorderProfile.videoBitRate);
 
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(context);
@@ -1850,7 +1854,7 @@ public class CameraActivity extends Activity {
              mMediaRecorder.setVideoFrameRate(vFPS);
              mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
              mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
-             mMediaRecorder.setVideoEncodingBitRate(16400000);
+             mMediaRecorder.setVideoEncodingBitRate(camcorderProfile.videoBitRate);
              mMediaRecorder.setVideoSize(mVideoRecordSize.getHeight(), mVideoRecordSize.getWidth());
              mVideoFile += mVideoSuffix;
              shouldDeleteEmptyFile = true;
@@ -1859,7 +1863,7 @@ public class CameraActivity extends Activity {
              } else {
                  mMediaRecorder.setOutputFile(mVideoFile);
              }
-             mMediaRecorder.prepare();           //FIXME : prepare fails on emulator(sdk24)
+             mMediaRecorder.prepare();           //FIXME : prepare fails on emulator(sdk24) cause it only supports QVGA resolution
          }
          catch (IOException e){
              e.printStackTrace();
@@ -2033,7 +2037,7 @@ public class CameraActivity extends Activity {
     private void setupMediaRecorder_SloMoe(Pair<Size,Range<Integer>> size) {
         try {
             mVideoFile = "//storage//emulated//0//DCIM//Camera//";
-            mVideoSuffix = "CamX" + System.currentTimeMillis() + "_HSR_"+ sFPS + "_" + getCameraId() + ".mp4";
+            mVideoSuffix = "CamX_" + System.currentTimeMillis() + "_HFR_"+ sFPS + "_" + getCameraId() + ".mp4";
 
             mMediaRecorder.reset();
             mMediaRecorder.setOrientationHint(getJpegOrientation());
@@ -2049,7 +2053,7 @@ public class CameraActivity extends Activity {
             mMediaRecorder.setVideoSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
             Log.e(TAG, "setupMediaRecorder_SloMoe: VideoEncodingBitRate : "+(size.first.getWidth()*size.first.getHeight()*size.second.getLower()) / 15);
             mVideoFile += mVideoSuffix;
-            shouldDeleteEmptyFile = true;
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 mMediaRecorder.setOutputFile(new File(mVideoFile));
             } else {
@@ -2379,9 +2383,7 @@ public class CameraActivity extends Activity {
 
     ImageReader.OnImageAvailableListener videoSnapshotCallback = reader -> {
         Log.e(TAG, "onImageAvailable: received video snapshot image data");
-        new Handler(Looper.getMainLooper()).post(new ImageSaverThread(reader.acquireLatestImage()
-                ,cameraId
-                ,getContentResolver()));
+        new Handler(Looper.getMainLooper()).post(new ImageSaverThread(reader.acquireLatestImage(),cameraId,getContentResolver()));
     };
 
     CameraDevice.StateCallback imageCaptureCallback = new CameraDevice.StateCallback() {
