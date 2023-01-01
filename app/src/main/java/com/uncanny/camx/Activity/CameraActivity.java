@@ -30,6 +30,7 @@
  import android.media.ImageReader;
  import android.media.MediaActionSound;
  import android.media.MediaRecorder;
+ import android.media.MediaScannerConnection;
  import android.os.Build;
  import android.os.Bundle;
  import android.os.Handler;
@@ -940,11 +941,20 @@ public class CameraActivity extends Activity {
     }
 
      private void performFileCleanup() {
-         shouldDeleteEmptyFile = false;
          Log.e(TAG, "performFileCleanup: DELETE STATUS : "+shouldDeleteEmptyFile);
-         File del = new File(mVideoFile);
-         boolean ds = del.delete();
-         Log.e(TAG, "performFileCleanup: DELETED ?? "+ds);
+//         File del = new File(mVideoFile);
+//         boolean ds = del.delete();
+         shouldDeleteEmptyFile = false;
+//         Log.e(TAG, "performFileCleanup: DELETED ?? "+ds);
+
+//         String mimeType = "image/jpeg";
+//         String mimeType = "video/mp4";
+         MediaScannerConnection.scanFile(context,
+                 new String[] { mVideoFile }, null,
+                 (path, uri) -> {
+                     Log.i("TAG", "Scanned " + path + ":");
+                     Log.i("TAG", "-> uri=" + uri);
+                 });
      }
 
      /**
@@ -1835,7 +1845,6 @@ public class CameraActivity extends Activity {
              mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
              mMediaRecorder.setAudioSamplingRate(48000);
              mMediaRecorder.setAudioEncodingBitRate(96000);
-             mMediaRecorder.setAudioEncodingBitRate(camcorderProfile.audioBitRate);
              mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
              mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
              mMediaRecorder.setVideoFrameRate(vFPS);
@@ -1845,7 +1854,6 @@ public class CameraActivity extends Activity {
              mMediaRecorder.setVideoSize(mVideoRecordSize.getHeight(), mVideoRecordSize.getWidth());
              mVideoFile += mVideoSuffix;
              shouldDeleteEmptyFile = true;
-             Log.e(TAG, "setupMediaRecorder: DELETE STATUS : "+shouldDeleteEmptyFile);
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                  mMediaRecorder.setOutputFile(new File(mVideoFile));
              } else {
@@ -1860,7 +1868,6 @@ public class CameraActivity extends Activity {
 
     private void startRecording(){
         shouldDeleteEmptyFile = false;
-        Log.e(TAG, "startRecording: DELETE STATUS : "+shouldDeleteEmptyFile);
         try {
 //            SurfaceTexture surfaceTexture = tvPreview.getSurfaceTexture();
 //            surfaceTexture.setDefaultBufferSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
@@ -2023,89 +2030,96 @@ public class CameraActivity extends Activity {
         }
     }
 
-    private void startSloMoRecording(){
-        try {
-            isSLRecording = true;
-            setupMediaRecorder_SloMoe(sloMoPair);
-
-            SurfaceTexture surfaceTexture = tvPreview.getSurfaceTexture();
-            surfaceTexture.setDefaultBufferSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
-            Surface previewSurface = new Surface(surfaceTexture); //TODO : free surface with #release
-            Surface recordSurface = mMediaRecorder.getSurface();
-            previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-            previewCaptureRequest.addTarget(previewSurface);
-            previewCaptureRequest.addTarget(recordSurface);
-
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                OutputConfiguration previewConfiguration = new OutputConfiguration(previewSurface);
-                OutputConfiguration recordConfiguration = new OutputConfiguration(recordSurface);
-                SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_HIGH_SPEED
-                        , Arrays.asList(previewConfiguration,recordConfiguration)
-                        , getMainExecutor()
-                        , new CameraCaptureSession.StateCallback() {
-                    @Override
-                    public void onConfigured(@NonNull CameraCaptureSession session) {
-                        camSession = session;
-                        highSpeedCaptureSession = (CameraConstrainedHighSpeedCaptureSession) session;
-                        smPreview();
-                    }
-
-                    @Override
-                    public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-
-                    }
-                });
-                camDevice.createCaptureSession(sessionConfiguration);
-            }
-            else {
-                camDevice.createConstrainedHighSpeedCaptureSession(hfrSurfaceList,
-                        new CameraCaptureSession.StateCallback() {
-                            @Override
-                            public void onConfigured(CameraCaptureSession session) {
-                                camSession = session;
-                                highSpeedCaptureSession = (CameraConstrainedHighSpeedCaptureSession) session;
-                                smPreview();
-                            }
-
-                            @Override
-                            public void onConfigureFailed(CameraCaptureSession session) {
-                                Log.d(TAG, "onConfigureFailed: startRecord");
-                            }
-                        }, mBackgroundHandler);
-            }
-            mMediaRecorder.start();
-        }
-        catch (CameraAccessException e){
-            e.printStackTrace();
-        }
-    }
-
     private void setupMediaRecorder_SloMoe(Pair<Size,Range<Integer>> size) {
-        mVideoSuffix = "CamX"+System.currentTimeMillis()+"_"+getCameraId()+".mp4";
-        mMediaRecorder.reset();
-        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-//        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-//        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            mMediaRecorder.setOutputFile(new File("//storage//emulated//0//DCIM//Camera//"+ mVideoSuffix));
-        }
-        else {
-            mMediaRecorder.setOutputFile("//storage//emulated//0//DCIM//Camera//"+ mVideoSuffix);
-        }
-        mMediaRecorder.setVideoFrameRate(sFPS);
-        mMediaRecorder.setVideoSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
-        Log.e(TAG, "setupMediaRecorder_SloMoe: VideoEncodingBitRate : "+(size.first.getWidth()*size.first.getHeight()*size.second.getLower()) / 15);
-        mMediaRecorder.setVideoEncodingBitRate((size.first.getWidth()*size.first.getHeight()*size.second.getLower()) / 15);
-        mMediaRecorder.setOrientationHint(getJpegOrientation());
         try {
+            mVideoFile = "//storage//emulated//0//DCIM//Camera//";
+            mVideoSuffix = "CamX" + System.currentTimeMillis() + "_HSR_"+ sFPS + "_" + getCameraId() + ".mp4";
+
+            mMediaRecorder.reset();
+            mMediaRecorder.setOrientationHint(getJpegOrientation());
+            mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
+            mMediaRecorder.setAudioSamplingRate(48000);
+            mMediaRecorder.setAudioEncodingBitRate(96000);
+            mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            mMediaRecorder.setVideoFrameRate(sFPS);
+            mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+            mMediaRecorder.setVideoEncodingBitRate((size.first.getWidth()*size.first.getHeight()*size.second.getLower()) / 15);
+            mMediaRecorder.setVideoSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
+            Log.e(TAG, "setupMediaRecorder_SloMoe: VideoEncodingBitRate : "+(size.first.getWidth()*size.first.getHeight()*size.second.getLower()) / 15);
+            mVideoFile += mVideoSuffix;
+            shouldDeleteEmptyFile = true;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                mMediaRecorder.setOutputFile(new File(mVideoFile));
+            } else {
+                mMediaRecorder.setOutputFile(mVideoFile);
+            }
             mMediaRecorder.prepare();
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
         hfrSurfaceList.add(mMediaRecorder.getSurface());
     }
+
+     private void startSloMoRecording(){
+         shouldDeleteEmptyFile = false;
+         try {
+             isSLRecording = true;
+             setupMediaRecorder_SloMoe(sloMoPair);
+
+             SurfaceTexture surfaceTexture = tvPreview.getSurfaceTexture();
+             surfaceTexture.setDefaultBufferSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
+             Surface previewSurface = new Surface(surfaceTexture); //TODO : free surface with #release
+             Surface recordSurface = mMediaRecorder.getSurface();
+             previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+             previewCaptureRequest.addTarget(previewSurface);
+             previewCaptureRequest.addTarget(recordSurface);
+
+             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                 OutputConfiguration previewConfiguration = new OutputConfiguration(previewSurface);
+                 OutputConfiguration recordConfiguration = new OutputConfiguration(recordSurface);
+                 SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_HIGH_SPEED
+                         , Arrays.asList(previewConfiguration,recordConfiguration)
+                         , getMainExecutor()
+                         , new CameraCaptureSession.StateCallback() {
+                     @Override
+                     public void onConfigured(@NonNull CameraCaptureSession session) {
+                         camSession = session;
+                         highSpeedCaptureSession = (CameraConstrainedHighSpeedCaptureSession) session;
+                         smPreview();
+                     }
+
+                     @Override
+                     public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+
+                     }
+                 });
+                 camDevice.createCaptureSession(sessionConfiguration);
+             }
+             else {
+                 camDevice.createConstrainedHighSpeedCaptureSession(hfrSurfaceList,
+                         new CameraCaptureSession.StateCallback() {
+                             @Override
+                             public void onConfigured(CameraCaptureSession session) {
+                                 camSession = session;
+                                 highSpeedCaptureSession = (CameraConstrainedHighSpeedCaptureSession) session;
+                                 smPreview();
+                             }
+
+                             @Override
+                             public void onConfigureFailed(CameraCaptureSession session) {
+                                 Log.d(TAG, "onConfigureFailed: startRecord");
+                             }
+                         }, mBackgroundHandler);
+             }
+             mMediaRecorder.start();
+         }
+         catch (CameraAccessException e){
+             e.printStackTrace();
+         }
+     }
 
     /**
      *  U N C A N N Y  M E T H O D S
