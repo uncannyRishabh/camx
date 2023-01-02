@@ -44,7 +44,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
-            android:clipToOutline="true" />
+            />
 
         <TextView
             android:id="@+id/zoom_text"
@@ -83,7 +83,8 @@
             android:focusable="false"
             android:text="1080p@30FPS"
             android:textSize="10sp"
-            android:visibility="invisible" />
+            android:visibility="invisible"
+            tools:ignore="SmallSp" />
 
         <com.uncanny.camx.UI.Views.ViewFinder.FaceMeteringRect
             android:id="@+id/fm_rect"
@@ -135,7 +136,7 @@
 
     <LinearLayout
         android:id="@+id/aux_videoMode_holder"
-        android:layout_width="292dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:layout_above="@id/relative_layout_button_dock"
@@ -146,7 +147,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:paddingHorizontal="5dp"
-            android:paddingVertical="4dp"
+            android:paddingVertical="3dp"
             android:background="@drawable/rounded_aux_dock"
             android:layout_gravity="center"
             android:visibility="gone"
@@ -166,17 +167,17 @@
                 android:paddingBottom="2dp"
                 android:text="1×"
                 android:textColor="@color/md3_neutral1_900"
-                android:textSize="16dp" />
+                android:textSize="16sp" />
         </LinearLayout>
 
         <com.uncanny.camx.UI.Views.ViewFinder.VideoModePicker
             android:id="@+id/video_mode_picker"
-            android:layout_width="292dp"
-            android:layout_height="42dp"
-            android:visibility="gone"
+            android:layout_width="262dp"
+            android:layout_height="40dp"
             android:layout_marginTop="14dp"
             android:paddingHorizontal="2dp"
             android:paddingVertical="3dp"
+            android:visibility="gone"
             />
     </LinearLayout>
 
@@ -239,7 +240,7 @@
         android:paddingHorizontal="10dp"
         android:paddingVertical="10dp"
         android:textColor="@color/white"
-        android:textSize="14.5dp"
+        android:textSize="14.5sp"
         app:sideItems="2"
         />
 

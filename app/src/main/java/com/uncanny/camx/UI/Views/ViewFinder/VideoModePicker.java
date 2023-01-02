@@ -32,15 +32,15 @@ public class VideoModePicker extends ModePicker{
         super(context);
     }
 
-    public VideoModePicker(Context context, @Nullable @org.jetbrains.annotations.Nullable AttributeSet attrs) {
+    public VideoModePicker(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
     }
 
-    public VideoModePicker(Context context, @Nullable @org.jetbrains.annotations.Nullable AttributeSet attrs, int defStyleAttr) {
+    public VideoModePicker(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }
 
-    public VideoModePicker(Context context, @Nullable @org.jetbrains.annotations.Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public VideoModePicker(Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
 
@@ -118,7 +118,7 @@ abstract class ModePicker extends View {
         bgRect = new RectF();
         Poppins = Typeface.create("Poppins", Typeface.NORMAL);
 
-        tSize = (float) (13.5 * density);
+        tSize = (float) (12.5 * density);
 
 //        bgPaint.setColor(0x40000000);
         bgPaint.setColor(ContextCompat.getColor(getContext(), R.color.md3_neutral2_800));
