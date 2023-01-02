@@ -87,8 +87,8 @@
  import com.uncanny.camx.UI.Views.ViewFinder.Grids;
  import com.uncanny.camx.UI.Views.ViewFinder.VerticalSlider;
  import com.uncanny.camx.UI.Views.ViewFinder.VideoModePicker;
- import com.uncanny.camx.Utils.AsyncThreads.ImageDecoderThread;
  import com.uncanny.camx.Utils.AsyncThreads.ImageSaverThread;
+ import com.uncanny.camx.Utils.AsyncThreads.LatestThumbnailGenerator;
  import com.uncanny.camx.Utils.AsyncThreads.MainThreadExecutor;
  import com.uncanny.camx.Utils.AsyncThreads.SerialExecutor;
  import com.uncanny.camx.Utils.CompareSizeByArea;
@@ -385,7 +385,7 @@ public class CameraActivity extends Activity {
         tvPreviewParent.setClipToOutline(true);
 
         if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
-            displayMediaThumbnailFromGallery();
+            displayLatestMediaThumbnailFromGallery();
         }
     }
 
@@ -795,7 +795,7 @@ public class CameraActivity extends Activity {
         Log.e(TAG, "onRequestPermissionsResult: "+ Arrays.toString(permissions));
         if (requestCode == REQUEST_PERMISSIONS) {
             if (grantResults.length > 0 && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
-                displayMediaThumbnailFromGallery();
+                displayLatestMediaThumbnailFromGallery();
             } else {
                 Toast.makeText(this, "Allow permission to continue", Toast.LENGTH_SHORT).show();
                 requestRuntimePermission();
@@ -1170,7 +1170,7 @@ public class CameraActivity extends Activity {
 
             thumbPreview.setImageDrawable(null);
             thumbPreview.setOnClickListener(openGallery);
-            displayMediaThumbnailFromGallery();
+            displayLatestMediaThumbnailFromGallery();
             front_switch.setImageDrawable(ResourcesCompat.getDrawable(getResources()
                     , R.drawable.ic_round_flip_camera_android_24, null));
             front_switch.setOnClickListener(switchFrontCamera);
@@ -2283,13 +2283,12 @@ public class CameraActivity extends Activity {
         return getResources().getDisplayMetrics().heightPixels;
     }
 
-    private void displayMediaThumbnailFromGallery() {
-        ImageDecoderThread idt;
-        // TODO: Optimize
-        Completable.fromRunnable(idt = new ImageDecoderThread())
+    private void displayLatestMediaThumbnailFromGallery() {
+        LatestThumbnailGenerator ltg;
+        Completable.fromRunnable(ltg = new LatestThumbnailGenerator(this))
                 .subscribeOn(Schedulers.from(executor))
                 .observeOn(AndroidSchedulers.mainThread())
-                .andThen(Completable.fromRunnable(() -> thumbPreview.setImageBitmap(idt.getBitmap())))
+                .andThen(Completable.fromRunnable(() -> thumbPreview.setImageBitmap(ltg.getBitmap())))
                 .subscribe();
     }
 
@@ -2374,7 +2373,7 @@ public class CameraActivity extends Activity {
 
             @Override
             public void onComplete() {
-                displayMediaThumbnailFromGallery();
+                displayLatestMediaThumbnailFromGallery();
             }
         });
 
@@ -2539,7 +2538,7 @@ public class CameraActivity extends Activity {
         resumed = true;
         startBackgroundThread();
         openCamera();
-        displayMediaThumbnailFromGallery();
+        displayLatestMediaThumbnailFromGallery();
         applyModeChange(getState());
         tvPreview.setOnTouchListener(touchListener);
         shutter.animateInnerCircle(getState());
