@@ -121,7 +121,9 @@ abstract class ModePicker extends View {
         tSize = (float) (12.5 * density);
 
 //        bgPaint.setColor(0x40000000);
-        bgPaint.setColor(ContextCompat.getColor(getContext(), R.color.md3_neutral2_800));
+        int color = ContextCompat.getColor(getContext(), R.color.md3_neutral2_800);
+        int aColor = Color.argb(200, Color.red(color), Color.green(color), Color.blue(color));
+        bgPaint.setColor(aColor);
         bgPaint.setAntiAlias(true);
         bgPaint.setStyle(Paint.Style.FILL);
 

@@ -12,6 +12,9 @@ import android.view.View;
 import android.view.animation.AnticipateOvershootInterpolator;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+
+import com.uncanny.camx.R;
 
 public class VerticalSlider extends Slider {
 
@@ -69,8 +72,8 @@ public class VerticalSlider extends Slider {
 
 abstract class Slider extends View{
     private Paint thumbPaint;
-    private Paint trackPaint;
     private Paint activeTrackPaint;
+    private Paint inactiveTrackPaint;
 
     private int minValue;
     private int maxValue;
@@ -147,34 +150,34 @@ abstract class Slider extends View{
     }
 
     private void init(){
-        trackPaint = new Paint();
-        thumbPaint = new Paint();
         activeTrackPaint = new Paint();
+        thumbPaint = new Paint();
+        inactiveTrackPaint = new Paint();
 
         minValue = 0;
         maxValue = 100;
 
         THUMB_PADDING = 8 * density;
         trackThickness = 4.5f * density;
-        thumbRadius = 8.5f * density;
+        thumbRadius = 10f * density;
         thumbRadiusCache = thumbRadius;
 
         position = THUMB_PADDING+thumbRadius;
 
-        trackPaint.setAntiAlias(true);
-        trackPaint.setColor(Color.WHITE);       //ACCENT
-        trackPaint.setStrokeWidth(trackThickness);
-        trackPaint.setStyle(Paint.Style.STROKE);
-        trackPaint.setStrokeCap(Paint.Cap.ROUND);
-
         activeTrackPaint.setAntiAlias(true);
-        activeTrackPaint.setColor(Color.DKGRAY);
-        activeTrackPaint.setStrokeWidth(trackThickness);
+        activeTrackPaint.setColor(Color.WHITE);       //ACCENT
+        activeTrackPaint.setStrokeWidth(trackThickness-2);
         activeTrackPaint.setStyle(Paint.Style.STROKE);
         activeTrackPaint.setStrokeCap(Paint.Cap.ROUND);
 
+        inactiveTrackPaint.setAntiAlias(true);
+        inactiveTrackPaint.setColor(ContextCompat.getColor(getContext(), R.color.md3_neutral2_800));
+        inactiveTrackPaint.setStrokeWidth(trackThickness);
+        inactiveTrackPaint.setStyle(Paint.Style.STROKE);
+        inactiveTrackPaint.setStrokeCap(Paint.Cap.ROUND);
+
         thumbPaint.setAntiAlias(true);
-        thumbPaint.setColor(Color.GRAY);        //ACCENT
+        thumbPaint.setColor(ContextCompat.getColor(getContext(), R.color.md3_accent2_100));    //ACCENT
         thumbPaint.setStyle(Paint.Style.FILL);
     }
 
@@ -240,18 +243,18 @@ abstract class Slider extends View{
                     , getMinValue(), getMaxValue()) );
         }
 
-        //TRACK
+        //INACTIVE TRACK
         canvas.drawLine(halfWidth,
                 thumbRadius+THUMB_PADDING,
                 halfWidth,
                 height-thumbRadius-THUMB_PADDING,
-                trackPaint);
+                inactiveTrackPaint);
 
         //ACTIVE TRACK
         canvas.drawLine(halfWidth,
-                thumbRadius+THUMB_PADDING,
-                halfWidth,
                 position,
+                halfWidth,
+                height-thumbRadius-THUMB_PADDING,
                 activeTrackPaint);
 
         //THUMB
