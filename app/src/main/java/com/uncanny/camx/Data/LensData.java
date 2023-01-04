@@ -14,7 +14,6 @@ import android.util.Log;
 import android.util.Pair;
 import android.util.Range;
 import android.util.Size;
-import android.widget.Toast;
 
 import com.uncanny.camx.Utils.CompareSizeByArea;
 
@@ -22,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 public class LensData {
@@ -29,8 +29,11 @@ public class LensData {
     private static final String CAMERA_MAIN_BACK = "0";
     private static final String CAMERA_MAIN_FRONT = "1";
     private int LOGICAL_ID;
-    Context activity;
+    private int FOCAL_LENGTH_FRONT, FOCAL_LENGTH_BACK;
+
+    Context context;
     CameraCharacteristics characteristics;
+
     int[] capabilities;
     Size imageSize,imageSize169;
     CameraManager cameraManager;
@@ -47,8 +50,8 @@ public class LensData {
     /**
      * Constructor for this class.
      */
-    public LensData(Context activity){
-        this.activity = activity;
+    public LensData(Context context){
+        this.context = context;
         getAuxCameras();
     }
 
@@ -75,7 +78,66 @@ public class LensData {
         auxiliaryCameras = new ArrayList<>(physicalCameras);
         auxiliaryCameras.remove((Object)0);
         auxiliaryCameras.remove((Object)1);
+
         return auxiliaryCameras;
+    }
+
+    public ArrayList<ArrayList<String>> getCameraAliasBack(){
+        ArrayList<String> camIdList = new ArrayList<>();
+        ArrayList<String> aliasList = new ArrayList<>();
+        ArrayList<ArrayList<String>> camAliasList = new ArrayList<>();
+
+        List<Integer> tList = new ArrayList<>(physicalCameras);
+        tList.remove((Object)0);
+        tList.remove((Object)1);
+
+        int uw = ultraWideCheck();
+        int tele = telephotoCheck();
+
+        if(getZoomFactor(uw+"") < 0.7) {
+            tList.remove((Object)uw);
+            camIdList.add(uw+"");
+            aliasList.add(0, getAuxButtonName(uw + ""));
+        }
+
+        camIdList.add(CAMERA_MAIN_BACK);
+        aliasList.add("1×");
+
+        if(getZoomFactor(tele+"") > 1.3) {
+            tList.remove((Object)tele);
+            camIdList.add(tele+"");
+            aliasList.add(getAuxButtonName(tele + ""));
+        }
+        for(int id : tList){
+            camIdList.add(id+"");
+            aliasList.add(getAuxButtonName(id + ""));
+        }
+
+        camAliasList.add(0,camIdList);
+        camAliasList.add(1,aliasList);
+        return camAliasList;
+    }
+
+    public int ultraWideCheck(){
+        for (int i : physicalCameras){
+            float zf = getFocalLength(i+"")/getMainBackFocalLength();
+            if(zf < 0.7){
+                return i;
+            }
+            Log.e(TAG, "ultraWideCheck: "+i+" : "+zf);
+        }
+        return 0;
+    }
+
+    public int telephotoCheck(){
+        for (int i : physicalCameras){
+            float zf = getFocalLength(i+"")/getMainBackFocalLength();
+            if(zf > 1.3){ //TODO: CHECK WITH K20 PRO 2x TELEPHOTO
+                return i;
+            }
+            Log.e(TAG, "telephotoCheck: "+i+" : "+zf);
+        }
+        return 0;
     }
 
     /**
@@ -221,7 +283,7 @@ public class LensData {
     public void getCameraLensCharacteristics(String id){
         StreamConfigurationMap map = getStreamConfigMap(id);
         CameraCharacteristics cc = getCameraCharacteristics(id);
-        cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+        cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
 //        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoFpsRanges()));
 //        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoSizes()));
 //        Log.e(TAG, "getCameraLensCharacteristics: CAMID : "+id+" resolutions : "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
@@ -358,6 +420,53 @@ public class LensData {
         return imageSize169;
     }
 
+    public float getMainBackFocalLength(){
+        if(FOCAL_LENGTH_BACK == 0){
+            try{
+                CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(CAMERA_MAIN_BACK);
+                return (36.0f / characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE).getWidth()
+                        * characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)[0]);
+            }
+        catch (CameraAccessException e){
+                e.printStackTrace();
+            }
+        }
+        return 0;
+    }
+
+    public float getMainFrontFocalLength(){
+        if(FOCAL_LENGTH_FRONT == 0){
+            try{
+                CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(CAMERA_MAIN_FRONT);
+                return (36.0f / characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE).getWidth()
+                        * characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)[0]);
+            }
+            catch (CameraAccessException e){
+                e.printStackTrace();
+            }
+        }
+        return 0;
+    }
+
+    public float getFocalLength(String cameraId){
+        try{
+            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
+            return (36.0f / characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE).getWidth()
+                    * characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)[0]);
+        }
+        catch (CameraAccessException e){
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    private float getZoomFactor(String id){
+        return getFocalLength(id)/getMainBackFocalLength();
+    }
+
+    private String getAuxButtonName(String id) {
+        return String.format(Locale.US, "%.1f", getZoomFactor(id)).replace(".0", "");
+    }
 
     /**
      * Init
@@ -365,7 +474,7 @@ public class LensData {
     private void getAuxCameras(){
         for(int i = 0; i<=31 ; i++){       // FIXME: 8/11/2021 fix extra aux lens problem @_@
             try {
-                cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+                cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
                 CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(String.valueOf(i));
                 if (characteristics!=null ) {
                     Log.e(TAG, "check_aux: value of array at " + i + " : " + i);
@@ -389,11 +498,10 @@ public class LensData {
         Log.e(TAG, "getAuxCameras: "+logicalCameras);
         Log.e(TAG, "getAuxCameras: "+physicalCameras);
 
-        Toast.makeText(activity, "Execution Completed cam_aux() Physical ids "+physicalCameras, Toast.LENGTH_SHORT).show();
-        Toast.makeText(activity, "Execution Completed cam_aux() Logical  ids "+logicalCameras , Toast.LENGTH_SHORT).show();
     }
 
     private void performBayerCheck(String id) {
+        //TODO : improve logic
         StreamConfigurationMap map = getCameraCharacteristics(id)
                 .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         Size[] sizes;
@@ -449,7 +557,7 @@ public class LensData {
     }
 
     private CameraCharacteristics getCameraCharacteristics(String camId) {
-        cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+        cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
         try {
             characteristics = cameraManager.getCameraCharacteristics(camId);
         } catch (CameraAccessException e) {
@@ -459,8 +567,7 @@ public class LensData {
     }
 
     private StreamConfigurationMap getStreamConfigMap(String id){
-        return getCameraCharacteristics(id)
-                .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+        return getCameraCharacteristics(id).get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
     }
 
 }

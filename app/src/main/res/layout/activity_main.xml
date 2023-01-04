@@ -22,7 +22,6 @@
 
     </RelativeLayout>
 
-
     <com.uncanny.camx.UI.Views.GestureBar
         android:id="@+id/gesture_bar"
         android:layout_width="match_parent"
@@ -82,15 +81,11 @@
             android:clickable="false"
             android:focusable="false"
             android:text="1080p@30FPS"
+            android:textColor="@color/md3_accent2_100"
             android:textSize="10sp"
             android:visibility="invisible"
             tools:ignore="SmallSp" />
 
-        <com.uncanny.camx.UI.Views.ViewFinder.FaceMeteringRect
-            android:id="@+id/fm_rect"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:visibility="gone" />
     </RelativeLayout>
 
     <ImageView
@@ -150,34 +145,6 @@
             android:layout_gravity="center"
             android:visibility="gone"
             />
-        <LinearLayout
-            android:id="@+id/aux_cam_switch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="5dp"
-            android:paddingVertical="3dp"
-            android:background="@drawable/rounded_aux_dock"
-            android:alpha="0.85"
-            android:layout_gravity="center"
-            android:visibility="gone"
-            >
-
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/main_wide"
-                android:layout_width="@dimen/aux_param"
-                android:layout_height="@dimen/aux_param"
-                android:layout_gravity="center_vertical"
-                android:layout_weight="1"
-                android:background="@drawable/circular_textview"
-                android:clickable="true"
-                android:focusable="true"
-                android:fontFamily="@font/poppins"
-                android:gravity="center"
-                android:paddingBottom="2dp"
-                android:text="1×"
-                android:textColor="@color/md3_neutral1_900"
-                android:textSize="16sp" />
-        </LinearLayout>
 
         <com.uncanny.camx.UI.Views.ViewFinder.VideoModePicker
             android:id="@+id/video_mode_picker"

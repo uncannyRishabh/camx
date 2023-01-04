@@ -92,8 +92,8 @@ abstract class Slider extends View{
     private boolean isDragging;
 
     private final float density = getResources().getDisplayMetrics().density;
-    private final Runnable expandThumb = () -> animateThumb(thumbRadius,thumbRadius*1.5f);
-    private final Runnable shrinkThumb = () -> animateThumb(thumbRadius*1.5f,thumbRadius);
+    private final Runnable expandThumb = () -> animateThumb(thumbRadius,thumbRadius*1.3f);
+    private final Runnable shrinkThumb = () -> animateThumb(thumbRadius*1.3f,thumbRadius);
 
     public Slider(Context context) {
         super(context);

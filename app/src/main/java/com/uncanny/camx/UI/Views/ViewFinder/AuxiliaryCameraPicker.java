@@ -67,7 +67,8 @@ abstract class AuxDock extends View {
 
     // 0: ultra-wide ; 1: wide ; 2: macro/telephoto ; 3: other ...
     private ArrayList<String> camList = new ArrayList<>();
-    // 0: alias ; 1: cmaIDs
+    private ArrayList<String> aliasList = new ArrayList<>();
+    // 0: alias ; 1: camIDs
     private ArrayList<ArrayList<String>> camAliasList = new ArrayList<>();
 
     public ArrayList<ArrayList<String>> getCamAliasList() {
@@ -77,6 +78,7 @@ abstract class AuxDock extends View {
     public void setCamAliasList(ArrayList<ArrayList<String>> camAliasList) {
         this.camAliasList = camAliasList;
         camList = camAliasList.get(0);
+        aliasList = camAliasList.get(1);
         invalidate();
     }
 
@@ -110,7 +112,7 @@ abstract class AuxDock extends View {
         activeLensPaint = new Paint();
         bgRect = new RectF();
 
-        textSize = (float) (13.5 * density);
+        textSize = (float) (13 * density);
         height = 40 * density;
         width = 38 * density; //36
 
@@ -123,17 +125,6 @@ abstract class AuxDock extends View {
 
         textPaint.setColor(Color.WHITE);
         textPaint.setTextSize(textSize);
-
-//        if(!camAliasList.isEmpty()){
-//            camList = camAliasList.get(1);
-//        }
-//        else{
-////            Test data
-//        camList.add("21");
-//        camList.add("1");
-//        camList.add("22");
-//        camList.add("23");
-//        }
 
     }
 
@@ -185,7 +176,7 @@ abstract class AuxDock extends View {
     }
 
     public String invokeOnTouch(){
-        return camAliasList.get(1).get(index);
+        return camList.get(index);
     }
 
     @Override
@@ -213,11 +204,11 @@ abstract class AuxDock extends View {
                     textPaint.setColor(0xFFFFFFFF);
                 }
 
-                textPaint.getTextBounds(camList.get(i), 0, camList.get(i).length(), textBounds);
-                textWidth = textPaint.measureText(camList.get(i));
+                textPaint.getTextBounds(aliasList.get(i), 0, aliasList.get(i).length(), textBounds);
+                textWidth = textPaint.measureText(aliasList.get(i));
                 textHeight = textBounds.height();
 
-                canvas.drawText(camList.get(i)
+                canvas.drawText(aliasList.get(i)
                         ,((float)division*i)+((float)division-textWidth)/2f
                         ,(getHeight()/2f)+textHeight/2f
                         ,textPaint);

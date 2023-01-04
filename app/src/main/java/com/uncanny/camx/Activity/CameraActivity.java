@@ -7,6 +7,7 @@
  import android.content.Context;
  import android.content.Intent;
  import android.content.pm.PackageManager;
+ import android.content.res.ColorStateList;
  import android.graphics.Color;
  import android.graphics.ImageFormat;
  import android.graphics.PorterDuff;
@@ -42,8 +43,6 @@
  import android.util.Range;
  import android.util.Size;
  import android.util.SparseIntArray;
- import android.util.TypedValue;
- import android.view.Gravity;
  import android.view.HapticFeedbackConstants;
  import android.view.KeyEvent;
  import android.view.MotionEvent;
@@ -71,7 +70,6 @@
  import com.google.android.material.chip.Chip;
  import com.google.android.material.imageview.ShapeableImageView;
  import com.google.android.material.slider.Slider;
- import com.google.android.material.textview.MaterialTextView;
  import com.uncanny.camx.Control.FocusControls;
  import com.uncanny.camx.Control.ZoomControls;
  import com.uncanny.camx.Data.LensData;
@@ -172,9 +170,7 @@ public class CameraActivity extends Activity {
     private RelativeLayout appbar;
     private AutoFitPreviewView tvPreview;
     private CaptureButton shutter;
-    private MaterialTextView wide_lens,tv;
     private AppCompatImageButton front_switch;
-//    private LinearLayout auxDock;
     private TextView zoomText;
     private ShapeableImageView thumbPreview;
     private ImageButton button1, button2, button3, button4, button5;
@@ -369,7 +365,6 @@ public class CameraActivity extends Activity {
         thumbPreview = findViewById(R.id.img_gal);
         tvPreview = findViewById(R.id.preview);
         shutter = findViewById(R.id.capture);
-        wide_lens = findViewById(R.id.main_wide);
         front_switch = findViewById(R.id.front_back_switch);
         auxDock = findViewById(R.id.auxiliary_cam_picker);
         tvPreviewParent = findViewById(R.id.previewParent);
@@ -415,6 +410,9 @@ public class CameraActivity extends Activity {
         btn_grid1 = findViewById(R.id.top_bar_0);
         btn_grid2 = findViewById(R.id.top_bar_1);
         vi_info = findViewById(R.id.vi_indicator);
+        int color = ContextCompat.getColor(this, R.color.md3_neutral2_800);
+        ColorStateList colorStateList = ColorStateList.valueOf(Color.argb(128,Color.red(color),Color.green(color),Color.blue(color)));
+        vi_info.setChipBackgroundColor(colorStateList);
         chronometer = findViewById(R.id.chronometer);
         resolutionSelector = findViewById(R.id.resolution_selector);
         exposureControl = findViewById(R.id.exposureControl);
@@ -496,6 +494,9 @@ public class CameraActivity extends Activity {
             Log.e(TAG, "onClick: flash : "+mflash);
         });
 
+        //Inflate Menu
+        button5.setOnClickListener(v -> inflateButtonMenu());
+
         //Aspect Ratio button
         button23.setOnClickListener(v -> {
             button1.setColorFilter(Color.WHITE);
@@ -524,12 +525,11 @@ public class CameraActivity extends Activity {
 
         //Settings button
         button25.setOnClickListener(v -> {
+            deflateButtonMenu();
             Intent settingsIntent = new Intent(CameraActivity.this,SettingsActivity.class);
             settingsIntent.putExtra("c2api",lensData.getCamera2level());
             startActivity(settingsIntent);
         });
-
-        button5.setOnClickListener(v -> inflateButtonMenu());
 
         resolutionSelector.setOnClickListener(v -> {
             performFileCleanup();
@@ -756,42 +756,29 @@ public class CameraActivity extends Activity {
             }
         });
 
+        if(!auxCameraList.isEmpty()){
+            ArrayList<ArrayList<String>> camAliasList = new ArrayList<>(lensData.getCameraAliasBack());
 
-        ArrayList<String> aliasList = new ArrayList<>();
-        ArrayList<String> camIdList = new ArrayList<>();
-
-        for(int id : auxCameraList){
-            aliasList.add(id+"");
-            camIdList.add(id+"");
-        }
-
-        aliasList.add(1,"1×");
-        camIdList.add(1,"0");
-
-        ArrayList<ArrayList<String>> camAliasList = new ArrayList<>();
-        camAliasList.add(0,aliasList);
-        camAliasList.add(1,camIdList);
-
-        auxDock.setCamAliasList(camAliasList);
-
-        auxDock.setOnClickListener((view, id) -> {
-            Log.e(TAG, "onClick: POS : "+id);
-            Log.e(TAG, "onClick: "+cameraList);
-            if(!(id).equals(getCameraId())){
-                performFileCleanup();
-                tvPreview.setOnTouchListener(null);
-                setCameraId(id);
-                closeCamera();
-                openCamera();
-                zoomText.post(hideZoomText);
-                if (getState() == CamState.VIDEO) {
-                    addCapableVideoResolutions();
-                    vfHandler.post(hideAuxDock);
+            auxDock.setCamAliasList(camAliasList);
+            auxDock.setOnClickListener((view, id) -> {
+                Log.e(TAG, "onClick: POS : "+id);
+                Log.e(TAG, "onClick: "+cameraList);
+                if(!(id).equals(getCameraId())){
+                    performFileCleanup();
+                    tvPreview.setOnTouchListener(null);
+                    setCameraId(id);
+                    closeCamera();
+                    openCamera();
+                    zoomText.post(hideZoomText);
+                    if (getState() == CamState.VIDEO) {
+                        addCapableVideoResolutions();
+                        vfHandler.post(hideAuxDock);
+                    }
+                    else if (getState() == CamState.SLOMO) addCapableSloMoResolutions();
+                    exposureControl.post(this::setExposureRange);
                 }
-                else if (getState() == CamState.SLOMO) addCapableSloMoResolutions();
-                exposureControl.post(this::setExposureRange);
-            }
-        });
+            });
+        }
 
         /*
         Caching Camera Modes for every camera id
@@ -1179,9 +1166,6 @@ public class CameraActivity extends Activity {
                 auxDock.setIndex(1);
                 setCameraId(BACK_CAMERA_ID);
                 if(getState() != CamState.PORTRAIT) openCamera();
-//                wide_lens.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview));
-//                wide_lens.setTextColor(ContextCompat.getColor(context,R.color.md3_neutral1_900));
-//                wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
                 front_switch.animate().rotation(-180f).setDuration(300);
 
             }
