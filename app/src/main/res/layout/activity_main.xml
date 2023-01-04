@@ -99,7 +99,7 @@
         android:layout_height="44dp"
         android:layout_above="@id/exposureControl"
         android:layout_alignParentEnd="true"
-        android:src="@drawable/ic_ae_af_unlock_24"
+        android:src="@drawable/ic_ae_unlock"
         android:padding="8dp"
         android:visibility="gone"
         android:contentDescription="@string/ae_af_lock" />
@@ -142,6 +142,14 @@
         android:layout_above="@id/relative_layout_button_dock"
         android:layout_centerHorizontal="true"
         >
+        <com.uncanny.camx.UI.Views.ViewFinder.AuxiliaryCameraPicker
+            android:id="@+id/auxiliary_cam_picker"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="3dp"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            />
         <LinearLayout
             android:id="@+id/aux_cam_switch"
             android:layout_width="wrap_content"

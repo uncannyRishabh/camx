@@ -21,9 +21,9 @@ public class VideoModePicker extends ModePicker{
     public interface OnCLickListener {
         /**
          * @param view ModePicker View
-         * @param Position Position of the element, starting from 0.
+         * @param position position of the element, starting from 0.
          */
-        void onClick(VideoModePicker view, int Position);
+        void onClick(VideoModePicker view, int position);
     }
 
     private OnCLickListener onCLickListener;
@@ -68,7 +68,6 @@ abstract class ModePicker extends View {
     private int index;
     private int cacheIndex;
     private float tSize;
-    private float halfHeight;
     private int divisionSize;
     private String []modes = {"Slow Motion","Normal","Time Warp"};
     private final float density = getResources().getDisplayMetrics().density;
@@ -135,7 +134,6 @@ abstract class ModePicker extends View {
         tPaint.setAntiAlias(true);
         tPaint.setColor(Color.WHITE);
         tPaint.setTextSize(tSize);
-        tPaint.setStyle(Paint.Style.FILL);
 
     }
 
@@ -144,6 +142,7 @@ abstract class ModePicker extends View {
         int action = event.getActionMasked();
         switch (action){
             case MotionEvent.ACTION_DOWN:{
+                break;
             }
             case MotionEvent.ACTION_UP:{
                 for(int i=0; i<modes.length; i++){
@@ -174,7 +173,6 @@ abstract class ModePicker extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        halfHeight = getHeight()/2f;
         divisionSize = (getWidth()/ modes.length);
 
         bgRect.set(0,0,getWidth(),getHeight());

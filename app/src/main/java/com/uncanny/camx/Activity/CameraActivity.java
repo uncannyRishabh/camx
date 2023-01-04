@@ -83,6 +83,7 @@
  import com.uncanny.camx.UI.Views.ResolutionSelector;
  import com.uncanny.camx.UI.Views.UncannyChronometer;
  import com.uncanny.camx.UI.Views.ViewFinder.AutoFitPreviewView;
+ import com.uncanny.camx.UI.Views.ViewFinder.AuxiliaryCameraPicker;
  import com.uncanny.camx.UI.Views.ViewFinder.FocusCircle;
  import com.uncanny.camx.UI.Views.ViewFinder.Grids;
  import com.uncanny.camx.UI.Views.ViewFinder.VerticalSlider;
@@ -173,7 +174,7 @@ public class CameraActivity extends Activity {
     private CaptureButton shutter;
     private MaterialTextView wide_lens,tv;
     private AppCompatImageButton front_switch;
-    private LinearLayout auxDock;
+//    private LinearLayout auxDock;
     private TextView zoomText;
     private ShapeableImageView thumbPreview;
     private ImageButton button1, button2, button3, button4, button5;
@@ -191,9 +192,11 @@ public class CameraActivity extends Activity {
     private ResolutionSelector resolutionSelector;
     private RelativeLayout tvPreviewParent;
     private RelativeLayout parent;
+    private LinearLayout aux_videoMode_holder;
     private VerticalSlider exposureControl;
     private VideoModePicker videoModePicker;
     private ImageView AEAFlock;
+    private AuxiliaryCameraPicker auxDock;
 
     private int resultCode = 1;
     private long lastClickTime = 0;
@@ -368,16 +371,19 @@ public class CameraActivity extends Activity {
         shutter = findViewById(R.id.capture);
         wide_lens = findViewById(R.id.main_wide);
         front_switch = findViewById(R.id.front_back_switch);
-        auxDock = findViewById(R.id.aux_cam_switch);
+        auxDock = findViewById(R.id.auxiliary_cam_picker);
         tvPreviewParent = findViewById(R.id.previewParent);
         dock = findViewById(R.id.relative_layout_button_dock);
         mModePicker = findViewById(R.id.mode_picker_view);
-        setAestheticLayout();
+        aux_videoMode_holder = findViewById(R.id.aux_videoMode_holder);
 
         context = getApplicationContext();
         lensData = new LensData(context);
         cameraList =  lensData.getPhysicalCameras();
         auxCameraList = lensData.getAuxiliaryCameras();
+
+        if(!auxCameraList.isEmpty()) auxDock.setVisibility(View.VISIBLE);
+        setAestheticLayout();
 
         modeMap.put(0,0);
         modeMap.put(1,1);
@@ -390,7 +396,6 @@ public class CameraActivity extends Activity {
     @Override
     protected void onPostCreate(@Nullable Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-        addAuxButtons();
 
         button1 = findViewById(R.id.btn_1);
         button2 = findViewById(R.id.btn_2);
@@ -637,25 +642,6 @@ public class CameraActivity extends Activity {
 
         thumbPreview.setOnClickListener(openGallery);
 
-        wide_lens.setOnClickListener(v -> {
-            performFileCleanup();
-            if (!getCameraId().equals(BACK_CAMERA_ID)) {
-                closeCamera();
-                tvPreview.setOnTouchListener(null);
-                zoomText.post(hideZoomText);
-                setCameraId(BACK_CAMERA_ID);
-                openCamera();
-                if(getState()==CamState.VIDEO) addCapableVideoResolutions();
-                else if(getState()==CamState.SLOMO) addCapableSloMoResolutions();
-                exposureControl.post(this::setExposureRange);
-                resetAuxDock();
-                wide_lens.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview));
-                wide_lens.setTextColor(ContextCompat.getColor(context,R.color.md3_neutral1_900));
-                wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
-                wide_lens.post(hideAuxDock);
-            }
-        });
-
         front_switch.setOnClickListener(switchFrontCamera);
 
         tvPreview.setOnTouchListener(touchListener);
@@ -707,6 +693,7 @@ public class CameraActivity extends Activity {
             @Override
             public void onStartTrackingTouch(VerticalSlider seekBar,float progress) {
                 exposureControl.removeCallbacks(hideExposureControl);
+                exposureControl.removeCallbacks(resetAEAF);
             }
 
             @Override
@@ -714,7 +701,7 @@ public class CameraActivity extends Activity {
                 if(getState() == CamState.CAMERA || getState() == CamState.PORTRAIT
                         || getState() == CamState.NIGHT || getState() == CamState.HIRES) {
                     if(!AE_AF_LOCK) {
-                        exposureControl.postDelayed(hideExposureControl, 3000);
+                        exposureControl.postDelayed(hideExposureControl, 3300);
                         exposureControl.postDelayed(resetAEAF, 3000);
                     }
                 }
@@ -769,6 +756,43 @@ public class CameraActivity extends Activity {
             }
         });
 
+
+        ArrayList<String> aliasList = new ArrayList<>();
+        ArrayList<String> camIdList = new ArrayList<>();
+
+        for(int id : auxCameraList){
+            aliasList.add(id+"");
+            camIdList.add(id+"");
+        }
+
+        aliasList.add(1,"1×");
+        camIdList.add(1,"0");
+
+        ArrayList<ArrayList<String>> camAliasList = new ArrayList<>();
+        camAliasList.add(0,aliasList);
+        camAliasList.add(1,camIdList);
+
+        auxDock.setCamAliasList(camAliasList);
+
+        auxDock.setOnClickListener((view, id) -> {
+            Log.e(TAG, "onClick: POS : "+id);
+            Log.e(TAG, "onClick: "+cameraList);
+            if(!(id).equals(getCameraId())){
+                performFileCleanup();
+                tvPreview.setOnTouchListener(null);
+                setCameraId(id);
+                closeCamera();
+                openCamera();
+                zoomText.post(hideZoomText);
+                if (getState() == CamState.VIDEO) {
+                    addCapableVideoResolutions();
+                    vfHandler.post(hideAuxDock);
+                }
+                else if (getState() == CamState.SLOMO) addCapableSloMoResolutions();
+                exposureControl.post(this::setExposureRange);
+            }
+        });
+
         /*
         Caching Camera Modes for every camera id
          */
@@ -797,10 +821,10 @@ public class CameraActivity extends Activity {
         }
     }
 
-    private boolean flashSupported() {
-        return context.getPackageManager()
-                .hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH);
-    }
+//    private boolean flashSupported() {
+//        return context.getPackageManager()
+//                .hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH);
+//    }
 
     /**
      * MODES
@@ -955,61 +979,6 @@ public class CameraActivity extends Activity {
      * UI CHANGES
      */
 
-    private void addAuxButtons() {
-        final float param= getResources().getDimension(R.dimen.aux_param);
-        if(auxCameraList.size()>0){
-            auxDock.setVisibility(View.VISIBLE);
-            for (int i=0 ; i< auxCameraList.size() ; i++) {
-                modeMap.put(auxCameraList.get(i),2+i);
-                LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams((int) param
-                        ,LinearLayout.LayoutParams.MATCH_PARENT);
-                layoutParams.weight = 1.0f;
-                MaterialTextView aux_btn = new MaterialTextView(this);
-                aux_btn.setLayoutParams(layoutParams);
-                aux_btn.setId(auxCameraList.get(i));
-                aux_btn.setGravity(Gravity.CENTER);
-                aux_btn.setText(auxCameraList.get(i).toString());
-//                aux_btn.setTextColor(ContextCompat.getColor(context,R.color.md3_neutral1_900));
-//                aux_btn.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview_small));
-                aux_btn.setTextColor(ContextCompat.getColor(context,R.color.md3_accent2_100));
-                aux_btn.setBackground(null);
-                aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP,11);
-                auxDock.addView(aux_btn);
-
-                aux_btn.setOnClickListener(v -> {
-                    if(!(aux_btn.getId()+"").equals(getCameraId())) {
-                        performFileCleanup();
-                        tvPreview.setOnTouchListener(null);
-                        setCameraId(aux_btn.getId() + "");
-                        closeCamera();
-                        setCameraId(aux_btn.getId() + "");
-                        openCamera();
-                        zoomText.post(hideZoomText);
-                        if (getState() == CamState.VIDEO) {
-                            addCapableVideoResolutions();
-                            vfHandler.post(hideAuxDock);
-                        }
-                        else if (getState() == CamState.SLOMO) addCapableSloMoResolutions();
-                        exposureControl.post(this::setExposureRange);
-//                        wide_lens.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview_small));
-                        wide_lens.setBackground(null);
-                        wide_lens.setTextColor(ContextCompat.getColor(context,R.color.md3_accent2_100));
-                        wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-                        aux_btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-                        aux_btn.setTextColor(ContextCompat.getColor(context,R.color.md3_neutral1_900));
-//                        aux_btn.setTextColor(ContextCompat.getColor(context,R.color.md3_accent2_100));
-                        aux_btn.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview));
-                        resetAuxDock();
-
-                    }
-                });
-            }
-        }
-        else if(cameraList.isEmpty()){
-            auxDock.setVisibility(View.GONE);
-        }
-    }
-
     private void setAestheticLayout() {
         new AestheticLayout(this);
 
@@ -1104,21 +1073,6 @@ public class CameraActivity extends Activity {
         btn_grid2.findViewById(R.id.btn_23).setVisibility(View.VISIBLE);
         btn_grid2.findViewById(R.id.btn_24).setVisibility(View.VISIBLE);
         btn_grid2.findViewById(R.id.resolution_selector).setVisibility(View.GONE);
-    }
-
-    private void resetAuxDock(){
-        for (int id : auxCameraList) {
-            //RESET LENS ATTRIBUTES
-            if ((id + "").equals(getCameraId())) {
-                continue;
-            }
-            tv = auxDock.findViewById(id);
-//            tv.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview_small));
-//            tv.setTextColor(ContextCompat.getColor(context,R.color.md3_neutral1_900));
-            tv.setBackground(null);
-            tv.setTextColor(ContextCompat.getColor(context,R.color.md3_accent2_100));
-            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        }
     }
 
     private void modifyUIonVideoShutter(){
@@ -1222,13 +1176,14 @@ public class CameraActivity extends Activity {
                 if(getState() != CamState.PORTRAIT) openCamera();
                 front_switch.animate().rotation(180f).setDuration(300);
             } else {
+                auxDock.setIndex(1);
                 setCameraId(BACK_CAMERA_ID);
                 if(getState() != CamState.PORTRAIT) openCamera();
-                wide_lens.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview));
-                wide_lens.setTextColor(ContextCompat.getColor(context,R.color.md3_neutral1_900));
-                wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
+//                wide_lens.setBackground(ContextCompat.getDrawable(context, R.drawable.circular_textview));
+//                wide_lens.setTextColor(ContextCompat.getColor(context,R.color.md3_neutral1_900));
+//                wide_lens.setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
                 front_switch.animate().rotation(-180f).setDuration(300);
-                resetAuxDock();
+
             }
             applyModeChange(getState());
             front_switch.post(hideAuxDock);
@@ -1554,7 +1509,7 @@ public class CameraActivity extends Activity {
 
         exposureControl.removeCallbacks(hideExposureControl);
         AE_AF_LOCK = true;
-        AEAFlock.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_ae_af_lock_24));
+        AEAFlock.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_ae_lock));
         buildPreview();
     }
 
@@ -1564,7 +1519,7 @@ public class CameraActivity extends Activity {
 
         exposureControl.postDelayed(hideExposureControl,3000);
         AE_AF_LOCK = false;
-        AEAFlock.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_ae_af_unlock_24));
+        AEAFlock.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_ae_unlock));
         buildPreview();
     }
 

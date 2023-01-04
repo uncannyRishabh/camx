@@ -9,6 +9,8 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.AnticipateInterpolator;
 import android.view.animation.AnticipateOvershootInterpolator;
 
 import androidx.annotation.Nullable;
@@ -57,12 +59,12 @@ public class FocusCircle extends View {
     public void animateInnerCircle(){
         PropertyValuesHolder oPropertyValuesHolder = PropertyValuesHolder.ofFloat("radius",radius/3f,radius);
         ValueAnimator valueAnimator = ValueAnimator.ofPropertyValuesHolder(oPropertyValuesHolder);
-        valueAnimator.setInterpolator(new AnticipateOvershootInterpolator());
+        valueAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         valueAnimator.addUpdateListener(animation -> {
             invalidate();
             iRadius = (float) animation.getAnimatedValue();
         });
-        valueAnimator.setDuration(650);
+        valueAnimator.setDuration(500);
         valueAnimator.start();
 
         PropertyValuesHolder iPropertyValuesHolder = PropertyValuesHolder.ofFloat("radius",radius/2f,radius);
