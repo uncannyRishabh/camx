@@ -425,7 +425,7 @@ public class CameraActivity extends Activity {
         addCapableVideoResolutions();
 
         mModePicker.setValues(new String[] {"Night", "Portrait", "Camera", "Video", "Pro"});
-        mModePicker.setSelectedItem(2);
+        mModePicker.setSelectedItem(2,null);
         mModePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
         mModePicker.setOnItemSelectedListener(this::switchMode);
 
@@ -1241,8 +1241,8 @@ public class CameraActivity extends Activity {
                             Log.e("TAG", "onTouchEvent: FLING RIGHT");
                             vfPointerX = event.getX();
                             if(mModePicker.getSelectedItem() >= 0 && mModePicker.getSelectedItem()<mModePicker.getItems()-1) {
-                                mModePicker.setSelectedItem(mModePicker.getSelectedItem() + 1);
-                                switchMode(mModePicker.getSelectedItem());
+                                mModePicker.setSelectedItem(mModePicker.getSelectedItem() + 1,1);
+//                                switchMode(mModePicker.getSelectedItem());
                                 return true;
                             }
                         }
@@ -1250,8 +1250,8 @@ public class CameraActivity extends Activity {
                             Log.e("TAG", "onTouchEvent: FLING LEFT");
                             vfPointerX = event.getX();
                             if(mModePicker.getSelectedItem() > 0 && mModePicker.getSelectedItem()<mModePicker.getItems()) {
-                                mModePicker.setSelectedItem(mModePicker.getSelectedItem() - 1);
-                                switchMode(mModePicker.getSelectedItem());
+                                mModePicker.setSelectedItem(mModePicker.getSelectedItem() - 1,-1);
+//                                switchMode(mModePicker.getSelectedItem());
                             }
                             return true;
                         }

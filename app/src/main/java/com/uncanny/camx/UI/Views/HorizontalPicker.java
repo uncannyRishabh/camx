@@ -37,6 +37,7 @@ import android.text.Layout;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
@@ -48,6 +49,7 @@ import android.widget.EdgeEffect;
 import android.widget.OverScroller;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
 import androidx.core.text.TextDirectionHeuristicCompat;
@@ -659,8 +661,9 @@ public class HorizontalPicker extends View {
         return getPositionFromCoordinates(x);
     }
 
-    public void setSelectedItem(int index) {
+    public void setSelectedItem(int index, @Nullable Integer scrollDirection) {
         selectedItem = index;
+        if (scrollDirection != null) smoothScrollBy(scrollDirection); //-1 , 1
         scrollToItem(index);
     }
 
@@ -739,8 +742,7 @@ public class HorizontalPicker extends View {
         SavedState ss = (SavedState) state;
         super.onRestoreInstanceState(ss.getSuperState());
 
-        setSelectedItem(ss.mSelItem);
-
+        setSelectedItem(ss.mSelItem, null);
 
     }
 

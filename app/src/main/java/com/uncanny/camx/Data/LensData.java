@@ -83,6 +83,7 @@ public class LensData {
     }
 
     public ArrayList<ArrayList<String>> getCameraAliasBack(){
+        Log.e(TAG, "getCameraAliasBack: physicalCamera : "+physicalCameras);
         ArrayList<String> camIdList = new ArrayList<>();
         ArrayList<String> aliasList = new ArrayList<>();
         ArrayList<ArrayList<String>> camAliasList = new ArrayList<>();
@@ -100,9 +101,6 @@ public class LensData {
             aliasList.add(0, getAuxButtonName(uw + ""));
         }
 
-        camIdList.add(CAMERA_MAIN_BACK);
-        aliasList.add("1×");
-
         if(getZoomFactor(tele+"") > 1.3) {
             tList.remove((Object)tele);
             camIdList.add(tele+"");
@@ -113,13 +111,26 @@ public class LensData {
             aliasList.add(getAuxButtonName(id + ""));
         }
 
+        if(!camIdList.isEmpty()){
+            camIdList.add(1,CAMERA_MAIN_BACK);
+            aliasList.add(1,"1×");
+        }
+        else {
+            camIdList.add(CAMERA_MAIN_BACK);
+            aliasList.add("1×");
+        }
+
         camAliasList.add(0,camIdList);
         camAliasList.add(1,aliasList);
+
         return camAliasList;
     }
 
     public int ultraWideCheck(){
-        for (int i : physicalCameras){
+        List<Integer> tList = new ArrayList<>(physicalCameras);
+        tList.remove((Object)0);
+        tList.remove((Object)1);
+        for (int i : tList){
             float zf = getFocalLength(i+"")/getMainBackFocalLength();
             if(zf < 0.7){
                 return i;
@@ -130,7 +141,10 @@ public class LensData {
     }
 
     public int telephotoCheck(){
-        for (int i : physicalCameras){
+        List<Integer> tList = new ArrayList<>(physicalCameras);
+        tList.remove((Object)0);
+        tList.remove((Object)1);
+        for (int i : tList){
             float zf = getFocalLength(i+"")/getMainBackFocalLength();
             if(zf > 1.3){ //TODO: CHECK WITH K20 PRO 2x TELEPHOTO
                 return i;

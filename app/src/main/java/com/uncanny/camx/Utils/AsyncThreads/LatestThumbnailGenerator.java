@@ -54,22 +54,7 @@ public class LatestThumbnailGenerator implements Runnable{
                     if (latestMedia.exists()) {
                         if(fileIsImage(String.valueOf(latestMedia))){
                             bitmap = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(String.valueOf(latestMedia)),100,100);
-                            try {
-                                ExifInterface exif = new ExifInterface(latestMedia.getAbsolutePath());
-                                int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION,1);
-//                                Log.e(TAG, "run: Exif : "+orientation);
-                                Matrix matrix = new Matrix();
-                                if(orientation == 8) {
-                                    matrix.postRotate(270);
-                                    bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-                                }
-                                else if(orientation == 6) {
-                                    matrix.postRotate(90);
-                                    bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-                                }
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
+                            bitmap = applyExifRotation(latestMedia.getAbsolutePath());
                         }
                         else {
                             bitmap = ThumbnailUtils.createVideoThumbnail(String.valueOf(latestMedia), MediaStore.Images.Thumbnails.MINI_KIND);
@@ -80,17 +65,44 @@ public class LatestThumbnailGenerator implements Runnable{
                     break;
                 }
             }while (cursor.moveToNext());
-
-
         }
-
         cursor.close();
+    }
+
+    public static Bitmap applyExifRotation(String filePath) {
+        ExifInterface exif;
+        Bitmap bitmap = BitmapFactory.decodeFile(filePath);
+        try {
+            exif = new ExifInterface(filePath);
+            int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+            int rotate = 0;
+            switch (orientation) {
+                case ExifInterface.ORIENTATION_ROTATE_270:
+                    rotate = 270;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_180:
+                    rotate = 180;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_90:
+                    rotate = 90;
+                    break;
+            }
+            if (rotate != 0) {
+                int w = bitmap.getWidth();
+                int h = bitmap.getHeight();
+                Matrix mtx = new Matrix();
+                mtx.preRotate(rotate);
+                bitmap = Bitmap.createBitmap(bitmap, 0, 0, w, h, mtx, false);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return bitmap;
     }
 
     private boolean fileIsImage(String file) {
         int index = file.lastIndexOf(46);
-        return IMAGE_FILES_EXTENSIONS.contains(-1 == index ? ""
-                : file.substring(index + 1).toUpperCase());
+        return IMAGE_FILES_EXTENSIONS.contains(-1 == index ? "" : file.substring(index + 1).toUpperCase());
     }
 
 }

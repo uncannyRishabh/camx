@@ -187,7 +187,7 @@ abstract class AuxDock extends View {
             division = getWidth()/camList.size();
             bgRect.set(0,0,(camList.size()*width)//+getPaddingStart()+getPaddingEnd()
                     ,height);//+getPaddingTop()+getPaddingBottom());
-            canvas.drawRoundRect(bgRect,50,50,bgPaint);
+            canvas.drawRoundRect(bgRect,60,60,bgPaint);
 
             canvas.drawCircle(getIndex()*((float)division)+(width/2f)//+getPaddingStart()
                     ,getHeight()/2f
