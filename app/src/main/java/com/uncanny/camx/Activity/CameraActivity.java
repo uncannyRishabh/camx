@@ -303,6 +303,7 @@ public class CameraActivity extends Activity {
     private Runnable hideAuxDock = new Runnable() {
         @Override
         public void run() {
+            boolean slomoCap = lensData.hasSloMoCapabilities(getCameraId());
             if(characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_BACK){
                 if(getState() == CamState.HIRES || getState() == CamState.VIDEO_PROGRESSED
                         || getState() == CamState.HSVIDEO_PROGRESSED
@@ -313,11 +314,22 @@ public class CameraActivity extends Activity {
                     auxDock.setVisibility(View.INVISIBLE);
                 }
                 else if(getState() == CamState.VIDEO){
-                    if(!lensData.hasSloMoCapabilities(getCameraId())){
-                        videoModePicker.setVisibility(View.GONE);
+                    if(!slomoCap){
+//                        videoModePicker.setVisibility(View.GONE);
+                        videoModePicker.removeMode("Slow Motion");
                     }
                     else {
-                        videoModePicker.setVisibility(View.VISIBLE);
+//                        videoModePicker.setVisibility(View.VISIBLE);
+                        videoModePicker.addMode(0,"Slow Motion");
+                    }
+                    auxDock.setVisibility(View.VISIBLE);
+                }
+                else if(getState() == CamState.TIMELAPSE){
+                    if(!slomoCap){
+                        videoModePicker.removeMode("Slow Motion");
+                    }
+                    else {
+                        videoModePicker.addMode(0,"Slow Motion");
                     }
                     auxDock.setVisibility(View.VISIBLE);
                 }
@@ -336,10 +348,11 @@ public class CameraActivity extends Activity {
                     videoModePicker.setVisibility(View.GONE);
                 }
                 else if(getState() == CamState.VIDEO) {
-                    if (!lensData.hasSloMoCapabilities(getCameraId())) {
-                        videoModePicker.setVisibility(View.GONE);
+                    if (!slomoCap) {
+                        videoModePicker.removeMode("Slow Motion");
+
                     } else {
-                        videoModePicker.setVisibility(View.VISIBLE);
+                        videoModePicker.addMode(0,"Slow Motion");
                     }
                 }
                 auxDock.setVisibility(View.GONE);
@@ -634,7 +647,7 @@ public class CameraActivity extends Activity {
                         thumbPreview.setVisibility(View.VISIBLE);
                         front_switch.setVisibility(View.VISIBLE);
                         createSloMoPreview(sloMoPair.first.getWidth(), sloMoPair.first.getHeight());
-                        videoModePicker.setIndex(0);
+                        videoModePicker.setIndex("Video");
                         isSLRecording = false;
                         displayLatestMediaThumbnailFromGallery();
                         fileHandler.performMediaScan(mVideoFile,"video");
@@ -644,8 +657,8 @@ public class CameraActivity extends Activity {
                 }
                 case TIMELAPSE: {
                     if(!isTLRecording){
-                        sound.play(MediaActionSound.START_VIDEO_RECORDING);
                         setState(CamState.TIMELAPSE_PROGRESSED);
+                        sound.play(MediaActionSound.START_VIDEO_RECORDING);
                         mainThreadExecutor.execute(this::modifyUIonVideoShutter);
                         auxDock.post(hideAuxDock);
                         startRecording();
@@ -810,6 +823,7 @@ public class CameraActivity extends Activity {
                     if (getState() == CamState.VIDEO || getState() == CamState.TIMELAPSE) {
                         addCapableVideoResolutions();
                         vfHandler.post(hideAuxDock);
+                        videoModePicker.setIndex("Video");
                     }
                     else if (getState() == CamState.SLOMO) addCapableSloMoResolutions();
                     exposureControl.post(this::setExposureRange);
@@ -863,7 +877,7 @@ public class CameraActivity extends Activity {
     }
 
     private void modeVideo(){
-        videoModePicker.setIndex(1);
+        videoModePicker.setIndex("Video");
         shutter.animateShutterButton(getState());
         requestVideoPermissions();
 
@@ -1102,7 +1116,7 @@ public class CameraActivity extends Activity {
     }
 
     private void modifyUIonVideoShutter(){
-        if(!isVRecording){
+        if(!isVRecording || !isTLRecording){
 //            Log.e(TAG, "modifyUIonVideoShutter: VIDEO END");
             chronometer.stop();
             chronometer.setVisibility(View.INVISIBLE);
@@ -1155,7 +1169,7 @@ public class CameraActivity extends Activity {
             front_switch.setImageDrawable(ResourcesCompat.getDrawable(getResources()
                     , R.drawable.ic_round_flip_camera_android_24, null));
             front_switch.setOnClickListener(switchFrontCamera);
-            videoModePicker.setIndex(1);
+            videoModePicker.setIndex(isVRecording ? "Video" : "Time Lapse");
         }
         else{
 //            Log.e(TAG, "modifyUIonVideoShutter: VIDEO START");
@@ -1812,7 +1826,7 @@ public class CameraActivity extends Activity {
         update_chip_text(mVideoRecordSize.getWidth()+"",vFPS+"");
 
         Log.e(TAG, "createVideoPreview: mVideoPreviewSize : "+ mVideoPreviewSize);
-        Log.e(TAG, "createVideoPreview: mVideoRecordSize : "+ mVideoRecordSize);
+        Log.e(TAG, "createVideoPreview: mVideoRecordSize : " + mVideoRecordSize);
 
         stPreview.setDefaultBufferSize(mVideoPreviewSize.getWidth(), mVideoPreviewSize.getHeight());
         tvPreview.setAspectRatio(mVideoPreviewSize.getHeight(), mVideoPreviewSize.getWidth());
@@ -1908,6 +1922,7 @@ public class CameraActivity extends Activity {
              if(getState() == CamState.VIDEO){
                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(context);
                  else mMediaRecorder = new MediaRecorder();
+                 mMediaRecorder.reset();
                  mMediaRecorder.setOrientationHint(getJpegOrientation()); //90   // TODO : CHANGE ACCORDING TO SENSOR ORIENTATION
                  mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
                  mMediaRecorder.setAudioSamplingRate(camcorderProfile.audioSampleRate);
@@ -1924,8 +1939,9 @@ public class CameraActivity extends Activity {
              }
 
              if(getState() == CamState.TIMELAPSE) {
-                 camcorderProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_TIME_LAPSE_1080P);
                  mMediaRecorder.reset();
+                 camcorderProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_TIME_LAPSE_1080P);
+                 mMediaRecorder.setOrientationHint(getJpegOrientation());
                  mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
                  mMediaRecorder.setVideoEncodingBitRate(camcorderProfile.videoBitRate);
                  mMediaRecorder.setProfile(camcorderProfile);
@@ -1954,6 +1970,7 @@ public class CameraActivity extends Activity {
 
             if(!isVRecording){
 
+                Log.e(TAG, "startRecording: TEST");
                 Surface recordSurface = mMediaRecorder.getSurface();
 //                previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
 //                previewCaptureRequest.addTarget(previewSurface);
@@ -1964,7 +1981,6 @@ public class CameraActivity extends Activity {
                     OutputConfiguration recordConfiguration = new OutputConfiguration(recordSurface);
                     SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR
                             , Arrays.asList(previewConfiguration,recordConfiguration)
-//                            , Collections.singletonList(recordConfiguration)
                             , getMainExecutor()
                             , new CameraCaptureSession.StateCallback() {
                         @Override
@@ -1972,6 +1988,7 @@ public class CameraActivity extends Activity {
                             camSession = session;
                             mMediaRecorder.start();
                             try {
+                                Log.e(TAG, "startRecording: TEST");
                                 camSession.setRepeatingRequest(previewCaptureRequest.build(),null, mBackgroundHandler);
                             } catch (CameraAccessException e) {
                                 e.printStackTrace();

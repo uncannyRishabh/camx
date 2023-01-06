@@ -16,6 +16,8 @@ import androidx.core.content.ContextCompat;
 
 import com.uncanny.camx.R;
 
+import java.util.ArrayList;
+
 public class VideoModePicker extends ModePicker{
 
     public interface OnCLickListener {
@@ -69,20 +71,36 @@ abstract class ModePicker extends View {
     private int cacheIndex;
     private float tSize;
     private int divisionSize;
-    private String []modes = {"Slow Motion","Normal","Time Lapse"};
+//    private String []modes = {"Slow Motion","Normal","Time Lapse"};
+    private ArrayList<String> modes = new ArrayList<>();
     private final float density = getResources().getDisplayMetrics().density;
 
-    public void setModes(String[] modes) {
+    public void setModes(ArrayList<String> modes) {
         this.modes = modes;
+        postInvalidate();
+    }
+
+    public void addMode(int index, String modeName){
+        if(!modes.contains(modeName)){
+            modes.add(index,modeName);
+            setIndex("Video");
+        }
+        postInvalidate();
+    }
+
+    public void removeMode(String modeName){
+        boolean ds = modes.remove(modeName);
+        if(ds) setIndex("Video");
+        postInvalidate();
     }
 
     public int getIndex() {
         return index;
     }
 
-    public void setIndex(int index) {
-        this.index = index;
-        this.cacheIndex = index;
+    public void setIndex(String modeName) {
+        this.index = modes.indexOf(modeName);;
+        this.cacheIndex = modes.indexOf(modeName);;
     }
 
     private void setIndexVal(int index) {
@@ -135,6 +153,9 @@ abstract class ModePicker extends View {
         tPaint.setColor(Color.WHITE);
         tPaint.setTextSize(tSize);
 
+        modes.add("Slow Motion");
+        modes.add("Video");
+        modes.add("Time Lapse");
     }
 
     @Override
@@ -145,7 +166,7 @@ abstract class ModePicker extends View {
                 break;
             }
             case MotionEvent.ACTION_UP:{
-                for(int i=0; i<modes.length; i++){
+                for(int i=0; i<modes.size(); i++){
                     if(event.getX()<(divisionSize*(i+1)) && event.getX()>(divisionSize*i)){
                         setIndexVal(i);
                     }
@@ -173,7 +194,7 @@ abstract class ModePicker extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        divisionSize = (getWidth()/ modes.length);
+        divisionSize = (getWidth()/ modes.size());
 
         bgRect.set(0,0,getWidth(),getHeight());
         sRect.set(divisionSize*index + getPaddingStart(),
@@ -185,11 +206,11 @@ abstract class ModePicker extends View {
 
         if(modes!=null){
             canvas.drawRoundRect(sRect,50,50,sPaint);
-            for(int i=0; i<modes.length; i++){
+            for(int i=0; i<modes.size(); i++){
                 if(i==getIndex()) tPaint.setColor(ContextCompat.getColor(getContext(),R.color.md3_neutral1_900));
                 else tPaint.setColor(0xFFFFFFFF);
-                canvas.drawText(modes[i]
-                        ,((float)divisionSize*i)+((float)divisionSize-tPaint.measureText(modes[i]))/2
+                canvas.drawText(modes.get(i)
+                        ,((float)divisionSize*i)+((float)divisionSize-tPaint.measureText(modes.get(i)))/2
                         ,(getHeight()+ tSize)/2f-5
                         ,tPaint);
             }
