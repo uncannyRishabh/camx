@@ -15,6 +15,7 @@ import android.util.Pair;
 import android.util.Range;
 import android.util.Size;
 
+import com.uncanny.camx.Utils.CameraHelper;
 import com.uncanny.camx.Utils.CompareSizeByArea;
 
 import java.util.ArrayList;
@@ -486,6 +487,7 @@ public class LensData {
      * Init
      */
     private void getAuxCameras(){
+        CameraHelper ch = new CameraHelper();
         for(int i = 0; i<=31 ; i++){       // FIXME: 8/11/2021 fix extra aux lens problem @_@
             try {
                 cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
@@ -502,6 +504,8 @@ public class LensData {
                     }
                     else  {
                         physicalCameras.add(i);
+                        ch.getCameraFov(context,i+"");
+                        ch.computeViewAngles(context,i+"");
                     }
                 }
             }

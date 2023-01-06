@@ -51,7 +51,6 @@
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
             android:layout_marginTop="36dp"
-            android:fontFamily="@font/poppins"
             android:textColor="#E3DDDD"
             android:textSize="38sp"
             android:visibility="invisible" />

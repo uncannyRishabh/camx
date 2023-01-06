@@ -72,7 +72,7 @@ public class CaptureButton extends View {
         mPaint.setStrokeWidth(10f);
         mPaint.setStyle(Paint.Style.FILL_AND_STROKE);
 
-        tPaint.setColor(Color.RED);
+        tPaint.setColor(0xFFF75C5C);
         tPaint.setAntiAlias(true);
         tPaint.setStrokeWidth(2f);
         tPaint.setStrokeJoin(Paint.Join.ROUND);
@@ -105,7 +105,7 @@ public class CaptureButton extends View {
                 paint.setColor(Color.RED);
                 break;
             case SLOMO:
-            case TIMEWARP:
+            case TIMELAPSE:
                 icRadius = screenWidth/16f;
                 oPaint.setStyle(Paint.Style.FILL);
                 tPaint.setPathEffect(new CornerPathEffect(14f));
@@ -124,7 +124,7 @@ public class CaptureButton extends View {
      * Call this method to animate {@link CaptureButton#icRadius}.
      * @param state current camera state {@link CamState}
      */
-    public void animateInnerCircle(CamState state){
+    public void animateShutterButton(CamState state){
         setState(state);
         sizeInnerCircle(.5f);
         invalidate();
@@ -197,7 +197,7 @@ public class CaptureButton extends View {
                 canvas.drawCircle(cx-icRadius/2,cy,icRadius,paint);
                 canvas.drawCircle(cx+icRadius/2,cy,icRadius,mPaint);
                 break;
-            case TIMEWARP:
+            case TIMELAPSE:
                 drawTriangle(canvas,getHeight());
                 break;
         }

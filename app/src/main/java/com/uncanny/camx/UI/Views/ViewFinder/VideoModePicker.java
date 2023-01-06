@@ -69,7 +69,7 @@ abstract class ModePicker extends View {
     private int cacheIndex;
     private float tSize;
     private int divisionSize;
-    private String []modes = {"Slow Motion","Normal","Time Warp"};
+    private String []modes = {"Slow Motion","Normal","Time Lapse"};
     private final float density = getResources().getDisplayMetrics().density;
 
     public void setModes(String[] modes) {

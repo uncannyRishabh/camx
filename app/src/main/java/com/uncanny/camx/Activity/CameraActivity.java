@@ -4,10 +4,12 @@
  import android.animation.LayoutTransition;
  import android.annotation.SuppressLint;
  import android.app.Activity;
+ import android.content.ContentResolver;
  import android.content.Context;
  import android.content.Intent;
  import android.content.pm.PackageManager;
  import android.content.res.ColorStateList;
+ import android.database.Cursor;
  import android.graphics.Color;
  import android.graphics.ImageFormat;
  import android.graphics.PorterDuff;
@@ -31,11 +33,14 @@
  import android.media.ImageReader;
  import android.media.MediaActionSound;
  import android.media.MediaRecorder;
+ import android.net.Uri;
  import android.os.Build;
  import android.os.Bundle;
+ import android.os.FileUtils;
  import android.os.Handler;
  import android.os.HandlerThread;
  import android.os.Looper;
+ import android.os.ParcelFileDescriptor;
  import android.os.SystemClock;
  import android.provider.MediaStore;
  import android.util.Log;
@@ -61,6 +66,7 @@
 
  import androidx.annotation.NonNull;
  import androidx.annotation.Nullable;
+ import androidx.annotation.RequiresApi;
  import androidx.appcompat.widget.AppCompatImageButton;
  import androidx.core.app.ActivityCompat;
  import androidx.core.content.ContextCompat;
@@ -94,6 +100,7 @@
  import com.uncanny.camx.Utils.FileHandler;
 
  import java.io.File;
+ import java.io.FileNotFoundException;
  import java.io.IOException;
  import java.math.BigDecimal;
  import java.math.RoundingMode;
@@ -153,7 +160,7 @@ public class CameraActivity extends Activity {
     private String chip_Text;
     private boolean resumed = false, surface = false, ready = false;
     public enum CamState{
-        CAMERA,VIDEO,VIDEO_PROGRESSED,HSVIDEO_PROGRESSED,PORTRAIT,PRO,NIGHT,SLOMO,TIMEWARP,HIRES
+        CAMERA,VIDEO,VIDEO_PROGRESSED,HSVIDEO_PROGRESSED,TIMELAPSE_PROGRESSED,PORTRAIT,PRO,NIGHT,SLOMO,TIMELAPSE,HIRES
     }
     public enum VFStates{
         IDLE,FOCUS,DOUBLE_TAP,SLIDE_ZOOM,SLIDE_EXPOSURE
@@ -216,6 +223,7 @@ public class CameraActivity extends Activity {
     private boolean shouldDeleteEmptyFile = false;
     private boolean isVRecording = false;
     private boolean isSLRecording = false;
+    private boolean isTLRecording = false;
     private boolean isVideoPaused = false;
     private boolean viewfinderGesture = false;
     private boolean AE_AF_LOCK = false;
@@ -297,7 +305,8 @@ public class CameraActivity extends Activity {
         public void run() {
             if(characteristics.get(CameraCharacteristics.LENS_FACING)==CameraCharacteristics.LENS_FACING_BACK){
                 if(getState() == CamState.HIRES || getState() == CamState.VIDEO_PROGRESSED
-                        || getState() == CamState.HSVIDEO_PROGRESSED){
+                        || getState() == CamState.HSVIDEO_PROGRESSED
+                        || getState() == CamState.TIMELAPSE_PROGRESSED){
                     auxDock.setVisibility(View.GONE);
                 }
                 else if(getState() == CamState.SLOMO){
@@ -322,7 +331,8 @@ public class CameraActivity extends Activity {
             }
             else{                                       //FIXME: HANDLE FOR MULTIPLE FRONT CAMERA
                 if(getState() == CamState.HIRES || getState() == CamState.VIDEO_PROGRESSED
-                        || getState() == CamState.HSVIDEO_PROGRESSED) {
+                        || getState() == CamState.HSVIDEO_PROGRESSED
+                        || getState() == CamState.TIMELAPSE_PROGRESSED) {
                     videoModePicker.setVisibility(View.GONE);
                 }
                 else if(getState() == CamState.VIDEO) {
@@ -549,19 +559,20 @@ public class CameraActivity extends Activity {
         tvPreview.setSurfaceTextureListener(surfaceTextureListener);
 
         shutter.setOnClickListener(v -> {
+            MediaActionSound sound = new MediaActionSound();
             switch (getState()) {
                 case CAMERA:
                 case HIRES:
                 case PORTRAIT: {
                     captureImage();
-                    shutter.animateInnerCircle(getState());
-                    MediaActionSound sound = new MediaActionSound();
+                    shutter.animateShutterButton(getState());
                     sound.play(MediaActionSound.SHUTTER_CLICK);
                     break;
                 }
                 case VIDEO: {
                     if (!isVRecording) {
                         setState(CamState.VIDEO_PROGRESSED);
+                        sound.play(MediaActionSound.START_VIDEO_RECORDING);
                         mainThreadExecutor.execute(this::modifyUIonVideoShutter);
                         auxDock.post(hideAuxDock);
 //                        try {
@@ -571,7 +582,6 @@ public class CameraActivity extends Activity {
 //                            e.printStackTrace();
 //                        }
                         startRecording();
-
                         isVRecording = true;
                     }
                     break;
@@ -580,6 +590,7 @@ public class CameraActivity extends Activity {
                     if (isVRecording) {
                         setState(CamState.VIDEO);
                         mMediaRecorder.stop(); //TODO: handle stop before preview is generated
+                        sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
 //                        mMediaRecorder.reset();
                         createVideoPreviewWithAptResolution();
                         mainThreadExecutor.execute(this::modifyUIonVideoShutter);
@@ -591,15 +602,15 @@ public class CameraActivity extends Activity {
                 }
                 case SLOMO: {
                     if (!isSLRecording) {
+                        sound.play(MediaActionSound.START_VIDEO_RECORDING);
                         setState(CamState.HSVIDEO_PROGRESSED);
                         startSloMoRecording();
                         mModePicker.setVisibility(View.INVISIBLE);
                         chronometer.setBase(SystemClock.elapsedRealtime());
                         chronometer.start();
                         chronometer.setVisibility(View.VISIBLE);
-                        shutter.animateInnerCircle(getState());
+                        shutter.animateShutterButton(getState());
                         isSLRecording = true;
-
                         thumbPreview.setVisibility(View.INVISIBLE);
                         front_switch.setVisibility(View.INVISIBLE);
                     }
@@ -613,7 +624,7 @@ public class CameraActivity extends Activity {
                         } catch (CameraAccessException e) {
                             e.printStackTrace();
                         }
-                        shutter.animateInnerCircle(getState());
+                        shutter.animateShutterButton(getState());
                         chronometer.stop();
                         chronometer.setVisibility(View.INVISIBLE);
                         mModePicker.setVisibility(View.VISIBLE);
@@ -627,6 +638,32 @@ public class CameraActivity extends Activity {
                         isSLRecording = false;
                         displayLatestMediaThumbnailFromGallery();
                         fileHandler.performMediaScan(mVideoFile,"video");
+                        sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
+                    }
+                    break;
+                }
+                case TIMELAPSE: {
+                    if(!isTLRecording){
+                        sound.play(MediaActionSound.START_VIDEO_RECORDING);
+                        setState(CamState.TIMELAPSE_PROGRESSED);
+                        mainThreadExecutor.execute(this::modifyUIonVideoShutter);
+                        auxDock.post(hideAuxDock);
+                        startRecording();
+                        isTLRecording = true;
+                    }
+                    break;
+                }
+                case TIMELAPSE_PROGRESSED: {
+                    if(isTLRecording){
+                        setState(CamState.TIMELAPSE);
+                        mMediaRecorder.stop(); //TODO: handle stop before preview is generated
+//                        mMediaRecorder.reset();
+                        createVideoPreviewWithAptResolution();
+                        mainThreadExecutor.execute(this::modifyUIonVideoShutter);
+                        auxDock.post(hideAuxDock);
+                        fileHandler.performMediaScan(mVideoFile,"video");
+                        isTLRecording = false;
+                        sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
                     }
                     break;
                 }
@@ -635,7 +672,7 @@ public class CameraActivity extends Activity {
             }
             videoModePicker.setVisibility(getState() == CamState.VIDEO
                     || getState() == CamState.SLOMO
-                    || getState() == CamState.TIMEWARP? View.VISIBLE : View.GONE);
+                    || getState() == CamState.TIMELAPSE ? View.VISIBLE : View.GONE);
 
             resolutionSelector.setState(getState());
         });
@@ -747,9 +784,9 @@ public class CameraActivity extends Activity {
                     break;
                 }
                 case 2:{
-                    if(getState() != CamState.TIMEWARP) {
-                        setState(CamState.TIMEWARP);
-                        modeTimeWarp();
+                    if(getState() != CamState.TIMELAPSE) {
+                        setState(CamState.TIMELAPSE);
+                        modeTimeLapse();
                     }
                     break;
                 }
@@ -770,7 +807,7 @@ public class CameraActivity extends Activity {
                     closeCamera();
                     openCamera();
                     zoomText.post(hideZoomText);
-                    if (getState() == CamState.VIDEO) {
+                    if (getState() == CamState.VIDEO || getState() == CamState.TIMELAPSE) {
                         addCapableVideoResolutions();
                         vfHandler.post(hideAuxDock);
                     }
@@ -818,7 +855,7 @@ public class CameraActivity extends Activity {
      */
 
     private void modeCamera(){
-        shutter.animateInnerCircle(getState());
+        shutter.animateShutterButton(getState());
         closeCamera();
         openCamera();
         modifyMenuForPhoto();
@@ -827,12 +864,10 @@ public class CameraActivity extends Activity {
 
     private void modeVideo(){
         videoModePicker.setIndex(1);
-        lensData.getFpsResolutionPair_video(getCameraId());
-        shutter.animateInnerCircle(getState());
+        shutter.animateShutterButton(getState());
         requestVideoPermissions();
 
         createVideoPreviewWithAptResolution();
-//        createVideoPreview(tvPreview.getHeight(),(lensData.is1080pCapable(getCameraId()) ? 1080 : 720));
         modifyMenuForVideo();
         if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
     }
@@ -851,19 +886,22 @@ public class CameraActivity extends Activity {
         sFPS = sloMoPair.second.getUpper();
         requestVideoPermissions();
         createSloMoPreview(sloMoPair.first.getWidth(), sloMoPair.first.getHeight());
-        shutter.animateInnerCircle(getState());
+        shutter.animateShutterButton(getState());
         modifyMenuForVideo();
         front_switch.setVisibility(lensData.hasSloMoCapabilities("1") ? View.VISIBLE : View.INVISIBLE);
     }
 
-    private void modeTimeWarp(){
+    private void modeTimeLapse(){
+        requestVideoPermissions();
+
+        createVideoPreviewWithAptResolution();
         modifyMenuForVideo();
         if(front_switch.getVisibility()==View.INVISIBLE) front_switch.setVisibility(View.VISIBLE);
-        shutter.animateInnerCircle(getState());
+        shutter.animateShutterButton(getState());
     }
 
     private void modeHiRes(){
-        shutter.animateInnerCircle(getState());
+        shutter.animateShutterButton(getState());
         ASPECT_RATIO_43 = true;
         closeCamera();
         openCamera();
@@ -921,8 +959,9 @@ public class CameraActivity extends Activity {
             }
             case 3:{
                 if(getState() == CamState.VIDEO || getState() == CamState.SLOMO ||
-                    getState() == CamState.TIMEWARP || getState() == CamState.VIDEO_PROGRESSED ||
-                    getState() == CamState.HSVIDEO_PROGRESSED) break;
+                    getState() == CamState.TIMELAPSE || getState() == CamState.VIDEO_PROGRESSED
+                    || getState() == CamState.HSVIDEO_PROGRESSED
+                    || getState() == CamState.TIMELAPSE_PROGRESSED) break;
                 setState(CamState.VIDEO);
                 modeVideo();
 
@@ -947,7 +986,7 @@ public class CameraActivity extends Activity {
             videoModePicker.setVisibility(View.VISIBLE);
         else videoModePicker.setVisibility(View.GONE);
 //            videoModePicker.setVisibility(getState() == CamState.VIDEO ? View.VISIBLE : View.GONE);
-        vi_info.setVisibility(getState() == CamState.VIDEO || getState() == CamState.SLOMO || getState() == CamState.TIMEWARP ?
+        vi_info.setVisibility(getState() == CamState.VIDEO || getState() == CamState.SLOMO || getState() == CamState.TIMELAPSE ?
                 View.VISIBLE : View.INVISIBLE);
     }
 
@@ -1067,7 +1106,7 @@ public class CameraActivity extends Activity {
 //            Log.e(TAG, "modifyUIonVideoShutter: VIDEO END");
             chronometer.stop();
             chronometer.setVisibility(View.INVISIBLE);
-            shutter.animateInnerCircle(getState());
+            shutter.animateShutterButton(getState());
             mModePicker.setVisibility(View.VISIBLE);
 
 //            try {
@@ -1127,7 +1166,7 @@ public class CameraActivity extends Activity {
             front_switch.setImageDrawable(ResourcesCompat.getDrawable(getResources()
                     , R.drawable.ic_video_pause, null));
             front_switch.setOnClickListener(pause_resume_Video);
-            shutter.animateInnerCircle(getState());
+            shutter.animateShutterButton(getState());
             mModePicker.setVisibility(View.INVISIBLE);
             chronometer.setBase(SystemClock.elapsedRealtime());
             chronometer.setVisibility(View.VISIBLE);
@@ -1145,9 +1184,65 @@ public class CameraActivity extends Activity {
      */
 
     private View.OnClickListener openGallery = v -> {
-        Intent intent = new Intent(Intent.ACTION_VIEW, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivityForResult(intent, resultCode);
+//        LatestThumbnailGenerator ltg = new LatestThumbnailGenerator(this);
+//        int writePermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+//        int readPermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+//
+//        if (writePermission != PackageManager.PERMISSION_GRANTED || readPermission != PackageManager.PERMISSION_GRANTED) {
+//            Uri u = MediaStore.getMediaUri(this, LatestThumbnailGenerator.latestUri);
+//            Log.e(TAG, "openGallery : URI : " + LatestThumbnailGenerator.latestUri);
+//            ContentResolver cr = getContentResolver();
+//            try {
+//                ParcelFileDescriptor pfd = cr.openFileDescriptor(u, "r");
+//            } catch (FileNotFoundException e) {
+//                e.printStackTrace();
+//            }
+//        }
+
+//        Intent intent = new Intent(Intent.ACTION_VIEW, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+//        Uri u = Uri.parse("file:///storage/emulated/0/DCIM/Camera/CamX_20230106_0349400.jpg");
+
+        final String GALLERY_REVIEW = "com.android.camera.action.REVIEW";
+//        final String REVIEW_ACTION = "com.android.camera.action.REVIEW";
+//        String[] projection = new String[] {MediaStore.Files.FileColumns.DATA, MediaStore.Files.FileColumns.MEDIA_TYPE};
+//        String selection = MediaStore.Files.FileColumns.MEDIA_TYPE + "="
+//                + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
+//                + " OR "
+//                + MediaStore.Files.FileColumns.MEDIA_TYPE + "="
+//                + MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
+//
+//        final Cursor cursor = context.getContentResolver().query(MediaStore.Files.getContentUri("external")
+//                , projection
+//                , selection, null
+//                , MediaStore.Images.ImageColumns.DATE_TAKEN + " DESC");
+//
+//        if (cursor != null && cursor.moveToFirst()) {
+//            // Get the latest image ID:
+//            int id = cursor.getInt(0);
+//
+//            // Construct the content URI for the image:
+//            Uri imageUri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, String.valueOf(id));
+//
+//            Log.e(TAG, "uri : : "+imageUri);
+//            // Create the intent:
+//            Intent intent = new Intent(GALLERY_REVIEW);
+//            intent.setData(imageUri);
+//
+//            // Start the intent:
+//            startActivity(intent);
+//        }
+//
+//
+//        cursor.close();
+
+
+        Intent intent = new Intent();
+        intent.setAction(Intent.ACTION_VIEW); // TODO: USING ACTION REVIEW STRING, uri
+        intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/jpeg");
+//        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+//        startActivityForResult(intent, resultCode);
+
     };
 
     private View.OnClickListener switchFrontCamera = new View.OnClickListener(){
@@ -1235,7 +1330,9 @@ public class CameraActivity extends Activity {
                     /*
                      * SWIPE GESTURES
                      */
-                    if (getState() == CamState.VIDEO_PROGRESSED || getState() == CamState.HSVIDEO_PROGRESSED) return true;
+                    if (getState() == CamState.VIDEO_PROGRESSED
+                        || getState() == CamState.HSVIDEO_PROGRESSED
+                        || getState() == CamState.TIMELAPSE_PROGRESSED) return true;
                     if (getVfStates() == VFStates.IDLE) {
                         if(vfPointerX - event.getX() > getScreenWidth()/4f){
                             Log.e("TAG", "onTouchEvent: FLING RIGHT");
@@ -1593,10 +1690,7 @@ public class CameraActivity extends Activity {
                         Log.e(TAG, "Manual AF failure: " + failure);
                     }
                 }, mBackgroundHandler);
-        } catch (CameraAccessException | NullPointerException e) {
-            e.printStackTrace();
-        }
-        catch (IllegalStateException e) {
+        } catch (CameraAccessException | NullPointerException | IllegalStateException e) {
             e.printStackTrace();
         }
     }
@@ -1726,11 +1820,16 @@ public class CameraActivity extends Activity {
         try {
             previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
             previewCaptureRequest.addTarget(previewSurface);
+
             previewCaptureRequest.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE
                     ,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON);
 
 //            previewCaptureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_OFF);
 //            camDeviceCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,new Range<>(24,60));
+//            if(getState() == CamState.TIMELAPSE){
+//                previewCaptureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, new Range<>(30, 30));
+//                captureRequest.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 1000 * 1000L);
+//            }
 
             camDevice.createCaptureSession(Collections.singletonList(previewSurface)
                     , new CameraCaptureSession.StateCallback() {
@@ -1759,6 +1858,25 @@ public class CameraActivity extends Activity {
                                     CamcorderProfile camcorderProfile = CamcorderProfile.get(getCameraId().equals("0") ? 0 : 1,camcorderQuality);
                                     setupMediaRecorder(camcorderProfile);
                                 }
+                                else if(!isTLRecording && getState() == CamState.TIMELAPSE){
+                                    Log.e(TAG, "onConfigured: TIMELAPSE CONFIG");
+                                    int camcorderQuality = CamcorderProfile.QUALITY_TIME_LAPSE_HIGH;
+                                    if(mVideoRecordSize.getWidth() == 4320){
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                                            camcorderQuality = CamcorderProfile.QUALITY_TIME_LAPSE_8KUHD;
+                                    }
+                                    else if(mVideoRecordSize.getWidth() == 2160){
+                                        camcorderQuality = CamcorderProfile.QUALITY_TIME_LAPSE_2160P;
+                                    }
+                                    else if(mVideoRecordSize.getWidth() == 1080){
+                                        camcorderQuality = CamcorderProfile.QUALITY_TIME_LAPSE_1080P;
+                                    }
+                                    else if(mVideoRecordSize.getWidth() == 720){
+                                        camcorderQuality = CamcorderProfile.QUALITY_TIME_LAPSE_720P;
+                                    }
+                                    CamcorderProfile camcorderProfile = CamcorderProfile.get(getCameraId().equals("0") ? 0 : 1,camcorderQuality);
+                                    setupMediaRecorder(camcorderProfile);
+                                }
                                 tvPreview.setOnTouchListener(touchListener);
                             } catch (CameraAccessException e) {
                                 e.printStackTrace();
@@ -1779,23 +1897,39 @@ public class CameraActivity extends Activity {
          try {
              mVideoFile = "//storage//emulated//0//DCIM//Camera//";
              mVideoSuffix = "CamX_" + System.currentTimeMillis() + "_" + getCameraId() + ".mp4";
-             Log.e(TAG, "setupMediaRecorder: MediaRecorder video size : h : " + camcorderProfile.videoFrameHeight + " w : " + camcorderProfile.videoFrameWidth);
-             Log.e(TAG, "setupMediaRecorder: Video BitRate : " + camcorderProfile.videoBitRate);
+//             Log.e(TAG, "setupMediaRecorder: MediaRecorder video size : h : " + camcorderProfile.videoFrameHeight + " w : " + camcorderProfile.videoFrameWidth);
+//             Log.e(TAG, "setupMediaRecorder: Audio Sampling Rate : " + camcorderProfile.audioSampleRate);
+//             Log.e(TAG, "setupMediaRecorder: Audio Bit Rate : " + camcorderProfile.audioBitRate);
+//             Log.e(TAG, "setupMediaRecorder: Audio Channels : " + camcorderProfile.audioChannels);
+//             Log.e(TAG, "setupMediaRecorder: Audio Codec : " + camcorderProfile.audioCodec);
+//             Log.e(TAG, "setupMediaRecorder: Video BitRate : " + camcorderProfile.videoBitRate);
+//             Log.e(TAG, "setupMediaRecorder: Video FrameRate : " + camcorderProfile.videoFrameRate);
+//             Log.e(TAG, "setupMediaRecorder: Video Codec : " + camcorderProfile.videoCodec);
+             if(getState() == CamState.VIDEO){
+                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(context);
+                 else mMediaRecorder = new MediaRecorder();
+                 mMediaRecorder.setOrientationHint(getJpegOrientation()); //90   // TODO : CHANGE ACCORDING TO SENSOR ORIENTATION
+                 mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
+                 mMediaRecorder.setAudioSamplingRate(camcorderProfile.audioSampleRate);
+                 mMediaRecorder.setAudioEncodingBitRate(camcorderProfile.audioBitRate);
+                 mMediaRecorder.setAudioChannels(camcorderProfile.audioChannels);
+                 mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+                 mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+                 mMediaRecorder.setVideoFrameRate(vFPS);
+                 mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+                 mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
+                 mMediaRecorder.setVideoEncodingBitRate(camcorderProfile.videoBitRate);
+                 mMediaRecorder.setVideoSize(mVideoRecordSize.getHeight(), mVideoRecordSize.getWidth());
 
-             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(context);
-             else mMediaRecorder = new MediaRecorder();
-             mMediaRecorder.setOrientationHint(getJpegOrientation()); //90   // TODO : CHANGE ACCORDING TO SENSOR ORIENTATION
-//             mMediaRecorder.setAudioChannels(1);
-             mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
-             mMediaRecorder.setAudioSamplingRate(48000);
-             mMediaRecorder.setAudioEncodingBitRate(96000);
-             mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-             mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-             mMediaRecorder.setVideoFrameRate(vFPS);
-             mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-             mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
-             mMediaRecorder.setVideoEncodingBitRate(camcorderProfile.videoBitRate);
-             mMediaRecorder.setVideoSize(mVideoRecordSize.getHeight(), mVideoRecordSize.getWidth());
+             }
+
+             if(getState() == CamState.TIMELAPSE) {
+                 camcorderProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_TIME_LAPSE_1080P);
+                 mMediaRecorder.reset();
+                 mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+                 mMediaRecorder.setVideoEncodingBitRate(camcorderProfile.videoBitRate);
+                 mMediaRecorder.setProfile(camcorderProfile);
+             }
              mVideoFile += mVideoSuffix;
              shouldDeleteEmptyFile = true;
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -1803,6 +1937,7 @@ public class CameraActivity extends Activity {
              } else {
                  mMediaRecorder.setOutputFile(mVideoFile);
              }
+             if(getState() == CamState.TIMELAPSE) mMediaRecorder.setCaptureRate(6);
              mMediaRecorder.prepare();           //FIXME : prepare fails on emulator(sdk24) cause it only supports QVGA resolution
          }
          catch (IOException e){
@@ -1904,6 +2039,17 @@ public class CameraActivity extends Activity {
         }
     }
 
+     /**
+      * Time Lapse Methods
+      */
+
+     public void createTimeLapsePreview(){
+
+     }
+
+     public void startTimeLapseRecording(){
+
+     }
     /**
      * Slow Motion Methods
      */
@@ -2065,6 +2211,7 @@ public class CameraActivity extends Activity {
          }
      }
 
+
     /**
      *  U N C A N N Y  M E T H O D S
      */
@@ -2197,8 +2344,8 @@ public class CameraActivity extends Activity {
             case SLOMO:
                 modeSloMo();
                 break;
-            case TIMEWARP:
-                modeTimeWarp();
+            case TIMELAPSE:
+                modeTimeLapse();
                 break;
             case HIRES:
                 modeHiRes();
@@ -2485,7 +2632,7 @@ public class CameraActivity extends Activity {
         displayLatestMediaThumbnailFromGallery();
         applyModeChange(getState());
         tvPreview.setOnTouchListener(touchListener);
-        shutter.animateInnerCircle(getState());
+        shutter.animateShutterButton(getState());
     }
 
     @Override
@@ -2532,4 +2679,5 @@ public class CameraActivity extends Activity {
                 return super.dispatchKeyEvent(event);
         }
     }
+
 }

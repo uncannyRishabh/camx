@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.media.ThumbnailUtils;
+import android.net.Uri;
 import android.provider.MediaStore;
 import android.util.Log;
 
@@ -26,6 +27,12 @@ public class LatestThumbnailGenerator implements Runnable{
         if(bitmap==null)
             return Bitmap.createBitmap(96,96, Bitmap.Config.ARGB_8888);
         return bitmap;
+    }
+
+    public static Uri latestUri;
+
+    public Uri getUri(){
+        return latestUri;
     }
 
     public LatestThumbnailGenerator(Context context){
@@ -51,6 +58,9 @@ public class LatestThumbnailGenerator implements Runnable{
                 if(cursor.getString(0).contains("DCIM/Camera")){
                     String imageLocation = cursor.getString(0);
                     File latestMedia = new File(imageLocation);
+                    latestUri = Uri.fromFile(latestMedia);
+//                    latestUri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, String.valueOf(cursor.getInt(0)));
+                    Log.e(TAG, "run: URI : "+latestUri);
                     if (latestMedia.exists()) {
                         if(fileIsImage(String.valueOf(latestMedia))){
                             bitmap = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(String.valueOf(latestMedia)),100,100);
