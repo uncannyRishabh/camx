@@ -25,7 +25,7 @@ public class VideoModePicker extends ModePicker{
          * @param view ModePicker View
          * @param position position of the element, starting from 0.
          */
-        void onClick(VideoModePicker view, int position);
+        void onClick(VideoModePicker view, String modeName);
     }
 
     private OnCLickListener onCLickListener;
@@ -51,7 +51,7 @@ public class VideoModePicker extends ModePicker{
     }
 
     @Override
-    public int invokeOnTouch() {
+    public String invokeOnTouch() {
         if(onCLickListener !=null){
             onCLickListener.onClick(this,super.invokeOnTouch());
         }
@@ -71,7 +71,6 @@ abstract class ModePicker extends View {
     private int cacheIndex;
     private float tSize;
     private int divisionSize;
-//    private String []modes = {"Slow Motion","Normal","Time Lapse"};
     private ArrayList<String> modes = new ArrayList<>();
     private final float density = getResources().getDisplayMetrics().density;
 
@@ -85,12 +84,14 @@ abstract class ModePicker extends View {
             modes.add(index,modeName);
             setIndex("Video");
         }
+        divisionSize = (getWidth()/ modes.size());
         postInvalidate();
     }
 
     public void removeMode(String modeName){
         boolean ds = modes.remove(modeName);
         if(ds) setIndex("Video");
+        divisionSize = (getWidth()/ modes.size());
         postInvalidate();
     }
 
@@ -99,8 +100,8 @@ abstract class ModePicker extends View {
     }
 
     public void setIndex(String modeName) {
-        this.index = modes.indexOf(modeName);;
-        this.cacheIndex = modes.indexOf(modeName);;
+        this.index = modes.indexOf(modeName);
+        this.cacheIndex = modes.indexOf(modeName);
     }
 
     private void setIndexVal(int index) {
@@ -178,8 +179,8 @@ abstract class ModePicker extends View {
         return true;
     }
 
-    public int invokeOnTouch(){
-            return index;
+    public String invokeOnTouch(){
+            return modes.get(index);
     }
 
     @Override
@@ -202,7 +203,7 @@ abstract class ModePicker extends View {
                 ,divisionSize*(index+1) - getPaddingEnd()
                 ,getHeight()-getPaddingBottom());
 
-        canvas.drawRoundRect(bgRect,50,50,bgPaint);
+        canvas.drawRoundRect(bgRect,60,60,bgPaint);
 
         if(modes!=null){
             canvas.drawRoundRect(sRect,50,50,sPaint);

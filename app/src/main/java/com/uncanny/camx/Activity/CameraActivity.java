@@ -776,11 +776,11 @@ public class CameraActivity extends Activity {
             }
         });
 
-        videoModePicker.setOnClickListener((view, Position) -> {
+        videoModePicker.setOnClickListener((view, modeName) -> {
             auxDock.post(hideAuxDock);
             performFileCleanup();
-            switch (Position){
-                case 0:{
+            switch (modeName){
+                case "Slow Motion":{
                     if(getState() != CamState.SLOMO) {
                         closeCamera();
                         setState(CamState.SLOMO);
@@ -788,7 +788,7 @@ public class CameraActivity extends Activity {
                     }
                     break;
                 }
-                case 1:{
+                case "Video":{
                     if(getState() != CamState.VIDEO){
                         setState(CamState.VIDEO);
                         openCamera();
@@ -796,7 +796,7 @@ public class CameraActivity extends Activity {
                     }
                     break;
                 }
-                case 2:{
+                case "Time Lapse":{
                     if(getState() != CamState.TIMELAPSE) {
                         setState(CamState.TIMELAPSE);
                         modeTimeLapse();

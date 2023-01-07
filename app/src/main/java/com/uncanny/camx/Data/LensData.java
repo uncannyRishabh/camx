@@ -504,8 +504,8 @@ public class LensData {
                     }
                     else  {
                         physicalCameras.add(i);
-//                        ch.getCameraFov(context,i+"");
-//                        ch.computeViewAngles(context,i+"");
+                        ch.getCameraFov(context,i+"");
+                        ch.computeViewAngles(context,i+"");
                     }
                 }
             }
