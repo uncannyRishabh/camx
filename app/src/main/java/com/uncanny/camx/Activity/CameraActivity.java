@@ -121,8 +121,7 @@
  import io.reactivex.rxjava3.disposables.Disposable;
  import io.reactivex.rxjava3.schedulers.Schedulers;
 
- @SuppressWarnings({"FieldMayBeFinal",
-        "FieldCanBeLocal"})
+ @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
 public class CameraActivity extends Activity {
     private static final String TAG = "CameraActivity";
     private final String BACK_CAMERA_ID = "0";
@@ -234,7 +233,6 @@ public class CameraActivity extends Activity {
     private int timer_cc = 1;
     private int gridClick = 0;
     private String zText = "";
-    private int tvHeight, tvWidth;
 
     private CamState getState() {
         return state;
@@ -315,11 +313,9 @@ public class CameraActivity extends Activity {
                 }
                 else if(getState() == CamState.VIDEO){
                     if(!slomoCap){
-//                        videoModePicker.setVisibility(View.GONE);
                         videoModePicker.removeMode("Slow Motion");
                     }
                     else {
-//                        videoModePicker.setVisibility(View.VISIBLE);
                         videoModePicker.addMode(0,"Slow Motion");
                     }
                     auxDock.setVisibility(View.VISIBLE);
@@ -584,9 +580,9 @@ public class CameraActivity extends Activity {
                 }
                 case VIDEO: {
                     if (!isVRecording) {
+                        mainThreadExecutor.execute(this::modifyUIonVideoShutter);
                         setState(CamState.VIDEO_PROGRESSED);
                         sound.play(MediaActionSound.START_VIDEO_RECORDING);
-                        mainThreadExecutor.execute(this::modifyUIonVideoShutter);
                         auxDock.post(hideAuxDock);
 //                        try {
 //                            camSession.abortCaptures();
@@ -601,12 +597,12 @@ public class CameraActivity extends Activity {
                 }
                 case VIDEO_PROGRESSED: {
                     if (isVRecording) {
+                        mainThreadExecutor.execute(this::modifyUIonVideoShutter);
                         setState(CamState.VIDEO);
                         mMediaRecorder.stop(); //TODO: handle stop before preview is generated
                         sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
 //                        mMediaRecorder.reset();
                         createVideoPreviewWithAptResolution();
-                        mainThreadExecutor.execute(this::modifyUIonVideoShutter);
                         auxDock.post(hideAuxDock);
                         fileHandler.performMediaScan(mVideoFile,"video");
                         isVRecording = false;
@@ -647,7 +643,7 @@ public class CameraActivity extends Activity {
                         thumbPreview.setVisibility(View.VISIBLE);
                         front_switch.setVisibility(View.VISIBLE);
                         createSloMoPreview(sloMoPair.first.getWidth(), sloMoPair.first.getHeight());
-                        videoModePicker.setIndex("Video");
+                        videoModePicker.setIndex("Slow Motion");
                         isSLRecording = false;
                         displayLatestMediaThumbnailFromGallery();
                         fileHandler.performMediaScan(mVideoFile,"video");
@@ -657,9 +653,9 @@ public class CameraActivity extends Activity {
                 }
                 case TIMELAPSE: {
                     if(!isTLRecording){
+                        mainThreadExecutor.execute(this::modifyUIonVideoShutter);
                         setState(CamState.TIMELAPSE_PROGRESSED);
                         sound.play(MediaActionSound.START_VIDEO_RECORDING);
-                        mainThreadExecutor.execute(this::modifyUIonVideoShutter);
                         auxDock.post(hideAuxDock);
                         startRecording();
                         isTLRecording = true;
@@ -668,11 +664,11 @@ public class CameraActivity extends Activity {
                 }
                 case TIMELAPSE_PROGRESSED: {
                     if(isTLRecording){
+                        mainThreadExecutor.execute(this::modifyUIonVideoShutter);
                         setState(CamState.TIMELAPSE);
                         mMediaRecorder.stop(); //TODO: handle stop before preview is generated
 //                        mMediaRecorder.reset();
                         createVideoPreviewWithAptResolution();
-                        mainThreadExecutor.execute(this::modifyUIonVideoShutter);
                         auxDock.post(hideAuxDock);
                         fileHandler.performMediaScan(mVideoFile,"video");
                         isTLRecording = false;
@@ -996,10 +992,9 @@ public class CameraActivity extends Activity {
 
         auxDock.post(hideAuxDock);
         zoomText.post(hideZoomText);
-        if(getState() == CamState.VIDEO && lensData.hasSloMoCapabilities(getCameraId()))
+        if(getState() == CamState.VIDEO)
             videoModePicker.setVisibility(View.VISIBLE);
         else videoModePicker.setVisibility(View.GONE);
-//            videoModePicker.setVisibility(getState() == CamState.VIDEO ? View.VISIBLE : View.GONE);
         vi_info.setVisibility(getState() == CamState.VIDEO || getState() == CamState.SLOMO || getState() == CamState.TIMELAPSE ?
                 View.VISIBLE : View.INVISIBLE);
     }
@@ -1116,6 +1111,7 @@ public class CameraActivity extends Activity {
     }
 
     private void modifyUIonVideoShutter(){
+        //TODO : Fix this!!
         if(!isVRecording || !isTLRecording){
 //            Log.e(TAG, "modifyUIonVideoShutter: VIDEO END");
             chronometer.stop();
@@ -1123,53 +1119,13 @@ public class CameraActivity extends Activity {
             shutter.animateShutterButton(getState());
             mModePicker.setVisibility(View.VISIBLE);
 
-//            try {
-//                previewCaptureRequest = camDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-//                Surface previewSurface = new Surface(stPreview);
-//                previewCaptureRequest.addTarget(previewSurface);
-//                previewCaptureRequest.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE
-//                        ,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON);
-//
-//                camDevice.createCaptureSession(Collections.singletonList(previewSurface)
-//                        , new CameraCaptureSession.StateCallback() {
-//                            @Override
-//                            public void onConfigured(@NonNull CameraCaptureSession session) {
-//                                camSession = session;
-//                                try {
-//                                    camSession.setRepeatingRequest(previewCaptureRequest.build()
-//                                            , null,mBackgroundHandler);
-//
-//                                    focus = new FocusControls(getCameraCharacteristics(),focusCircle,hideFocusCircle,getState(),session
-//                                            ,previewCaptureRequest,highSpeedCaptureSession,mBackgroundHandler);
-//
-//                                    if(!isVRecording){
-//                                        CamcorderProfile camcorderProfile = CamcorderProfile.get(getCameraId().equals("0") ? 0 : 1
-//                                                ,CamcorderProfile.QUALITY_HIGH);
-//                                        setupMediaRecorder(camcorderProfile);
-//                                    }
-//                                    tvPreview.setOnTouchListener(touchListener);
-//                                } catch (CameraAccessException e) {
-//                                    e.printStackTrace();
-//                                }
-//                            }
-//
-//                            @Override
-//                            public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-//
-//                            }
-//                        },null);
-//
-//            } catch (CameraAccessException e) {
-//                e.printStackTrace();
-//            }
-
             thumbPreview.setImageDrawable(null);
             thumbPreview.setOnClickListener(openGallery);
             displayLatestMediaThumbnailFromGallery();
             front_switch.setImageDrawable(ResourcesCompat.getDrawable(getResources()
                     , R.drawable.ic_round_flip_camera_android_24, null));
             front_switch.setOnClickListener(switchFrontCamera);
-            videoModePicker.setIndex(isVRecording ? "Video" : "Time Lapse");
+            videoModePicker.setIndex(getState() != CamState.TIMELAPSE ? "Time Lapse" : "Video");
         }
         else{
 //            Log.e(TAG, "modifyUIonVideoShutter: VIDEO START");
@@ -1198,64 +1154,27 @@ public class CameraActivity extends Activity {
      */
 
     private View.OnClickListener openGallery = v -> {
-//        LatestThumbnailGenerator ltg = new LatestThumbnailGenerator(this);
-//        int writePermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-//        int readPermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
-//
-//        if (writePermission != PackageManager.PERMISSION_GRANTED || readPermission != PackageManager.PERMISSION_GRANTED) {
-//            Uri u = MediaStore.getMediaUri(this, LatestThumbnailGenerator.latestUri);
-//            Log.e(TAG, "openGallery : URI : " + LatestThumbnailGenerator.latestUri);
-//            ContentResolver cr = getContentResolver();
-//            try {
-//                ParcelFileDescriptor pfd = cr.openFileDescriptor(u, "r");
-//            } catch (FileNotFoundException e) {
-//                e.printStackTrace();
-//            }
-//        }
-
-//        Intent intent = new Intent(Intent.ACTION_VIEW, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-//        Uri u = Uri.parse("file:///storage/emulated/0/DCIM/Camera/CamX_20230106_0349400.jpg");
-
         final String GALLERY_REVIEW = "com.android.camera.action.REVIEW";
-//        final String REVIEW_ACTION = "com.android.camera.action.REVIEW";
-//        String[] projection = new String[] {MediaStore.Files.FileColumns.DATA, MediaStore.Files.FileColumns.MEDIA_TYPE};
-//        String selection = MediaStore.Files.FileColumns.MEDIA_TYPE + "="
-//                + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
-//                + " OR "
-//                + MediaStore.Files.FileColumns.MEDIA_TYPE + "="
-//                + MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
-//
-//        final Cursor cursor = context.getContentResolver().query(MediaStore.Files.getContentUri("external")
-//                , projection
-//                , selection, null
-//                , MediaStore.Images.ImageColumns.DATE_TAKEN + " DESC");
-//
-//        if (cursor != null && cursor.moveToFirst()) {
-//            // Get the latest image ID:
-//            int id = cursor.getInt(0);
-//
-//            // Construct the content URI for the image:
-//            Uri imageUri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, String.valueOf(id));
-//
-//            Log.e(TAG, "uri : : "+imageUri);
-//            // Create the intent:
-//            Intent intent = new Intent(GALLERY_REVIEW);
-//            intent.setData(imageUri);
-//
-//            // Start the intent:
-//            startActivity(intent);
-//        }
-//
-//
-//        cursor.close();
 
+        if((getState() == CamState.VIDEO || getState() == CamState.SLOMO || getState() == CamState.TIMELAPSE) && fileHandler.getFileUri()!=null){
+            Intent i = new Intent(GALLERY_REVIEW);
+//            Intent i = new Intent(Intent.ACTION_VIEW);
+            i.setData(fileHandler.getFileUri());
+            startActivity(i);
+            return;
+        }
 
-        Intent intent = new Intent();
-        intent.setAction(Intent.ACTION_VIEW); // TODO: USING ACTION REVIEW STRING, uri
-        intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/jpeg");
-//        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(intent);
-//        startActivityForResult(intent, resultCode);
+        if(ImageSaverThread.staticUri == null){
+            Intent i = new Intent(Intent.ACTION_VIEW);
+            i.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/jpeg");
+            startActivity(i);
+        }
+        else{
+            Log.e(TAG, "onClick: uri : "+ImageSaverThread.staticUri);
+            Intent i = new Intent(GALLERY_REVIEW);
+            i.setData(ImageSaverThread.staticUri);
+            startActivity(i);
+        }
 
     };
 
@@ -1427,7 +1346,6 @@ public class CameraActivity extends Activity {
             cachedHeight = appbar.getHeight();
             setDockHeight(i);
 //            Log.e(TAG, "onSurfaceTextureAvailable: w : "+i+" h : "+tvPreview.getHeight());
-            tvHeight = i1;tvWidth = i;
             openCamera();
         }
 
@@ -1441,7 +1359,6 @@ public class CameraActivity extends Activity {
                 grids.postInvalidate();
                 grids.setViewBounds(i1,i);
             }
-            tvHeight = i1; tvWidth = i;
         }
 
         @Override
@@ -1767,7 +1684,6 @@ public class CameraActivity extends Activity {
             captureRequest.set(CaptureRequest.JPEG_ORIENTATION,getJpegOrientation());
 //            captureRequest.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_OFF);
 
-//            captureRequest.addTarget(surfaceList.get(0));
             captureRequest.addTarget(surfaceList.get(1));
 
             if(mflash) captureRequest.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE);
@@ -1935,7 +1851,6 @@ public class CameraActivity extends Activity {
                  mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
                  mMediaRecorder.setVideoEncodingBitRate(camcorderProfile.videoBitRate);
                  mMediaRecorder.setVideoSize(mVideoRecordSize.getHeight(), mVideoRecordSize.getWidth());
-
              }
 
              if(getState() == CamState.TIMELAPSE) {
@@ -1948,13 +1863,21 @@ public class CameraActivity extends Activity {
              }
              mVideoFile += mVideoSuffix;
              shouldDeleteEmptyFile = true;
+             File videoFile = new File(mVideoFile);
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                 mMediaRecorder.setOutputFile(new File(mVideoFile));
+                 mMediaRecorder.setOutputFile(videoFile);
              } else {
                  mMediaRecorder.setOutputFile(mVideoFile);
              }
              if(getState() == CamState.TIMELAPSE) mMediaRecorder.setCaptureRate(6);
              mMediaRecorder.prepare();           //FIXME : prepare fails on emulator(sdk24) cause it only supports QVGA resolution
+
+//             mMediaRecorder.setOnInfoListener((mr, what, extra) -> {
+//                 if (what == MediaRecorder.MEDIA_ERROR_SERVER_DIED) {
+//                     Uri recordedUri = Uri.parse(mVideoFile);
+//                     Log.d(TAG, "Recorded URI: " + recordedUri);  // Logs the URI of the recorded video file
+//                 }
+//             });
          }
          catch (IOException e){
              e.printStackTrace();

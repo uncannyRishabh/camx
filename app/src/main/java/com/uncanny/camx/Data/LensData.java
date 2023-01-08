@@ -127,6 +127,8 @@ public class LensData {
         return camAliasList;
     }
 
+    CameraHelper ch = new CameraHelper();
+
     public int ultraWideCheck(){
         List<Integer> tList = new ArrayList<>(physicalCameras);
         tList.remove((Object)0);
@@ -487,7 +489,7 @@ public class LensData {
      * Init
      */
     private void getAuxCameras(){
-        CameraHelper ch = new CameraHelper();
+//        CameraHelper ch = new CameraHelper();
         for(int i = 0; i<=31 ; i++){       // FIXME: 8/11/2021 fix extra aux lens problem @_@
             try {
                 cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
@@ -504,8 +506,8 @@ public class LensData {
                     }
                     else  {
                         physicalCameras.add(i);
-                        ch.getCameraFov(context,i+"");
-                        ch.computeViewAngles(context,i+"");
+//                        ch.getCameraFov(context,i+"");
+//                        ch.computeViewAngles(context,i+"");
                     }
                 }
             }

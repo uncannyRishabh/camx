@@ -59,7 +59,7 @@ public class LatestThumbnailGenerator implements Runnable{
                     String imageLocation = cursor.getString(0);
                     File latestMedia = new File(imageLocation);
                     latestUri = Uri.fromFile(latestMedia);
-//                    latestUri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, String.valueOf(cursor.getInt(0)));
+
                     Log.e(TAG, "run: URI : "+latestUri);
                     if (latestMedia.exists()) {
                         if(fileIsImage(String.valueOf(latestMedia))){

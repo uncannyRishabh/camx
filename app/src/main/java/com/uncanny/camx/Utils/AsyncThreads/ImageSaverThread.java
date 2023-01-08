@@ -36,6 +36,7 @@ public class ImageSaverThread implements Runnable {
     private final String cameraId;
     private final ContentResolver contentResolver;
     private Uri uri;
+    public static Uri staticUri;
     private Context context;
     private FileHandler fileHandler;
     private boolean isPortrait;
@@ -87,6 +88,7 @@ public class ImageSaverThread implements Runnable {
 
             Uri external = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
             uri = contentResolver.insert(external, values);
+            staticUri = uri;
         }
 
         ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
@@ -110,7 +112,6 @@ public class ImageSaverThread implements Runnable {
             saveByteBuffer(bytes,file);
         }
 
-//        fileHandler.performMediaScan(file.getName(),"image");
     }
 
     private void saveBitmap(Bitmap bitmap,int bitmapRotation) {
