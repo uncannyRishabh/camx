@@ -182,7 +182,7 @@
             app:strokeWidth="2.5dp" />
 
         <com.uncanny.camx.UI.Views.CaptureButton
-            android:id="@+id/capture"
+            android:id="@+id/shutter"
             android:layout_width="84dp"
             android:layout_height="82dp"
             android:layout_centerInParent="true"
