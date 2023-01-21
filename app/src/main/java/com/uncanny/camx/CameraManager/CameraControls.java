@@ -47,6 +47,7 @@ import java.util.Locale;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+@SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
 public class CameraControls {
     private String TAG = "CameraControls";
     private Activity activity;
@@ -72,12 +73,13 @@ public class CameraControls {
     private MediaActionSound sound = new MediaActionSound();
 
     private Handler cameraHandler;
-    private Handler mHandler;
+    private Handler bHandler;
     private HandlerThread mBackgroundThread;
     private HandlerThread bBackgroundThread;
     private Executor bgExecutor = Executors.newSingleThreadExecutor();
 
     private int CODE_CAMERA_PERMISSION = 101;
+    private boolean resumed;
 
     public CameraControls(Activity activity) {
         this.activity = activity;
@@ -88,14 +90,19 @@ public class CameraControls {
         surfaceList = new ArrayList<>();
     }
 
+    public void setResumed(boolean resumed){
+        this.resumed = resumed;
+    }
+
     public void setSurfaceTexture(SurfaceTexture texture){
         this.stPreview = texture;
     }
 
-    public void openCamera() {
+    public void openCamera(String cameraId) {
+        if(!resumed || stPreview == null) return;
         try {
             cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
-            cameraCharacteristics = cameraManager.getCameraCharacteristics("0");
+            cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId);
 
 //        Don't need cause hardcoded the values
 //        StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
@@ -116,7 +123,7 @@ public class CameraControls {
                 if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                     activity.requestPermissions(new String[]{ Manifest.permission.CAMERA}, CODE_CAMERA_PERMISSION);
                 }
-                cameraManager.openCamera("0", cameraDeviceStateCallback, mHandler);
+                cameraManager.openCamera(cameraId, cameraDeviceStateCallback, bHandler);
             } catch(CameraAccessException e) {
                 Log.e(TAG, "openCamera: open failed: " + e.getMessage());
             }
@@ -134,7 +141,7 @@ public class CameraControls {
             previewRequestBuilder.addTarget(surfaceList.get(0));
             captureRequestBuilder.addTarget(surfaceList.get(0));
 
-            cameraCaptureSession.setRepeatingRequest(previewRequestBuilder.build(), null, mHandler);
+            cameraCaptureSession.setRepeatingRequest(previewRequestBuilder.build(), null, bHandler);
 
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -148,7 +155,7 @@ public class CameraControls {
             captureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION,getJpegOrientation());
             captureRequestBuilder.addTarget(surfaceList.get(1));
             captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_HIGH_QUALITY);
-            cameraCaptureSession.capture(captureRequestBuilder.build(), null, mHandler);
+            cameraCaptureSession.capture(captureRequestBuilder.build(), null, bHandler);
 
             sound.play(MediaActionSound.SHUTTER_CLICK);
         } catch (CameraAccessException e) {
@@ -157,16 +164,11 @@ public class CameraControls {
     }
 
     public void captureBurstImage(){
-        Log.e(TAG, "captureBurstImage: Capture");
         try {
-//            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY,(byte) 100);
             captureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION,getJpegOrientation());
-//            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
 
             captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF);
-//            captureRequestBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON);
-//            captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF);
 
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, true);
             captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_LOCK, true);
@@ -185,7 +187,7 @@ public class CameraControls {
                         public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
                             super.onCaptureCompleted(session, request, result);
                         }
-                    }, mHandler);
+                    }, bHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -217,7 +219,7 @@ public class CameraControls {
                     jpegByteBuffer.get(jpegByteArray);
                     bgExecutor.execute(() -> {
                         long date = System.currentTimeMillis();
-                        String title = "Camera2_starter_" + dateFormat.format(date);
+                        String title = "Camx_" + dateFormat.format(date);
                         String displayName = title + ".jpeg";
                         String path = cameraDir + "/" + displayName;
 
@@ -268,25 +270,28 @@ public class CameraControls {
     }
 
     public void startBackgroundThread() {
-        mBackgroundThread = new HandlerThread("Camera Background");
+        mBackgroundThread = new HandlerThread("Camera Main");
         bBackgroundThread = new HandlerThread("Camera Background");
         mBackgroundThread.start();
         bBackgroundThread.start();
         cameraHandler = new Handler(mBackgroundThread.getLooper());
-        mHandler = new Handler(mBackgroundThread.getLooper());
+        bHandler = new Handler(bBackgroundThread.getLooper());
     }
 
     public void stopBackgroundThread() {
         if(mBackgroundThread!=null) mBackgroundThread.quitSafely();
+        if(bBackgroundThread!=null) bBackgroundThread.quitSafely();
         else{
             activity.finishAffinity();
             return;
         }
         try {
             mBackgroundThread.join();
+            bBackgroundThread.join();
             cameraHandler = null;
-            mHandler = null;
+            bHandler = null;
             mBackgroundThread = null;
+            bBackgroundThread = null;
             cameraManager = null;
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -316,7 +321,7 @@ public class CameraControls {
             }
             else{
                 try {
-                    cameraDevice.createCaptureSession(surfaceList,stateCallback, mHandler);
+                    cameraDevice.createCaptureSession(surfaceList,stateCallback, bHandler);
                 } catch (CameraAccessException e) {
                     e.printStackTrace();
                 }

@@ -8,6 +8,7 @@ import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.TextureView;
 import android.view.View;
 import android.view.WindowManager;
@@ -18,6 +19,7 @@ import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 
 import com.uncanny.camx.CameraManager.CameraControls;
+import com.uncanny.camx.Data.LensData;
 import com.uncanny.camx.R;
 import com.uncanny.camx.UI.Views.CaptureButton;
 import com.uncanny.camx.UI.Views.ViewFinder.AutoFitPreviewView;
@@ -34,11 +36,55 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private CaptureButton shutter;
 
 
-    CameraControls cameraControls;
+    private LensData lensData;
+    private CameraControls cameraControls;
+
+    private boolean isLongPressed;
 
 
-    private int permissionRequestCount;
-    private boolean resumed,hasSurface;
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        previewView = findViewById(R.id.preview);
+        shutter = findViewById(R.id.shutter);
+
+        if (ActivityCompat.checkSelfPermission(CameraActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+            previewView.setSurfaceTextureListener(surfaceTextureListener);
+        else requestPermissions();
+
+        lensData = new LensData(this);
+        cameraControls = new CameraControls(this);
+
+        shutter.setOnClickListener(this);
+
+        if(lensData.supportBurstCapture("0")){
+            shutter.setOnLongClickListener(v -> {
+                //Start Repeating Burst
+                isLongPressed = true;
+                cameraControls.captureBurstImage();
+                Log.e(TAG, "onCreate: Start Repeating Burst");
+                return false;
+            });
+
+            shutter.setOnTouchListener((v, event) -> {
+                if(event.getActionMasked() == MotionEvent.ACTION_UP && isLongPressed){
+                    //Stop Repeating Burst
+                    isLongPressed = false;
+                    cameraControls.createPreview();
+//                cameraHandler.post(this::displayLatestImage);
+                    Log.e(TAG, "onLongPressedUp: Stop Repeating Burst");
+
+                    return true;
+                }
+                return false;
+            });
+        }
+
+        requestPermissions();
+    }
 
     private void requestPermissions() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
@@ -52,20 +98,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         //TODO: Handle permissions with permission rationale
-//        if(requestCode == REQUEST_CAMERA_PERMISSION) {
-//            if(Arrays.stream(grantResults).anyMatch(permission -> permission == PackageManager.PERMISSION_DENIED)){
-//                Log.e(TAG, "onRequestPermissionsResult: permission denied count : "+permissionRequestCount);
-//                requestPermissions();
-//                permissionRequestCount++;
-//            }
-//            else{
-//                //displayLatestThumbnail()
-//            }
-//        }
-//        if (permissionRequestCount > 3) {
-//            finishAffinity();
-//        }
-
         if(requestCode == REQUEST_CAMERA_PERMISSION) {
             for(int i=0; i<permissions.length-1;i++){
                 if(grantResults[i] != PackageManager.PERMISSION_GRANTED) {
@@ -76,22 +108,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             }
         }
 
-    }
-
-    @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-        previewView = findViewById(R.id.preview);
-        shutter = findViewById(R.id.shutter);
-
-        shutter.setOnClickListener(this);
-
-        cameraControls = new CameraControls(this);
-
-        requestPermissions();
     }
 
     @Override
@@ -106,11 +122,9 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private TextureView.SurfaceTextureListener surfaceTextureListener = new TextureView.SurfaceTextureListener() {
         @Override
         public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
-            hasSurface = true;
             cameraControls.setSurfaceTexture(surface);
-            if (resumed || hasSurface) {
-                cameraControls.openCamera();
-            }
+            cameraControls.openCamera("0");
+
             runOnUiThread(() -> {
                 previewView.measure(1080, 1440);
                 previewView.setAspectRatio(1080,1440);
@@ -124,7 +138,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
         @Override
         public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
-            hasSurface = false;
             return false;
         }
 
@@ -138,12 +151,9 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     @Override
     protected void onResume() {
         super.onResume();
-        resumed = true;
+        cameraControls.setResumed(true);
         cameraControls.startBackgroundThread();
-        if (ActivityCompat.checkSelfPermission(CameraActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-            previewView.setSurfaceTextureListener(surfaceTextureListener);
-        }
-        else requestPermissions();
+        cameraControls.openCamera("0");
 
         //Permission Check
         //displayLatestImage
@@ -152,14 +162,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     @Override
     protected void onPause() {
         super.onPause();
-        resumed = false;
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        cameraControls.closeCamera();
-        cameraControls.stopBackgroundThread();
+        cameraControls.setResumed(false);
     }
 
     @Override
