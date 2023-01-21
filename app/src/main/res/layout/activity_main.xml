@@ -166,7 +166,7 @@
         android:paddingTop="20dp">
 
         <com.google.android.material.imageview.ShapeableImageView
-            android:id="@+id/img_gal"
+            android:id="@+id/thumbPreview"
             android:layout_width="60dp"
             android:layout_height="60dp"
             android:layout_centerVertical="true"

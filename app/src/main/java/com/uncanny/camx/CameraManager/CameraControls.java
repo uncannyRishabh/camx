@@ -16,9 +16,11 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.OutputConfiguration;
 import android.hardware.camera2.params.SessionConfiguration;
+import android.media.CamcorderProfile;
 import android.media.Image;
 import android.media.ImageReader;
 import android.media.MediaActionSound;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -70,6 +72,8 @@ public class CameraControls {
     private CaptureRequest.Builder captureRequestBuilder;
     private CaptureRequest.Builder previewRequestBuilder;
     private ImageReader imageReader;
+    private MediaRecorder mMediaRecorder;
+    private CamcorderProfile camcorderProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P);
     private MediaActionSound sound = new MediaActionSound();
 
     private Handler cameraHandler;
@@ -80,6 +84,8 @@ public class CameraControls {
 
     private int CODE_CAMERA_PERMISSION = 101;
     private boolean resumed;
+    private boolean shouldDeleteEmptyFile;
+    private File videoFile;
 
     public CameraControls(Activity activity) {
         this.activity = activity;
@@ -203,6 +209,43 @@ public class CameraControls {
             imageReader = null;
         }
     }
+
+    private void prepareMediaRecorder(){
+        String mVideoLocation = "//storage//emulated//0//DCIM//Camera//";
+        String mVideoSuffix = "Camera2_Video_" + System.currentTimeMillis() + ".mp4";
+
+        if(resumed)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(activity);
+            else mMediaRecorder = new MediaRecorder();
+        mMediaRecorder.setOrientationHint(getJpegOrientation());
+        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
+        mMediaRecorder.setAudioSamplingRate(camcorderProfile.audioSampleRate);
+        mMediaRecorder.setAudioEncodingBitRate(camcorderProfile.audioBitRate);
+        mMediaRecorder.setAudioChannels(camcorderProfile.audioChannels);
+        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+//        mMediaRecorder.setInputSurface(persistentSurface);
+        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+        mMediaRecorder.setVideoFrameRate(30);
+        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
+        mMediaRecorder.setVideoEncodingBitRate(camcorderProfile.videoBitRate);
+        mMediaRecorder.setVideoSize(1920,1080);
+
+        shouldDeleteEmptyFile = true;
+        videoFile = new File(mVideoLocation+mVideoSuffix);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            mMediaRecorder.setOutputFile(videoFile);
+        } else {
+            mMediaRecorder.setOutputFile(mVideoLocation+mVideoSuffix);
+        }
+
+        try {
+            mMediaRecorder.prepare();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     private class OnJpegImageAvailableListener implements ImageReader.OnImageAvailableListener {
         private DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.getDefault());

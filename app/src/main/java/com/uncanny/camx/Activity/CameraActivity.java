@@ -3,9 +3,11 @@ package com.uncanny.camx.Activity;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.SurfaceTexture;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -23,6 +25,7 @@ import com.uncanny.camx.Data.LensData;
 import com.uncanny.camx.R;
 import com.uncanny.camx.UI.Views.CaptureButton;
 import com.uncanny.camx.UI.Views.ViewFinder.AutoFitPreviewView;
+import com.uncanny.camx.Utils.AsyncThreads.ImageSaverThread;
 
 @SuppressLint("ClickableViewAccessibility")
 @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
@@ -115,6 +118,20 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         int id = v.getId();
         if(id == R.id.shutter){
             cameraControls.captureImage();
+        }
+        else if (id == R.id.thumbPreview) {
+            if(ImageSaverThread.staticUri == null){
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/jpeg");
+                startActivity(i);
+            }
+            else{
+                Log.e(TAG, "onClick: uri : "+ImageSaverThread.staticUri);
+                final String GALLERY_REVIEW = "com.android.camera.action.REVIEW";
+                Intent i = new Intent(GALLERY_REVIEW);
+                i.setData(ImageSaverThread.staticUri);
+                startActivity(i);
+            }
         }
 
     }
