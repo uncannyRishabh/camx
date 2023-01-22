@@ -164,6 +164,15 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         }
     };
 
+    private void performFileCleanup() {
+        Log.e(TAG, "performFileCleanup: shouldDeleteEmptyFile : "+cameraControls.isShouldDeleteEmptyFile());
+        boolean ds = false;
+        if(cameraControls.isShouldDeleteEmptyFile()) {
+            ds = cameraControls.deleteFile();
+        }
+        cameraControls.setShouldDeleteEmptyFile(false);
+        Log.e(TAG, "performFileCleanup: DELETED ?? "+ds);
+    }
 
     @Override
     protected void onResume() {
@@ -180,6 +189,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     protected void onPause() {
         super.onPause();
         cameraControls.setResumed(false);
+        performFileCleanup();
     }
 
     @Override
@@ -187,6 +197,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         super.onDestroy();
         cameraControls.closeCamera();
         cameraControls.stopBackgroundThread();
+        performFileCleanup();
     }
 
     @Override

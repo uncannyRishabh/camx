@@ -36,6 +36,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 import androidx.core.app.ActivityCompat;
 
+import com.uncanny.camx.Data.CamState;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -44,6 +46,7 @@ import java.nio.ByteBuffer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executor;
@@ -62,9 +65,6 @@ public class CameraControls {
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
 
-    private SurfaceTexture stPreview;
-    private List<Surface> surfaceList;
-
     private CameraDevice cameraDevice;
     private CameraManager cameraManager;
     private CameraCaptureSession cameraCaptureSession;
@@ -76,16 +76,26 @@ public class CameraControls {
     private CamcorderProfile camcorderProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P);
     private MediaActionSound sound = new MediaActionSound();
 
+    private OutputConfiguration previewConfiguration;
+    private OutputConfiguration recordConfiguration;
+    private OutputConfiguration snapshotConfiguration;
+
     private Handler cameraHandler;
     private Handler bHandler;
     private HandlerThread mBackgroundThread;
     private HandlerThread bBackgroundThread;
     private Executor bgExecutor = Executors.newSingleThreadExecutor();
 
+    private Surface recordSurface,previewSurface;
+    private SurfaceTexture stPreview;
+    private List<Surface> surfaceList;
+
     private int CODE_CAMERA_PERMISSION = 101;
     private boolean resumed;
     private boolean shouldDeleteEmptyFile;
     private File videoFile;
+
+    private CamState state;
 
     public CameraControls(Activity activity) {
         this.activity = activity;
@@ -93,11 +103,24 @@ public class CameraControls {
     }
 
     private void init(){
+        state.setState(CamState.CAMERA);
         surfaceList = new ArrayList<>();
     }
 
     public void setResumed(boolean resumed){
         this.resumed = resumed;
+    }
+
+    public boolean isShouldDeleteEmptyFile() {
+        return shouldDeleteEmptyFile;
+    }
+
+    public void setShouldDeleteEmptyFile(boolean shouldDeleteEmptyFile) {
+        this.shouldDeleteEmptyFile = shouldDeleteEmptyFile;
+    }
+
+    public boolean deleteFile(){
+        return videoFile.delete();
     }
 
     public void setSurfaceTexture(SurfaceTexture texture){
@@ -139,6 +162,9 @@ public class CameraControls {
         }
     }
 
+    /**
+     * CAMERA
+     */
     public void createPreview(){
         try {
             previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
@@ -210,6 +236,9 @@ public class CameraControls {
         }
     }
 
+    /**
+     * VIDEO
+     */
     private void prepareMediaRecorder(){
         String mVideoLocation = "//storage//emulated//0//DCIM//Camera//";
         String mVideoSuffix = "Camera2_Video_" + System.currentTimeMillis() + ".mp4";
@@ -242,6 +271,99 @@ public class CameraControls {
         try {
             mMediaRecorder.prepare();
         } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void createVideoPreview()  {
+        if(!resumed || stPreview == null) return;
+
+        try {
+            prepareMediaRecorder();
+            previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+//            previewView.getSurfaceTexture().setDefaultBufferSize(1920, 1080);
+//            previewSurface = new Surface(surfaceList.get(0));
+
+//            recordSurface = persistentSurface; // TODO: PersistentSurface not recording video in some devices
+            recordSurface = mMediaRecorder.getSurface();
+
+            previewRequestBuilder.addTarget(recordSurface);
+
+            previewRequestBuilder.addTarget(surfaceList.get(0));
+
+            previewRequestBuilder.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE
+                    ,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON);
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                OutputConfiguration previewConfiguration  = new OutputConfiguration(previewSurface);
+                OutputConfiguration recordConfiguration   = new OutputConfiguration(recordSurface);
+                OutputConfiguration snapshotConfiguration = new OutputConfiguration(imageReader.getSurface());
+
+//                previewConfiguration.enableSurfaceSharing();
+
+                SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR
+                        , Arrays.asList(previewConfiguration,recordConfiguration,snapshotConfiguration)
+                        , bgExecutor
+                        , streamlineCaptureSessionCallback);
+
+                cameraDevice.createCaptureSession(sessionConfiguration);
+            }
+            else{
+                cameraDevice.createCaptureSession(Arrays.asList(previewSurface, recordSurface, imageReader.getSurface())
+                        ,streamlineCaptureSessionCallback,null);
+            }
+
+        }
+        catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private CameraCaptureSession.StateCallback streamlineCaptureSessionCallback = new CameraCaptureSession.StateCallback() {
+        @Override
+        public void onConfigured(@NonNull CameraCaptureSession session) {
+            cameraCaptureSession = session;
+            try {
+                cameraCaptureSession.setRepeatingRequest(previewRequestBuilder.build(), null,bHandler);
+//                if(isVRecording){
+//                    Log.e(TAG, "onConfigured: Preparing media Recorder");
+//                }
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+            Log.e(TAG, "onConfigureFailed: createVideoPreview()");
+        }
+    };
+
+    private void startRecording(){
+        sound.play(MediaActionSound.START_VIDEO_RECORDING);
+        shouldDeleteEmptyFile = false;
+        mMediaRecorder.start();
+    }
+
+    private void stopRecording(){
+        mMediaRecorder.stop();
+        mMediaRecorder.reset();
+        mMediaRecorder.release();
+//        performMediaScan(videoFile.getAbsolutePath(),"video"); //TODO : Handle Efficiently
+        createVideoPreview(); //without persistentSurface
+        sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
+    }
+
+    private void captureVideoSnapshot() {
+        try {
+            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_VIDEO_SNAPSHOT);
+            captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY,(byte) 100);
+            captureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION,getJpegOrientation());
+            captureRequestBuilder.addTarget(imageReader.getSurface());
+
+            cameraCaptureSession.capture(captureRequestBuilder.build(), null, bHandler);
+        } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }
@@ -347,30 +469,38 @@ public class CameraControls {
         public void onOpened(@NonNull CameraDevice camera) {
             cameraDevice = camera;
 
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                List<OutputConfiguration> outputs = new ArrayList<>();
-                outputs.add(new OutputConfiguration(surfaceList.get(0)));
-                outputs.add(new OutputConfiguration(surfaceList.get(1)));
-                SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
-                        outputs,
-                        bgExecutor,
-                        stateCallback);
+            if(state.getState() == CamState.CAMERA){
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    List<OutputConfiguration> outputs = new ArrayList<>();
+                    outputs.add(new OutputConfiguration(surfaceList.get(0)));
+                    outputs.add(new OutputConfiguration(surfaceList.get(1)));
+                    SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
+                            outputs,
+                            bgExecutor,
+                            stateCallback);
 
-                try {
-                    cameraDevice.createCaptureSession(sessionConfiguration);
-                } catch (CameraAccessException e) {
-                    e.printStackTrace();
+                    try {
+                        cameraDevice.createCaptureSession(sessionConfiguration);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+                else{
+                    try {
+                        cameraDevice.createCaptureSession(surfaceList,stateCallback, bHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
-            else{
-                try {
-                    cameraDevice.createCaptureSession(surfaceList,stateCallback, bHandler);
-                } catch (CameraAccessException e) {
-                    e.printStackTrace();
+            else if(state.getState() == CamState.VIDEO){
+                if(resumed) {
+                    Log.e(TAG, "onOpened: SURFACE ABANDONED");
+//                persistentSurface = MediaCodec.createPersistentInputSurface();
+                    mMediaRecorder = null;
                 }
+                createVideoPreview();
             }
-
-
         }
 
         @Override
