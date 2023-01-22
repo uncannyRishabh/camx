@@ -229,15 +229,6 @@ public class LensData {
     }
 
     /**
-     * Checks if BURST_CAPTURE is supported
-     */
-    public boolean supportBurstCapture(String id){
-        StreamConfigurationMap map = getStreamConfigMap(id);
-        Size [] sizes = map.getHighResolutionOutputSizes(ImageFormat.JPEG);
-        return sizes == null;
-    }
-
-    /**
      * Returns true if given camera id has HSV capabilities
      */
     public boolean hasSloMoCapabilities(String id){
