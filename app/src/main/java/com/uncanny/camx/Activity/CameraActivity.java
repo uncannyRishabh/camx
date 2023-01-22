@@ -4,10 +4,12 @@
  import android.animation.LayoutTransition;
  import android.annotation.SuppressLint;
  import android.app.Activity;
+ import android.content.ContentResolver;
  import android.content.Context;
  import android.content.Intent;
  import android.content.pm.PackageManager;
  import android.content.res.ColorStateList;
+ import android.database.Cursor;
  import android.graphics.Color;
  import android.graphics.ImageFormat;
  import android.graphics.PorterDuff;
@@ -31,11 +33,14 @@
  import android.media.ImageReader;
  import android.media.MediaActionSound;
  import android.media.MediaRecorder;
+ import android.net.Uri;
  import android.os.Build;
  import android.os.Bundle;
+ import android.os.FileUtils;
  import android.os.Handler;
  import android.os.HandlerThread;
  import android.os.Looper;
+ import android.os.ParcelFileDescriptor;
  import android.os.SystemClock;
  import android.provider.MediaStore;
  import android.util.Log;
@@ -61,6 +66,7 @@
 
  import androidx.annotation.NonNull;
  import androidx.annotation.Nullable;
+ import androidx.annotation.RequiresApi;
  import androidx.appcompat.widget.AppCompatImageButton;
  import androidx.core.app.ActivityCompat;
  import androidx.core.content.ContextCompat;
@@ -94,6 +100,7 @@
  import com.uncanny.camx.Utils.FileHandler;
 
  import java.io.File;
+ import java.io.FileNotFoundException;
  import java.io.IOException;
  import java.math.BigDecimal;
  import java.math.RoundingMode;
@@ -251,7 +258,7 @@ public class CameraActivity extends Activity {
     private HandlerThread mBackgroundThread;
     private Handler vfHandler = HandlerCompat.createAsync(Looper.getMainLooper());
     private Executor executor = new SerialExecutor(Executors.newCachedThreadPool());
-    private MainThreadExecutor mainThreadExecutor = new MainThreadExecutor();
+    private MainThreadExecutor mainThreadExecutor = new MainThreadExecutor(); //UI UPDATION SHIT ONLY
     private Executor executor1 = new SerialExecutor(Executors.newFixedThreadPool(2));
 
     private Runnable hideFocusCircle = new Runnable() {
