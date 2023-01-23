@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.provider.MediaStore;
 import android.util.Log;
 
+import androidx.annotation.WorkerThread;
 import androidx.exifinterface.media.ExifInterface;
 
 import java.io.File;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+@WorkerThread
 public class LatestThumbnailGenerator implements Runnable{
     private static final String TAG = "LatestThumbnailGenerator";
     private static final List<String> IMAGE_FILES_EXTENSIONS = Arrays.asList("JPG", "JPEG", "DNG");
@@ -63,7 +65,7 @@ public class LatestThumbnailGenerator implements Runnable{
                     Log.e(TAG, "run: URI : "+latestUri);
                     if (latestMedia.exists()) {
                         if(fileIsImage(String.valueOf(latestMedia))){
-                            bitmap = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(String.valueOf(latestMedia)),100,100);
+//                            bitmap = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(String.valueOf(latestMedia)),100,100);
                             bitmap = applyExifRotation(latestMedia.getAbsolutePath());
                         }
                         else {
@@ -81,7 +83,8 @@ public class LatestThumbnailGenerator implements Runnable{
 
     public static Bitmap applyExifRotation(String filePath) {
         ExifInterface exif;
-        Bitmap bitmap = BitmapFactory.decodeFile(filePath);
+//        Bitmap bitmap = BitmapFactory.decodeFile(filePath);
+        Bitmap bitmap = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(filePath), 100, 100);
         try {
             exif = new ExifInterface(filePath);
             int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);

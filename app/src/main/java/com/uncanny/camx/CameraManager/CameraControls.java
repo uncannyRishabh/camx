@@ -5,7 +5,10 @@ import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -21,6 +24,7 @@ import android.media.Image;
 import android.media.ImageReader;
 import android.media.MediaActionSound;
 import android.media.MediaRecorder;
+import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -35,8 +39,11 @@ import android.view.Surface;
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 import androidx.core.app.ActivityCompat;
+import androidx.exifinterface.media.ExifInterface;
 
+import com.google.android.material.imageview.ShapeableImageView;
 import com.uncanny.camx.Data.CamState;
+import com.uncanny.camx.Utils.FileHandler;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -96,6 +103,8 @@ public class CameraControls {
     private boolean shouldDeleteEmptyFile;
     private Uri uri;
     private File videoFile;
+    private FileHandler fileHandler;
+    private ShapeableImageView thumbPreview;
 
 //    private CamState state = CamState.CAMERA;
 
@@ -107,6 +116,7 @@ public class CameraControls {
     private void init(){
         CamState.getInstance().setState(CamState.CAMERA);
         surfaceList = new ArrayList<>();
+        fileHandler = new FileHandler();
     }
 
     public void setResumed(boolean resumed){
@@ -125,13 +135,17 @@ public class CameraControls {
         return videoFile.delete();
     }
 
+    public void setThumbView(ShapeableImageView thumbPreview) {
+        this.thumbPreview = thumbPreview;
+    }
+
     public void setSurfaceTexture(SurfaceTexture texture){
         this.stPreview = texture;
     }
 
+
     public Optional<Uri> getUri(){
-        if (uri != null) return Optional.of(uri);
-        else return Optional.empty();
+        return Optional.ofNullable(uri);
     }
 
     private void setUri(Uri uri){
@@ -201,7 +215,6 @@ public class CameraControls {
 
     public void captureImage() {
         try {
-            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY,(byte) 100);
             captureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION,getJpegOrientation());
             captureRequestBuilder.addTarget(surfaceList.get(1));
@@ -303,7 +316,7 @@ public class CameraControls {
 //            previewView.getSurfaceTexture().setDefaultBufferSize(1920, 1080);
 //            previewSurface = new Surface(surfaceList.get(0));
 
-//            recordSurface = persistentSurface; // TODO: PersistentSurface not recording video in some devices
+//            recordSurface = persistentSurface; // FIXME: PersistentSurface not recording video in some devices
             recordSurface = mMediaRecorder.getSurface();
 
             previewRequestBuilder.addTarget(recordSurface);
@@ -372,9 +385,11 @@ public class CameraControls {
 //        performMediaScan(videoFile.getAbsolutePath(),"video"); //TODO : Handle Efficiently
         createVideoPreview(); //without persistentSurface
         sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
+        thumbPreview.setImageBitmap(ThumbnailUtils.createVideoThumbnail(String.valueOf(videoFile), MediaStore.Images.Thumbnails.MINI_KIND));
         setUri(Uri.fromFile(videoFile));
     }
 
+    //TODO : Set separate imageReader
     private void captureVideoSnapshot() {
         try {
             captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_VIDEO_SNAPSHOT);
@@ -418,6 +433,8 @@ public class CameraControls {
                         Uri u = activity.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
                         setUri(u);
                         saveByteBuffer(jpegByteArray, file, u);
+
+//                        thumbPreview.setImageBitmap(fileHandler.getExifThumbnail(path));
                     });
                 }
             }
@@ -441,6 +458,7 @@ public class CameraControls {
                 }
             }
         }
+
     }
 
 

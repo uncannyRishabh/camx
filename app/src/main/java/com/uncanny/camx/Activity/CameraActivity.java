@@ -31,7 +31,11 @@ import com.uncanny.camx.R;
 import com.uncanny.camx.UI.Views.CaptureButton;
 import com.uncanny.camx.UI.Views.HorizontalPicker;
 import com.uncanny.camx.UI.Views.ViewFinder.AutoFitPreviewView;
-import com.uncanny.camx.Utils.AsyncThreads.ImageSaverThread;
+import com.uncanny.camx.Utils.AsyncThreads.LatestThumbnailGenerator;
+
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 
 @SuppressLint("ClickableViewAccessibility")
 @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
@@ -54,6 +58,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
     private LensData lensData;
     private CameraControls cameraControls;
+    private LatestThumbnailGenerator ltg;
 
     private int screenWidth, screenHeight;
     private float vfPointerX, vfPointerY;
@@ -92,6 +97,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
         lensData = new LensData(this);
         cameraControls = new CameraControls(this);
+        cameraControls.setThumbView(thumbPreview);
 
         shutter.setOnClickListener(this);
         front_switch.setOnClickListener(this);
@@ -344,6 +350,15 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         Log.e(TAG, "performFileCleanup: DELETED ?? "+ds);
     }
 
+    private void displayLatestImage(){
+        Completable.fromRunnable(ltg = new LatestThumbnailGenerator(this))
+                .subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
+                .andThen(Completable.fromRunnable(() -> {
+                    thumbPreview.setImageBitmap(ltg.getBitmap());
+                    Log.e(TAG, "displayLatestMediaThumbnailFromGallery: Updated Thumbnail");
+                })).subscribe();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -351,8 +366,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         cameraControls.startBackgroundThread();
         cameraControls.openCamera(cameraId == null ? BACK_CAMERA_ID : getCameraId());
 
-        //Permission Check
-        //displayLatestImage
+        displayLatestImage();
     }
 
     @Override
