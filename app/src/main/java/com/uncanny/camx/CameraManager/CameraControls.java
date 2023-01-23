@@ -103,7 +103,6 @@ public class CameraControls {
     private boolean shouldDeleteEmptyFile;
     private Uri uri;
     private File videoFile;
-    private FileHandler fileHandler;
     private ShapeableImageView thumbPreview;
 
 //    private CamState state = CamState.CAMERA;
@@ -116,7 +115,6 @@ public class CameraControls {
     private void init(){
         CamState.getInstance().setState(CamState.CAMERA);
         surfaceList = new ArrayList<>();
-        fileHandler = new FileHandler();
     }
 
     public void setResumed(boolean resumed){
@@ -434,7 +432,9 @@ public class CameraControls {
                         setUri(u);
                         saveByteBuffer(jpegByteArray, file, u);
 
-//                        thumbPreview.setImageBitmap(fileHandler.getExifThumbnail(path));
+                        activity.runOnUiThread(() -> {
+                            thumbPreview.setImageBitmap(getThumbnail(path));
+                        });
                     });
                 }
             }
@@ -458,6 +458,50 @@ public class CameraControls {
                 }
             }
         }
+
+        private Bitmap getThumbnail(String jpegPath) {
+            ExifInterface exifInterface;
+            try {
+                exifInterface = new ExifInterface(jpegPath);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            float orientation;
+            switch (exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
+                case ExifInterface.ORIENTATION_NORMAL:
+                    orientation = 0.0F;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_90:
+                    orientation = 90.0F;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_180:
+                    orientation = 180.0F;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_270:
+                    orientation = 270.0F;
+                    break;
+                default:
+                    orientation = 0.0F;
+            }
+
+            Bitmap thumbnail;
+            if (exifInterface.hasThumbnail()) {
+                thumbnail = exifInterface.getThumbnailBitmap();
+            } else {
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inSampleSize = 16;
+                thumbnail = BitmapFactory.decodeFile(jpegPath, options);
+            }
+
+            if (orientation != 0.0F && thumbnail != null) {
+                Matrix matrix = new Matrix();
+                matrix.setRotate(orientation);
+                thumbnail = Bitmap.createBitmap(thumbnail, 0, 0, thumbnail.getWidth(), thumbnail.getHeight(), matrix, true);
+            }
+
+            return thumbnail;
+        }
+
 
     }
 
