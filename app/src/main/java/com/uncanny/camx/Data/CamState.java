@@ -6,7 +6,11 @@ public enum CamState {
     CAMERA,VIDEO,VIDEO_PROGRESSED,HSVIDEO_PROGRESSED
     ,TIMELAPSE_PROGRESSED,PORTRAIT,PRO,NIGHT,SLOMO,TIMELAPSE,HIRES;
 
-    private static CamState state;
+    private static CamState state = CamState.CAMERA;
+
+    public static CamState getInstance(){
+        return state;
+    }
 
     public void setState(CamState camState){
         state = camState;

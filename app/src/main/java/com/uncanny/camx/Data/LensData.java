@@ -15,6 +15,8 @@ import android.util.Pair;
 import android.util.Range;
 import android.util.Size;
 
+import androidx.annotation.WorkerThread;
+
 import com.uncanny.camx.Utils.CameraHelper;
 import com.uncanny.camx.Utils.CompareSizeByArea;
 
@@ -25,6 +27,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
+//@WorkerThread
 public class LensData {
     private static final String TAG = "LensData";
     private static final String CAMERA_MAIN_BACK = "0";

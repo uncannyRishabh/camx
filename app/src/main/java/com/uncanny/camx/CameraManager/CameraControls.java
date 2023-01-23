@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -56,8 +57,9 @@ import java.util.concurrent.Executors;
 public class CameraControls {
     private String TAG = "CameraControls";
     private Activity activity;
-
+    private final int CODE_CAMERA_PERMISSION = 101;
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
+
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
         ORIENTATIONS.append(Surface.ROTATION_90, 0);
@@ -90,12 +92,12 @@ public class CameraControls {
     private SurfaceTexture stPreview;
     private List<Surface> surfaceList;
 
-    private int CODE_CAMERA_PERMISSION = 101;
     private boolean resumed;
     private boolean shouldDeleteEmptyFile;
+    private Uri uri;
     private File videoFile;
 
-    private CamState state;
+//    private CamState state = CamState.CAMERA;
 
     public CameraControls(Activity activity) {
         this.activity = activity;
@@ -103,7 +105,7 @@ public class CameraControls {
     }
 
     private void init(){
-        state.setState(CamState.CAMERA);
+        CamState.getInstance().setState(CamState.CAMERA);
         surfaceList = new ArrayList<>();
     }
 
@@ -127,38 +129,55 @@ public class CameraControls {
         this.stPreview = texture;
     }
 
+    public Optional<Uri> getUri(){
+        if (uri != null) return Optional.of(uri);
+        else return Optional.empty();
+    }
+
+    private void setUri(Uri uri){
+        this.uri = uri;
+    }
+
+    public int getLensFacing(){
+        return cameraCharacteristics.get(CameraCharacteristics.LENS_FACING);
+    }
+
+    private CameraCharacteristics getCameraCharacteristics(String id){
+        cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+        try {
+            cameraCharacteristics = cameraManager.getCameraCharacteristics(id);
+        } catch (CameraAccessException e) {
+            throw new RuntimeException(e);
+        }
+        return cameraCharacteristics;
+    }
+
     public void openCamera(String cameraId) {
         if(!resumed || stPreview == null) return;
-        try {
-            cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
-            cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId);
+        getCameraCharacteristics(cameraId);
 
 //        Don't need cause hardcoded the values
-//        StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+//        StreamConfigurationMap map = getCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
-            //set preview resolution
+        //set preview resolution
 //            previewView.measure(1080, 1440);
-            stPreview.setDefaultBufferSize(1440, 1080);
+        stPreview.setDefaultBufferSize(1440, 1080);
 
-            //set capture resolution
-            imageReader = ImageReader.newInstance(4000, 3000, ImageFormat.JPEG, 3);
-            imageReader.setOnImageAvailableListener(new OnJpegImageAvailableListener(), cameraHandler);
+        //set capture resolution
+        imageReader = ImageReader.newInstance(4000, 3000, ImageFormat.JPEG, 3);
+        imageReader.setOnImageAvailableListener(new OnImageAvailableListener(), cameraHandler);
 
-            surfaceList.clear();
-            surfaceList.add(new Surface(stPreview));
-            surfaceList.add(imageReader.getSurface());
+        surfaceList.clear();
+        surfaceList.add(new Surface(stPreview));
+        surfaceList.add(imageReader.getSurface());
 
-            try {
-                if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                    activity.requestPermissions(new String[]{ Manifest.permission.CAMERA}, CODE_CAMERA_PERMISSION);
-                }
-                cameraManager.openCamera(cameraId, cameraDeviceStateCallback, bHandler);
-            } catch(CameraAccessException e) {
-                Log.e(TAG, "openCamera: open failed: " + e.getMessage());
+        try {
+            if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                activity.requestPermissions(new String[]{ Manifest.permission.CAMERA}, CODE_CAMERA_PERMISSION);
             }
-        }
-        catch (CameraAccessException e){
-            e.printStackTrace();
+            cameraManager.openCamera(cameraId, openCameraCallback, bHandler);
+        } catch(CameraAccessException e) {
+            Log.e(TAG, "openCamera: open failed: " + e.getMessage());
         }
     }
 
@@ -353,6 +372,7 @@ public class CameraControls {
 //        performMediaScan(videoFile.getAbsolutePath(),"video"); //TODO : Handle Efficiently
         createVideoPreview(); //without persistentSurface
         sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
+        setUri(Uri.fromFile(videoFile));
     }
 
     private void captureVideoSnapshot() {
@@ -368,15 +388,13 @@ public class CameraControls {
         }
     }
 
-
-    private class OnJpegImageAvailableListener implements ImageReader.OnImageAvailableListener {
+    @WorkerThread
+    private class OnImageAvailableListener implements ImageReader.OnImageAvailableListener {
         private DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.getDefault());
         private String cameraDir = Environment.getExternalStorageDirectory()+"//DCIM//Camera//";
 
-        @WorkerThread
         @Override
         public void onImageAvailable(ImageReader imageReader) {
-//            Log.e(TAG, "onImageAvailable: "+isLongPressed);
             try(Image image = imageReader.acquireNextImage()) {
                 if (image != null ) {
                     ByteBuffer jpegByteBuffer = image.getPlanes()[0].getBuffer();
@@ -398,31 +416,33 @@ public class CameraControls {
                         values.put(MediaStore.Images.ImageColumns.DATA, path);
                         values.put(MediaStore.Images.ImageColumns.DATE_TAKEN, date);
                         Uri u = activity.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                        setUri(u);
                         saveByteBuffer(jpegByteArray, file, u);
                     });
                 }
             }
             catch (Exception e) { e.printStackTrace(); }
         }
+
+        private void saveByteBuffer(byte[] bytes, File file, Uri uri) {
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                try(OutputStream outputStream = activity.getContentResolver().openOutputStream(uri)) {
+                    outputStream.write(bytes);
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            else {
+                try(FileOutputStream fos = new FileOutputStream(file)){
+                    fos.write(bytes);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
-    private void saveByteBuffer(byte[] bytes, File file, Uri uri) {
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            try(OutputStream outputStream = activity.getContentResolver().openOutputStream(uri)) {
-                outputStream.write(bytes);
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        else {
-            try(FileOutputStream fos = new FileOutputStream(file)){
-                fos.write(bytes);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
     private int getJpegOrientation() {
         int deviceOrientation = activity.getWindowManager().getDefaultDisplay().getRotation();
@@ -464,12 +484,12 @@ public class CameraControls {
     }
 
 
-    private CameraDevice.StateCallback cameraDeviceStateCallback = new CameraDevice.StateCallback() {
+    private CameraDevice.StateCallback openCameraCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
             cameraDevice = camera;
 
-            if(state.getState() == CamState.CAMERA){
+            if(CamState.getInstance().getState() == CamState.CAMERA){
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                     List<OutputConfiguration> outputs = new ArrayList<>();
                     outputs.add(new OutputConfiguration(surfaceList.get(0)));
@@ -493,7 +513,7 @@ public class CameraControls {
                     }
                 }
             }
-            else if(state.getState() == CamState.VIDEO){
+            else if(CamState.getInstance().getState() == CamState.VIDEO){
                 if(resumed) {
                     Log.e(TAG, "onOpened: SURFACE ABANDONED");
 //                persistentSurface = MediaCodec.createPersistentInputSurface();

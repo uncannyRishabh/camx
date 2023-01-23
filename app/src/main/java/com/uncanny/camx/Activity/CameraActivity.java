@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.SurfaceTexture;
+import android.hardware.camera2.CameraCharacteristics;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -14,16 +15,21 @@ import android.view.MotionEvent;
 import android.view.TextureView;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.core.app.ActivityCompat;
 
+import com.google.android.material.imageview.ShapeableImageView;
 import com.uncanny.camx.CameraManager.CameraControls;
+import com.uncanny.camx.Data.CamState;
 import com.uncanny.camx.Data.LensData;
 import com.uncanny.camx.R;
 import com.uncanny.camx.UI.Views.CaptureButton;
+import com.uncanny.camx.UI.Views.HorizontalPicker;
 import com.uncanny.camx.UI.Views.ViewFinder.AutoFitPreviewView;
 import com.uncanny.camx.Utils.AsyncThreads.ImageSaverThread;
 
@@ -31,19 +37,37 @@ import com.uncanny.camx.Utils.AsyncThreads.ImageSaverThread;
 @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
 public class CameraActivity extends Activity implements View.OnClickListener {
     private static final String TAG = "CameraActivity";
+    private static final String BACK_CAMERA_ID = "0";
+    private static final String FRONT_CAMERA_ID = "1";
     private static final int REQUEST_CAMERA_PERMISSION = 200;
     private static final String[] PERMISSION_STRING = { Manifest.permission.CAMERA,Manifest.permission.READ_EXTERNAL_STORAGE
             , Manifest.permission.RECORD_AUDIO,Manifest.permission.WRITE_EXTERNAL_STORAGE};
 
+    private static String cameraId;
+
     private AutoFitPreviewView previewView;
     private CaptureButton shutter;
-
+    private ShapeableImageView thumbPreview;
+    private AppCompatImageButton front_switch;
+    private HorizontalPicker modePicker;
+    private RelativeLayout tvPreviewParent;
 
     private LensData lensData;
     private CameraControls cameraControls;
 
+    private int screenWidth, screenHeight;
+    private float vfPointerX, vfPointerY;
+    private long lastClickTime;
     private boolean isLongPressed;
+    private boolean viewfinderGesture;
 
+    public static String getCameraId() {
+        return cameraId;
+    }
+
+    public static void setCameraId(String cameraId) {
+        CameraActivity.cameraId = cameraId;
+    }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -51,8 +75,16 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         setContentView(R.layout.activity_main);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+//        initializeViews()
         previewView = findViewById(R.id.preview);
+        thumbPreview = findViewById(R.id.thumbPreview);
         shutter = findViewById(R.id.shutter);
+        front_switch = findViewById(R.id.front_back_switch);
+        modePicker = findViewById(R.id.mode_picker_view);
+        tvPreviewParent = findViewById(R.id.previewParent);
+
+        tvPreviewParent.setClipToOutline(true);
+
 
         if (ActivityCompat.checkSelfPermission(CameraActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
             previewView.setSurfaceTextureListener(surfaceTextureListener);
@@ -62,6 +94,15 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         cameraControls = new CameraControls(this);
 
         shutter.setOnClickListener(this);
+        front_switch.setOnClickListener(this);
+        thumbPreview.setOnClickListener(this);
+
+        modePicker.setValues(new String[] {"Night", "Portrait", "Camera", "Video", "Pro"});
+        modePicker.setSelectedItem(2,null);
+        modePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        previewView.setOnTouchListener(viewfinderGestureListener);
+
+//        modePicker.setOnItemSelectedListener(this::switchMode);
 
         if(lensData.supportBurstCapture("0")){
             shutter.setOnLongClickListener(v -> {
@@ -88,6 +129,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
         requestPermissions();
     }
+
 
     private void requestPermissions() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
@@ -120,18 +162,38 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             cameraControls.captureImage();
         }
         else if (id == R.id.thumbPreview) {
-            if(ImageSaverThread.staticUri == null){
-                Intent i = new Intent(Intent.ACTION_VIEW);
-                i.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/jpeg");
-                startActivity(i);
+            Intent i;
+            if(cameraControls.getUri().isPresent()){
+//                Log.e(TAG, "onClick: uri : "+cameraControls.getUri().get());
+                final String GALLERY_REVIEW = "com.android.camera.action.REVIEW";
+                i = new Intent(GALLERY_REVIEW);
+                i.setData(cameraControls.getUri().get());
             }
             else{
-                Log.e(TAG, "onClick: uri : "+ImageSaverThread.staticUri);
-                final String GALLERY_REVIEW = "com.android.camera.action.REVIEW";
-                Intent i = new Intent(GALLERY_REVIEW);
-                i.setData(ImageSaverThread.staticUri);
-                startActivity(i);
+                i = new Intent(Intent.ACTION_VIEW);
+                i.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/jpeg");
             }
+            startActivity(i);
+        }
+        else if (id == R.id.front_back_switch) {
+            performFileCleanup();
+            previewView.setOnTouchListener(null);
+//            zoomText.post(hideZoomText);
+//            exposureControl.post(() -> setExposureRange());
+            cameraControls.closeCamera();
+            if (cameraControls.getLensFacing()== CameraCharacteristics.LENS_FACING_BACK) {
+                setCameraId(FRONT_CAMERA_ID);
+                if(CamState.getInstance().getState() != CamState.PORTRAIT) cameraControls.openCamera(FRONT_CAMERA_ID);
+                front_switch.animate().rotation(180f).setDuration(300);
+            } else {
+//                auxDock.setIndex(1);
+                setCameraId(BACK_CAMERA_ID);
+                if(CamState.getInstance().getState() != CamState.PORTRAIT) cameraControls.openCamera(BACK_CAMERA_ID);
+                front_switch.animate().rotation(-180f).setDuration(300);
+
+            }
+//            applyModeChange(getState());
+//            front_switch.post(hideAuxDock);
         }
 
     }
@@ -140,7 +202,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         @Override
         public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
             cameraControls.setSurfaceTexture(surface);
-            cameraControls.openCamera("0");
+            cameraControls.openCamera(cameraId == null ? BACK_CAMERA_ID : getCameraId());
 
             runOnUiThread(() -> {
                 previewView.measure(1080, 1440);
@@ -164,6 +226,114 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         }
     };
 
+    private View.OnTouchListener viewfinderGestureListener = new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            int action = event.getActionMasked();
+
+            switch (action) {
+                case MotionEvent.ACTION_DOWN: {
+                    viewfinderGesture = false;
+                    vfPointerX = event.getX();
+                    vfPointerY = event.getY();
+                    return true;
+                }
+                case MotionEvent.ACTION_MOVE: {
+                    /*
+                     * PINCH TO ZOOM
+                     */
+                    if (event.getPointerCount() > 1) {
+//                        pinchToZoom(event);
+                        break;
+                    }
+
+                    /*
+                     * SWIPE GESTURES
+                     */
+                    if (CamState.getInstance().getState() == CamState.VIDEO_PROGRESSED
+                            || CamState.getInstance().getState() == CamState.HSVIDEO_PROGRESSED
+                            || CamState.getInstance().getState() == CamState.TIMELAPSE_PROGRESSED) return true;
+//                    if (getVfStates() == VFStates.IDLE) {
+                    if (vfPointerX - event.getX() > getScreenWidth() / 4f) {
+                        Log.e("TAG", "onTouchEvent: FLING RIGHT");
+                        vfPointerX = event.getX();
+                        if (modePicker.getSelectedItem() >= 0 && modePicker.getSelectedItem() < modePicker.getItems() - 1) {
+                            modePicker.setSelectedItem(modePicker.getSelectedItem() + 1, 1);
+//                                switchMode(mModePicker.getSelectedItem());
+                            return true;
+                        }
+                    } else if (vfPointerX - event.getX() < -getScreenWidth() / 4f) {
+                        Log.e("TAG", "onTouchEvent: FLING LEFT");
+                        vfPointerX = event.getX();
+                        if (modePicker.getSelectedItem() > 0 && modePicker.getSelectedItem() < modePicker.getItems()) {
+                            modePicker.setSelectedItem(modePicker.getSelectedItem() - 1, -1);
+//                                switchMode(mModePicker.getSelectedItem());
+                        }
+                        return true;
+                    }
+                    break;
+//                    }
+
+//                    return true;
+                }
+                case MotionEvent.ACTION_POINTER_UP: {
+//                    zSlider.postDelayed(hideZoomSlider, 2000);
+//                    zoomText.postDelayed(hideZoomText, 2000);
+                    break;
+                }
+                case MotionEvent.ACTION_UP: {
+                    long clickTime = System.currentTimeMillis();
+                    if (vfPointerX - event.getX() > 15 || vfPointerY - event.getY() > 15)
+                        viewfinderGesture = true;
+
+                    if ((clickTime - lastClickTime) < 500) {
+                        /*
+                         * DOUBLE TAP TO ZOOM
+                         */
+//                        setVfStates(VFStates.DOUBLE_TAP);
+                        Log.e("**DOUBLE TAP**", " second tap ");
+//                        try {
+//                            doubleTapZoom();
+//                        } catch (CameraAccessException e) {
+//                            e.printStackTrace();
+//                        }
+//                        lastClickTime = 0;
+                    }
+//                    else if (getVfStates() != VFStates.DOUBLE_TAP && getVfStates() != VFStates.SLIDE_ZOOM && !viewfinderGesture) {
+//                        /*
+//                         * TOUCH TO FOCUS
+//                         */
+//                        setVfStates(VFStates.FOCUS);
+//                        exposureControl.removeCallbacks(hideExposureControl);
+//                        exposureControl.setVisibility(View.VISIBLE);
+//                        AEAFlock.setVisibility(View.VISIBLE);
+//                        exposureControl.postDelayed(hideExposureControl, 3000);
+////                        focus.setFocus(v,event);
+//                        focus(v.getHeight(), v.getWidth(), event);
+//                        lastClickTime = System.currentTimeMillis();
+//                        return false;
+//                    }
+                    lastClickTime = clickTime;
+//                    setVfStates(VFStates.IDLE);
+                    v.performClick();
+                }
+            }
+
+            return true;
+        }
+    };
+
+    private int getScreenWidth() {
+        if(screenWidth < 1) screenWidth = getResources().getDisplayMetrics().widthPixels;
+        return screenWidth;
+    }
+
+    private int getScreenHeight() {
+        Log.e(TAG, "getScreenHeight: "+getResources().getDisplayMetrics().heightPixels);
+        if(screenHeight < 1) screenHeight = getResources().getDisplayMetrics().heightPixels;
+        return screenHeight;
+    }
+
     private void performFileCleanup() {
         Log.e(TAG, "performFileCleanup: shouldDeleteEmptyFile : "+cameraControls.isShouldDeleteEmptyFile());
         boolean ds = false;
@@ -179,7 +349,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         super.onResume();
         cameraControls.setResumed(true);
         cameraControls.startBackgroundThread();
-        cameraControls.openCamera("0");
+        cameraControls.openCamera(cameraId == null ? BACK_CAMERA_ID : getCameraId());
 
         //Permission Check
         //displayLatestImage
