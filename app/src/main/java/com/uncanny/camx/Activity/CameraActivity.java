@@ -8,6 +8,8 @@ import android.content.pm.PackageManager;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraCharacteristics;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -74,6 +76,9 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         CameraActivity.cameraId = cameraId;
     }
 
+    private HandlerThread backgroundThread;
+    private Handler backgroundHandler;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -114,7 +119,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             shutter.setOnLongClickListener(v -> {
                 //Start Repeating Burst
                 isLongPressed = true;
-                cameraControls.captureBurstImage();
+                backgroundHandler.post(() -> cameraControls.captureBurstImage());
+//                cameraControls.captureBurstImage();
                 Log.e(TAG, "onCreate: Start Repeating Burst");
                 return false;
             });
@@ -123,7 +129,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 if(event.getActionMasked() == MotionEvent.ACTION_UP && isLongPressed){
                     //Stop Repeating Burst
                     isLongPressed = false;
-                    cameraControls.createPreview();
+                    backgroundHandler.post(() -> cameraControls.createPreview());
+//                    cameraControls.createPreview();
 //                cameraHandler.post(this::displayLatestImage);
                     Log.e(TAG, "onLongPressedUp: Stop Repeating Burst");
 
@@ -359,9 +366,31 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 })).subscribe();
     }
 
+    private void startThread(){
+         backgroundThread = new HandlerThread("Activity Background Thread");
+         backgroundThread.start();
+//         backgroundHandler = new Handler(backgroundThread.getLooper());
+         backgroundHandler = new Handler(getMainLooper());
+    }
+
+    private void stopThread(){
+        if(backgroundThread!=null) backgroundThread.quitSafely();
+        else return;
+
+        try {
+            backgroundThread.join();
+            backgroundHandler = null;
+            backgroundThread = null;
+        }
+        catch (InterruptedException e){
+            e.printStackTrace();
+        }
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
+        startThread();
         cameraControls.setResumed(true);
         cameraControls.startBackgroundThread();
         cameraControls.openCamera(cameraId == null ? BACK_CAMERA_ID : getCameraId());
@@ -379,6 +408,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        stopThread();
         cameraControls.closeCamera();
         cameraControls.stopBackgroundThread();
         performFileCleanup();

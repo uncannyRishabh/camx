@@ -5,7 +5,10 @@ import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -36,6 +39,7 @@ import android.view.Surface;
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 import androidx.core.app.ActivityCompat;
+import androidx.exifinterface.media.ExifInterface;
 
 import com.google.android.material.imageview.ShapeableImageView;
 import com.uncanny.camx.Data.CamState;
@@ -99,7 +103,6 @@ public class CameraControls {
     private boolean shouldDeleteEmptyFile;
     private Uri uri;
     private File videoFile;
-    private FileHandler fileHandler;
     private ShapeableImageView thumbPreview;
 
 //    private CamState state = CamState.CAMERA;
@@ -112,7 +115,6 @@ public class CameraControls {
     private void init(){
         CamState.getInstance().setState(CamState.CAMERA);
         surfaceList = new ArrayList<>();
-        fileHandler = new FileHandler();
     }
 
     public void setResumed(boolean resumed){
@@ -193,7 +195,7 @@ public class CameraControls {
     }
 
     public void setImageSize(){
-        imageReader = ImageReader.newInstance(4000, 3000, ImageFormat.JPEG, 3);
+        imageReader = ImageReader.newInstance(3264, 2448, ImageFormat.JPEG, 3);
         imageReader.setOnImageAvailableListener(new OnImageAvailableListener(), cameraHandler);
         surfaceList.add(imageReader.getSurface());
     }
@@ -272,14 +274,14 @@ public class CameraControls {
                         @Override
                         public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
                             super.onCaptureStarted(session, request, timestamp, frameNumber);
-                            cameraHandler.post(() -> sound.play(MediaActionSound.SHUTTER_CLICK));
+//                            cameraHandler.post(() -> sound.play(MediaActionSound.SHUTTER_CLICK));
                         }
 
                         @Override
                         public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
                             super.onCaptureCompleted(session, request, result);
                         }
-                    }, bHandler);
+                    }, cameraHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -494,7 +496,9 @@ public class CameraControls {
                         setUri(u);
                         saveByteBuffer(jpegByteArray, file, u);
 
-//                        thumbPreview.setImageBitmap(fileHandler.getExifThumbnail(path));
+                        activity.runOnUiThread(() -> {
+                            thumbPreview.setImageBitmap(getThumbnail(path));
+                        });
                     });
                 }
             }
@@ -519,6 +523,50 @@ public class CameraControls {
             }
         }
 
+        private Bitmap getThumbnail(String jpegPath) {
+            ExifInterface exifInterface;
+            try {
+                exifInterface = new ExifInterface(jpegPath);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            float orientation;
+            switch (exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
+                case ExifInterface.ORIENTATION_NORMAL:
+                    orientation = 0.0F;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_90:
+                    orientation = 90.0F;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_180:
+                    orientation = 180.0F;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_270:
+                    orientation = 270.0F;
+                    break;
+                default:
+                    orientation = 0.0F;
+            }
+
+            Bitmap thumbnail;
+            if (exifInterface.hasThumbnail()) {
+                thumbnail = exifInterface.getThumbnailBitmap();
+            } else {
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inSampleSize = 16;
+                thumbnail = BitmapFactory.decodeFile(jpegPath, options);
+            }
+
+            if (orientation != 0.0F && thumbnail != null) {
+                Matrix matrix = new Matrix();
+                matrix.setRotate(orientation);
+                thumbnail = Bitmap.createBitmap(thumbnail, 0, 0, thumbnail.getWidth(), thumbnail.getHeight(), matrix, true);
+            }
+
+            return thumbnail;
+        }
+
+
     }
 
 
@@ -534,11 +582,12 @@ public class CameraControls {
 
     public void startBackgroundThread() {
         mBackgroundThread = new HandlerThread("Camera Main");
-        bBackgroundThread = new HandlerThread("Camera Background");
+//        bBackgroundThread = new HandlerThread("Camera Background");
         mBackgroundThread.start();
-        bBackgroundThread.start();
+//        bBackgroundThread.start();
         cameraHandler = new Handler(mBackgroundThread.getLooper());
-        bHandler = new Handler(bBackgroundThread.getLooper());
+        bHandler = new Handler(activity.getMainLooper());
+//        bHandler = new Handler(bBackgroundThread.getLooper());
     }
 
     public void stopBackgroundThread() {
