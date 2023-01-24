@@ -5,10 +5,7 @@ import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
-import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -39,7 +36,6 @@ import android.view.Surface;
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 import androidx.core.app.ActivityCompat;
-import androidx.exifinterface.media.ExifInterface;
 
 import com.google.android.material.imageview.ShapeableImageView;
 import com.uncanny.camx.Data.CamState;
@@ -96,7 +92,7 @@ public class CameraControls {
     private Executor bgExecutor = Executors.newSingleThreadExecutor();
 
     private Surface recordSurface,previewSurface;
-    private SurfaceTexture stPreview;
+    private SurfaceTexture previewSurfaceTexture;
     private List<Surface> surfaceList;
 
     private boolean resumed;
@@ -140,7 +136,7 @@ public class CameraControls {
     }
 
     public void setSurfaceTexture(SurfaceTexture texture){
-        this.stPreview = texture;
+        this.previewSurfaceTexture = texture;
     }
 
 
@@ -166,24 +162,20 @@ public class CameraControls {
         return cameraCharacteristics;
     }
 
+    /**
+     * CAMERA
+     */
+
     public void openCamera(String cameraId) {
-        if(!resumed || stPreview == null) return;
+        if(!resumed || previewSurfaceTexture == null) return;
         getCameraCharacteristics(cameraId);
 
 //        Don't need cause hardcoded the values
 //        StreamConfigurationMap map = getCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
-        //set preview resolution
-//            previewView.measure(1080, 1440);
-        stPreview.setDefaultBufferSize(1440, 1080);
-
-        //set capture resolution
-        imageReader = ImageReader.newInstance(4000, 3000, ImageFormat.JPEG, 3);
-        imageReader.setOnImageAvailableListener(new OnImageAvailableListener(), cameraHandler);
-
         surfaceList.clear();
-        surfaceList.add(new Surface(stPreview));
-        surfaceList.add(imageReader.getSurface());
+        setPreviewSize();
+        setImageSize();
 
         try {
             if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -195,14 +187,50 @@ public class CameraControls {
         }
     }
 
-    /**
-     * CAMERA
-     */
+    public void setPreviewSize(){
+        previewSurfaceTexture.setDefaultBufferSize(1440, 1080);
+        surfaceList.add(new Surface(previewSurfaceTexture));
+    }
+
+    public void setImageSize(){
+        imageReader = ImageReader.newInstance(4000, 3000, ImageFormat.JPEG, 3);
+        imageReader.setOnImageAvailableListener(new OnImageAvailableListener(), cameraHandler);
+        surfaceList.add(imageReader.getSurface());
+    }
+
+    private void createSession() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            List<OutputConfiguration> outputs = new ArrayList<>();
+            outputs.add(new OutputConfiguration(surfaceList.get(0)));
+            outputs.add(new OutputConfiguration(surfaceList.get(1)));
+            SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
+                    outputs,
+                    bgExecutor,
+                    sessionStateCallback);
+
+            try {
+                previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+                captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+
+                cameraDevice.createCaptureSession(sessionConfiguration);
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+            }
+        }
+        else{
+            try {
+                previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+                captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+
+                cameraDevice.createCaptureSession(surfaceList, sessionStateCallback, bHandler);
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public void createPreview(){
         try {
-            previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-
             previewRequestBuilder.addTarget(surfaceList.get(0));
             captureRequestBuilder.addTarget(surfaceList.get(0));
 
@@ -268,6 +296,37 @@ public class CameraControls {
         }
     }
 
+    private CameraDevice.StateCallback openCameraCallback = new CameraDevice.StateCallback() {
+        @Override
+        public void onOpened(@NonNull CameraDevice camera) {
+            cameraDevice = camera;
+
+            if(CamState.getInstance().getState() == CamState.CAMERA){
+                createSession();
+            }
+            else if(CamState.getInstance().getState() == CamState.VIDEO){
+                if(resumed) {
+                    Log.e(TAG, "onOpened: SURFACE ABANDONED");
+//                persistentSurface = MediaCodec.createPersistentInputSurface();
+                    mMediaRecorder = null;
+                }
+                createVideoPreview();
+            }
+        }
+
+        @Override
+        public void onDisconnected(@NonNull CameraDevice camera) {
+            cameraDevice = null;
+        }
+
+        @Override
+        public void onError(@NonNull CameraDevice camera, int error) {
+            cameraDevice = null;
+            Log.e(TAG, "onError: error int : "+error);
+        }
+    };
+
+
     /**
      * VIDEO
      */
@@ -308,7 +367,7 @@ public class CameraControls {
     }
 
     private void createVideoPreview()  {
-        if(!resumed || stPreview == null) return;
+        if(!resumed || previewSurfaceTexture == null) return;
 
         try {
             prepareMediaRecorder();
@@ -327,9 +386,9 @@ public class CameraControls {
                     ,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON);
 
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                OutputConfiguration previewConfiguration  = new OutputConfiguration(previewSurface);
-                OutputConfiguration recordConfiguration   = new OutputConfiguration(recordSurface);
-                OutputConfiguration snapshotConfiguration = new OutputConfiguration(imageReader.getSurface());
+                previewConfiguration  = new OutputConfiguration(previewSurface);
+                recordConfiguration   = new OutputConfiguration(recordSurface);
+                snapshotConfiguration = new OutputConfiguration(imageReader.getSurface());
 
 //                previewConfiguration.enableSurfaceSharing();
 
@@ -357,6 +416,7 @@ public class CameraControls {
         public void onConfigured(@NonNull CameraCaptureSession session) {
             cameraCaptureSession = session;
             try {
+//                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) cameraCaptureSession.finalizeOutputConfigurations(Arrays.asList(previewConfiguration, recordConfiguration, snapshotConfiguration));
                 cameraCaptureSession.setRepeatingRequest(previewRequestBuilder.build(), null,bHandler);
 //                if(isVRecording){
 //                    Log.e(TAG, "onConfigured: Preparing media Recorder");
@@ -501,59 +561,7 @@ public class CameraControls {
         }
     }
 
-
-    private CameraDevice.StateCallback openCameraCallback = new CameraDevice.StateCallback() {
-        @Override
-        public void onOpened(@NonNull CameraDevice camera) {
-            cameraDevice = camera;
-
-            if(CamState.getInstance().getState() == CamState.CAMERA){
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                    List<OutputConfiguration> outputs = new ArrayList<>();
-                    outputs.add(new OutputConfiguration(surfaceList.get(0)));
-                    outputs.add(new OutputConfiguration(surfaceList.get(1)));
-                    SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
-                            outputs,
-                            bgExecutor,
-                            stateCallback);
-
-                    try {
-                        cameraDevice.createCaptureSession(sessionConfiguration);
-                    } catch (CameraAccessException e) {
-                        e.printStackTrace();
-                    }
-                }
-                else{
-                    try {
-                        cameraDevice.createCaptureSession(surfaceList,stateCallback, bHandler);
-                    } catch (CameraAccessException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-            else if(CamState.getInstance().getState() == CamState.VIDEO){
-                if(resumed) {
-                    Log.e(TAG, "onOpened: SURFACE ABANDONED");
-//                persistentSurface = MediaCodec.createPersistentInputSurface();
-                    mMediaRecorder = null;
-                }
-                createVideoPreview();
-            }
-        }
-
-        @Override
-        public void onDisconnected(@NonNull CameraDevice camera) {
-            cameraDevice = null;
-        }
-
-        @Override
-        public void onError(@NonNull CameraDevice camera, int error) {
-            cameraDevice = null;
-            Log.e(TAG, "onError: error int : "+error);
-        }
-    };
-
-    private CameraCaptureSession.StateCallback stateCallback = new CameraCaptureSession.StateCallback() {
+    private CameraCaptureSession.StateCallback sessionStateCallback = new CameraCaptureSession.StateCallback() {
         @Override
         public void onConfigured(@NonNull CameraCaptureSession session) {
             cameraCaptureSession = session;
