@@ -43,7 +43,6 @@ import androidx.exifinterface.media.ExifInterface;
 
 import com.google.android.material.imageview.ShapeableImageView;
 import com.uncanny.camx.Data.CamState;
-import com.uncanny.camx.Utils.FileHandler;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -195,7 +194,8 @@ public class CameraControls {
     }
 
     public void setImageSize(){
-        imageReader = ImageReader.newInstance(3264, 2448, ImageFormat.JPEG, 3);
+//        imageReader = ImageReader.newInstance(3264, 2448, ImageFormat.JPEG, 3);
+        imageReader = ImageReader.newInstance(4000, 3000, ImageFormat.JPEG, 3); // BURST LAG IS OK
         imageReader.setOnImageAvailableListener(new OnImageAvailableListener(), cameraHandler);
         surfaceList.add(imageReader.getSurface());
     }
@@ -208,7 +208,7 @@ public class CameraControls {
             SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
                     outputs,
                     bgExecutor,
-                    sessionStateCallback);
+                    cameraCaptureSessionCallback);
 
             try {
                 previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
@@ -224,7 +224,7 @@ public class CameraControls {
                 previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
                 captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
 
-                cameraDevice.createCaptureSession(surfaceList, sessionStateCallback, bHandler);
+                cameraDevice.createCaptureSession(surfaceList, cameraCaptureSessionCallback, bHandler);
             } catch (CameraAccessException e) {
                 e.printStackTrace();
             }
@@ -328,10 +328,23 @@ public class CameraControls {
         }
     };
 
+    private CameraCaptureSession.StateCallback cameraCaptureSessionCallback = new CameraCaptureSession.StateCallback() {
+        @Override
+        public void onConfigured(@NonNull CameraCaptureSession session) {
+            cameraCaptureSession = session;
+            createPreview();
+        }
+
+        @Override
+        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+            Log.e(TAG, "IMAGE CAPTURE CALLBACK: onConfigureFailed: configure failed");
+        }
+    };
 
     /**
      * VIDEO
      */
+
     private void prepareMediaRecorder(){
         String mVideoLocation = "//storage//emulated//0//DCIM//Camera//";
         String mVideoSuffix = "Camera2_Video_" + System.currentTimeMillis() + ".mp4";
@@ -397,13 +410,13 @@ public class CameraControls {
                 SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR
                         , Arrays.asList(previewConfiguration,recordConfiguration,snapshotConfiguration)
                         , bgExecutor
-                        , streamlineCaptureSessionCallback);
+                        , videoCaptureSessionCallback);
 
                 cameraDevice.createCaptureSession(sessionConfiguration);
             }
             else{
                 cameraDevice.createCaptureSession(Arrays.asList(previewSurface, recordSurface, imageReader.getSurface())
-                        ,streamlineCaptureSessionCallback,null);
+                        , videoCaptureSessionCallback,null);
             }
 
         }
@@ -413,7 +426,7 @@ public class CameraControls {
 
     }
 
-    private CameraCaptureSession.StateCallback streamlineCaptureSessionCallback = new CameraCaptureSession.StateCallback() {
+    private CameraCaptureSession.StateCallback videoCaptureSessionCallback = new CameraCaptureSession.StateCallback() {
         @Override
         public void onConfigured(@NonNull CameraCaptureSession session) {
             cameraCaptureSession = session;
@@ -609,18 +622,5 @@ public class CameraControls {
             e.printStackTrace();
         }
     }
-
-    private CameraCaptureSession.StateCallback sessionStateCallback = new CameraCaptureSession.StateCallback() {
-        @Override
-        public void onConfigured(@NonNull CameraCaptureSession session) {
-            cameraCaptureSession = session;
-            createPreview();
-        }
-
-        @Override
-        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-            Log.e(TAG, "IMAGE CAPTURE CALLBACK: onConfigureFailed: configure failed");
-        }
-    };
 
 }
