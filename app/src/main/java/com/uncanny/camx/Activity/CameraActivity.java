@@ -67,7 +67,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private boolean isLongPressed;
     private boolean viewfinderGesture;
 
-    private Handler backgroundHandler = new Handler(getMainLooper());
+    private Handler backgroundHandler;
 
     public static String getCameraId() {
         return cameraId;
@@ -138,6 +138,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             });
         }
 
+        backgroundHandler = new Handler(getMainLooper());
         requestPermissions();
     }
 

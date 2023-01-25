@@ -48,36 +48,38 @@ public class FileHandler {
                 });
     }
 
-    //Causes Memory Leak
-//    public Bitmap getExifThumbnail(String filePath) {
-//        ExifInterface exif;
-////        Bitmap bitmap = BitmapFactory.decodeFile(filePath);
-//        bitmap = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(filePath), 100, 100);
-//        try {
-//            exif = new ExifInterface(filePath);
-//            int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-//            int rotate = 0;
-//            switch (orientation) {
-//                case ExifInterface.ORIENTATION_ROTATE_270:
-//                    rotate = 270;
-//                    break;
-//                case ExifInterface.ORIENTATION_ROTATE_180:
-//                    rotate = 180;
-//                    break;
-//                case ExifInterface.ORIENTATION_ROTATE_90:
-//                    rotate = 90;
-//                    break;
-//            }
-//            if (rotate != 0) {
-//                int w = bitmap.getWidth();
-//                int h = bitmap.getHeight();
-//                Matrix mtx = new Matrix();
-//                mtx.preRotate(rotate);
-//                bitmap = Bitmap.createBitmap(bitmap, 0, 0, w, h, mtx, false);
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        return bitmap;
-//    }
+    public Bitmap getExifThumbnail(String filePath) {
+        ExifInterface exif;
+//        Bitmap bitmap = BitmapFactory.decodeFile(filePath);
+
+        //Causes Memory Leak
+        bitmap = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(filePath), 100, 100);
+
+        try {
+            exif = new ExifInterface(filePath);
+            int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+            int rotate = 0;
+            switch (orientation) {
+                case ExifInterface.ORIENTATION_ROTATE_270:
+                    rotate = 270;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_180:
+                    rotate = 180;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_90:
+                    rotate = 90;
+                    break;
+            }
+            if (rotate != 0) {
+                int w = bitmap.getWidth();
+                int h = bitmap.getHeight();
+                Matrix mtx = new Matrix();
+                mtx.preRotate(rotate);
+                bitmap = Bitmap.createBitmap(bitmap, 0, 0, w, h, mtx, false);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return bitmap;
+    }
 }
