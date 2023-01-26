@@ -176,9 +176,6 @@ public class CameraControls {
         if(!resumed || previewSurfaceTexture == null) return;
         getCameraCharacteristics(cameraId);
 
-//        Don't need cause hardcoded the values
-//        StreamConfigurationMap map = getCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-
         surfaceList.clear();
         setPreviewSize();
         setImageSize();
@@ -194,7 +191,11 @@ public class CameraControls {
     }
 
     public void setPreviewSize(){
-        previewSurfaceTexture.setDefaultBufferSize(1440, 1080);
+        Log.e(TAG, "setPreviewSize: "+CamState.getInstance().getState());
+        if(CamState.getInstance().getState() == CamState.VIDEO)
+            previewSurfaceTexture.setDefaultBufferSize(1920, 1080);
+        else
+            previewSurfaceTexture.setDefaultBufferSize(1440, 1080);
         surfaceList.add(new Surface(previewSurfaceTexture));
     }
 
@@ -365,6 +366,7 @@ public class CameraControls {
         public void onOpened(@NonNull CameraDevice camera) {
             cameraDevice = camera;
 
+            Log.e(TAG, "onOpened: "+CamState.getInstance().getState());
             if(CamState.getInstance().getState() == CamState.CAMERA){
                 createSession();
             }
@@ -375,6 +377,7 @@ public class CameraControls {
                     mMediaRecorder = null;
                 }
                 createVideoPreview();
+                setPreviewSize();
             }
         }
 
@@ -449,15 +452,15 @@ public class CameraControls {
         try {
             prepareMediaRecorder();
             previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-//            previewView.getSurfaceTexture().setDefaultBufferSize(1920, 1080);
-//            previewSurface = new Surface(surfaceList.get(0));
+            previewSurfaceTexture.setDefaultBufferSize(1920, 1080);
 
 //            recordSurface = persistentSurface; // FIXME: PersistentSurface not recording video in some devices
+            previewSurface = surfaceList.get(0);
             recordSurface = mMediaRecorder.getSurface();
 
             previewRequestBuilder.addTarget(recordSurface);
 
-            previewRequestBuilder.addTarget(surfaceList.get(0));
+            previewRequestBuilder.addTarget(previewSurface);
 
             previewRequestBuilder.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE
                     ,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON);
@@ -509,13 +512,13 @@ public class CameraControls {
         }
     };
 
-    private void startRecording(){
+    public void startRecording(){
         sound.play(MediaActionSound.START_VIDEO_RECORDING);
         shouldDeleteEmptyFile = false;
         mMediaRecorder.start();
     }
 
-    private void stopRecording(){
+    public void stopRecording(){
         mMediaRecorder.stop();
         mMediaRecorder.reset();
         mMediaRecorder.release();
