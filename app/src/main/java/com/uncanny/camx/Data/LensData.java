@@ -502,10 +502,11 @@ public class LensData {
      */
     private void getAuxCameras(){
 //        CameraHelper ch = new CameraHelper();
+        cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
         for(int i = 0; i<=31 ; i++){       // FIXME: 8/11/2021 fix extra aux lens problem @_@
             try {
-                cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
-                CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(String.valueOf(i));
+//                characteristics = cameraManager.getCameraCharacteristics(String.valueOf(i));
+                characteristics = getCameraCharacteristics(String.valueOf(i));
                 if (characteristics!=null ) {
                     Log.e(TAG, "check_aux: value of array at " + i + " : " + i);
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -523,7 +524,7 @@ public class LensData {
                     }
                 }
             }
-            catch (IllegalArgumentException | CameraAccessException ignored){
+            catch (IllegalArgumentException ignored){
             }
         }
 
@@ -589,7 +590,8 @@ public class LensData {
     }
 
     private CameraCharacteristics getCameraCharacteristics(String camId) {
-        cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+        if(cameraManager==null)
+            cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
         try {
             characteristics = cameraManager.getCameraCharacteristics(camId);
         } catch (CameraAccessException e) {

@@ -53,6 +53,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -98,10 +99,14 @@ public class CameraControls {
     private SurfaceTexture previewSurfaceTexture;
     private List<Surface> surfaceList;
 
+
+    public int counter =0;
     private boolean resumed;
     private boolean shouldDeleteEmptyFile;
     private Uri uri;
     private File videoFile;
+    private List<CaptureRequest> captureRequest = new ArrayList<>();
+
     private ShapeableImageView thumbPreview;
 
 //    private CamState state = CamState.CAMERA;
@@ -194,7 +199,6 @@ public class CameraControls {
     }
 
     public void setImageSize(){
-//        imageReader = ImageReader.newInstance(3264, 2448, ImageFormat.JPEG, 3);
         imageReader = ImageReader.newInstance(4000, 3000, ImageFormat.JPEG, 3); // BURST LAG IS OK
         imageReader.setOnImageAvailableListener(new OnImageAvailableListener(), cameraHandler);
         surfaceList.add(imageReader.getSurface());
@@ -252,6 +256,64 @@ public class CameraControls {
             cameraCaptureSession.capture(captureRequestBuilder.build(), null, bHandler);
 
             sound.play(MediaActionSound.SHUTTER_CLICK);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Tips to minimize burst lag :<br>
+     * - Use lower resolution for image reader.<br>
+     * - Use Limited Burst Capture only.
+     */
+    public void captureLimitedBurst(int limit){
+        try {
+            captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY,(byte) 100);
+            captureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION,getJpegOrientation());
+
+            captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF);
+
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, true);
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_LOCK, true);
+
+            captureRequestBuilder.addTarget(surfaceList.get(1));
+
+            for(int i=0; i<20; i++){
+                captureRequest.add(captureRequestBuilder.build());
+            }
+
+            cameraCaptureSession.captureBurst(captureRequest
+                    , new CameraCaptureSession.CaptureCallback() {
+                        @Override
+                        public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
+                            super.onCaptureStarted(session, request, timestamp, frameNumber);
+                        }
+
+                        @Override
+                        public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+                            super.onCaptureCompleted(session, request, result);
+                            Log.e(TAG, "onCaptureCompleted: counter : "+ ++counter);
+                        }
+
+                        @Override
+                        public void onCaptureSequenceCompleted(@NonNull CameraCaptureSession session, int sequenceId, long frameNumber) {
+                            super.onCaptureSequenceCompleted(session, sequenceId, frameNumber);
+                            counter = 0;
+
+                        }
+
+                        @Override
+                        public void onCaptureSequenceAborted(@NonNull CameraCaptureSession session, int sequenceId) {
+                            super.onCaptureSequenceAborted(session, sequenceId);
+                            counter = 0;
+                        }
+
+                        @Override
+                        public void onCaptureBufferLost(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull Surface target, long frameNumber) {
+                            super.onCaptureBufferLost(session, request, target, frameNumber);
+                        }
+                    }
+                    ,cameraHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -497,6 +559,10 @@ public class CameraControls {
                         String path = cameraDir + "/" + displayName;
 
                         File file = new File(path);
+
+                        /**
+                         * MediaStore.Images.ImageColumns.F_NUMBER
+                         */
 
                         ContentValues values = new ContentValues();
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) values.put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM/Camera/");
