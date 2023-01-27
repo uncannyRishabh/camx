@@ -130,7 +130,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 if(event.getActionMasked() == MotionEvent.ACTION_UP && isLongPressed){
                     //Stop Repeating Burst
                     isLongPressed = false;
-                    backgroundHandler.post(() -> cameraControls.createPreview());
+                    backgroundHandler.post(() -> cameraControls.stopBurstCapture());
 //                    cameraControls.createPreview();
 //                cameraHandler.post(this::displayLatestImage);
                     Log.e(TAG, "onLongPressedUp: Stop Repeating Burst");
@@ -175,7 +175,12 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         if(id == R.id.shutter){
             Log.e(TAG, "onClick: "+getState());
             switch (getState()){
-                case CAMERA:{
+                case CAMERA:
+                case NIGHT:
+                case PORTRAIT:
+                case HIRES:
+                case PRO:
+                {
                     cameraControls.captureImage();
                     break;
                 }
@@ -187,6 +192,22 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 case VIDEO_PROGRESSED:{
                     cameraControls.stopRecording();
                     setState(CamState.VIDEO);
+                    break;
+                }
+                case SLOMO:{
+                    setState(CamState.HSVIDEO_PROGRESSED);
+                    break;
+                }
+                case HSVIDEO_PROGRESSED:{
+                    setState(CamState.SLOMO);
+                    break;
+                }
+                case TIMELAPSE:{
+                    setState(CamState.TIMELAPSE_PROGRESSED);
+                    break;
+                }
+                case TIMELAPSE_PROGRESSED:{
+                    setState(CamState.TIMELAPSE);
                     break;
                 }
             }
@@ -213,14 +234,17 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             cameraControls.closeCamera();
             if (cameraControls.getLensFacing()== CameraCharacteristics.LENS_FACING_BACK) {
                 setCameraId(FRONT_CAMERA_ID);
-                if(CamState.getInstance().getState() != CamState.PORTRAIT) cameraControls.openCamera(FRONT_CAMERA_ID);
-                front_switch.animate().rotation(180f).setDuration(300);
+                synchronized (new Object()){
+                    if(CamState.getInstance().getState() != CamState.PORTRAIT) cameraControls.openCamera(FRONT_CAMERA_ID);
+                    front_switch.animate().rotation(180f).setDuration(300);
+                }
             } else {
 //                auxDock.setIndex(1);
                 setCameraId(BACK_CAMERA_ID);
-                if(CamState.getInstance().getState() != CamState.PORTRAIT) cameraControls.openCamera(BACK_CAMERA_ID);
-                front_switch.animate().rotation(-180f).setDuration(300);
-
+                synchronized (new Object()) {
+                    if (CamState.getInstance().getState() != CamState.PORTRAIT) cameraControls.openCamera(BACK_CAMERA_ID);
+                    front_switch.animate().rotation(-180f).setDuration(300);
+                }
             }
 //            applyModeChange(getState());
 //            front_switch.post(hideAuxDock);
@@ -392,6 +416,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             case 2:{
                 if(getState() == CamState.CAMERA) break;
                 setState(CamState.CAMERA);
+                cameraControls.openCamera(getCameraId());
+                runOnUiThread(() -> previewView.setAspectRatio(1080,1440));
 //                modeCamera();
                 break;
             }
@@ -400,10 +426,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                         getState() == CamState.TIMELAPSE || getState() == CamState.VIDEO_PROGRESSED
                         || getState() == CamState.HSVIDEO_PROGRESSED
                         || getState() == CamState.TIMELAPSE_PROGRESSED) break;
-                runOnUiThread(() -> {
-//                    previewView.measure(1080, 1920);
-                    previewView.setAspectRatio(1080,1920);
-                });
+                runOnUiThread(() -> previewView.setAspectRatio(1080,1920));
                 setState(CamState.VIDEO);
                 cameraControls.openCamera(getCameraId());
                 break;

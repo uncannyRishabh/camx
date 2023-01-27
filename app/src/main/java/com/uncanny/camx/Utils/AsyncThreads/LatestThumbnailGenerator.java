@@ -7,8 +7,10 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
+import android.os.CancellationSignal;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.util.Size;
 
 import androidx.annotation.WorkerThread;
 import androidx.exifinterface.media.ExifInterface;
@@ -69,7 +71,14 @@ public class LatestThumbnailGenerator implements Runnable{
                             bitmap = applyExifRotation(latestMedia.getAbsolutePath());
                         }
                         else {
-                            bitmap = ThumbnailUtils.createVideoThumbnail(String.valueOf(latestMedia), MediaStore.Images.Thumbnails.MINI_KIND);
+                            try {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q)
+                                    bitmap = ThumbnailUtils.createVideoThumbnail(latestMedia, new Size(96, 96), new CancellationSignal());
+                                else
+                                    bitmap = ThumbnailUtils.createVideoThumbnail(latestMedia.getAbsolutePath(), MediaStore.Images.Thumbnails.MINI_KIND);
+                            } catch (IOException e) {
+                                Log.e(TAG, "mediaScan: "+e.getMessage());
+                            }
                         }
 
                         Log.e(TAG, "Latest media: "+latestMedia);

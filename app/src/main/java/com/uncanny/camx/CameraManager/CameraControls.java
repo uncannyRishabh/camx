@@ -23,15 +23,19 @@ import android.media.CamcorderProfile;
 import android.media.Image;
 import android.media.ImageReader;
 import android.media.MediaActionSound;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaRecorder;
+import android.media.MediaScannerConnection;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.Build;
+import android.os.CancellationSignal;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.OrientationEventListener;
 import android.view.Surface;
@@ -53,9 +57,9 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -163,6 +167,7 @@ public class CameraControls {
         try {
             cameraCharacteristics = cameraManager.getCameraCharacteristics(id);
         } catch (CameraAccessException e) {
+            Log.e(TAG, "getCameraCharacteristics: "+e.getMessage());
             throw new RuntimeException(e);
         }
         return cameraCharacteristics;
@@ -174,6 +179,7 @@ public class CameraControls {
 
     public void openCamera(String cameraId) {
         if(!resumed || previewSurfaceTexture == null) return;
+        if(sound == null) sound = new MediaActionSound();
         getCameraCharacteristics(cameraId);
 
         surfaceList.clear();
@@ -181,6 +187,7 @@ public class CameraControls {
         setImageSize();
 
         try {
+            if(cameraDevice!=null && cameraCaptureSession!=null) cameraCaptureSession.stopRepeating();
             if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 activity.requestPermissions(new String[]{ Manifest.permission.CAMERA}, CODE_CAMERA_PERMISSION);
             }
@@ -200,7 +207,11 @@ public class CameraControls {
     }
 
     public void setImageSize(){
-        imageReader = ImageReader.newInstance(4000, 3000, ImageFormat.JPEG, 3); // BURST LAG IS OK
+        if(CamState.getInstance().getState() == CamState.VIDEO)
+            imageReader = ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 3);
+        else
+            imageReader = ImageReader.newInstance(4000, 3000, ImageFormat.JPEG, 3); // BURST LAG IS OK
+
         imageReader.setOnImageAvailableListener(new OnImageAvailableListener(), cameraHandler);
         surfaceList.add(imageReader.getSurface());
     }
@@ -221,7 +232,7 @@ public class CameraControls {
 
                 cameraDevice.createCaptureSession(sessionConfiguration);
             } catch (CameraAccessException e) {
-                e.printStackTrace();
+                Log.e(TAG, "createSession: "+e.getMessage());
             }
         }
         else{
@@ -231,7 +242,7 @@ public class CameraControls {
 
                 cameraDevice.createCaptureSession(surfaceList, cameraCaptureSessionCallback, bHandler);
             } catch (CameraAccessException e) {
-                e.printStackTrace();
+                Log.e(TAG, "createSession: "+e.getMessage());
             }
         }
     }
@@ -244,7 +255,7 @@ public class CameraControls {
             cameraCaptureSession.setRepeatingRequest(previewRequestBuilder.build(), null, bHandler);
 
         } catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e(TAG, "createPreview: "+e.getMessage());
         }
     }
 
@@ -258,7 +269,7 @@ public class CameraControls {
 
             sound.play(MediaActionSound.SHUTTER_CLICK);
         } catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e(TAG, "captureImage: "+e.getMessage());
         }
     }
 
@@ -316,7 +327,7 @@ public class CameraControls {
                     }
                     ,cameraHandler);
         } catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e(TAG, "captureLimitedBurst: "+e.getMessage());
         }
     }
 
@@ -326,9 +337,10 @@ public class CameraControls {
             captureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION,getJpegOrientation());
 
             captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF);
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
 
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, true);
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_LOCK, true);
+//            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, true);
+//            captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_LOCK, true);
 
             captureRequestBuilder.addTarget(surfaceList.get(1));
 
@@ -346,16 +358,20 @@ public class CameraControls {
                         }
                     }, cameraHandler);
         } catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e(TAG, "captureBurstImage: "+e.getMessage());
         }
     }
 
+    public void stopBurstCapture(){
+        createPreview();
+    }
+
     public void closeCamera() {
-        if (null != cameraDevice) {
+        if (cameraDevice != null) {
             cameraDevice.close();
             cameraDevice = null;
         }
-        if (null != imageReader) {
+        if (imageReader != null) {
             imageReader.close();
             imageReader = null;
         }
@@ -372,7 +388,6 @@ public class CameraControls {
             }
             else if(CamState.getInstance().getState() == CamState.VIDEO){
                 if(resumed) {
-                    Log.e(TAG, "onOpened: SURFACE ABANDONED");
 //                persistentSurface = MediaCodec.createPersistentInputSurface();
                     mMediaRecorder = null;
                 }
@@ -410,10 +425,13 @@ public class CameraControls {
      * VIDEO
      */
 
+    @WorkerThread
     private void prepareMediaRecorder(){
         String mVideoLocation = "//storage//emulated//0//DCIM//Camera//";
         String mVideoSuffix = "Camera2_Video_" + System.currentTimeMillis() + ".mp4";
 
+        if(recordSurface != null) recordSurface.release();
+//        if(previewSurface != null) previewSurface.release();
         if(resumed)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(activity);
             else mMediaRecorder = new MediaRecorder();
@@ -424,6 +442,7 @@ public class CameraControls {
         mMediaRecorder.setAudioChannels(camcorderProfile.audioChannels);
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
 //        mMediaRecorder.setInputSurface(persistentSurface);
+
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         mMediaRecorder.setVideoFrameRate(30);
         mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
@@ -481,12 +500,12 @@ public class CameraControls {
             }
             else{
                 cameraDevice.createCaptureSession(Arrays.asList(previewSurface, recordSurface, imageReader.getSurface())
-                        , videoCaptureSessionCallback,null);
+                        , videoCaptureSessionCallback,bHandler);
             }
 
         }
         catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e(TAG, "createVideoPreview: "+e.getMessage());
         }
 
     }
@@ -502,7 +521,7 @@ public class CameraControls {
 //                    Log.e(TAG, "onConfigured: Preparing media Recorder");
 //                }
             } catch (CameraAccessException e) {
-                e.printStackTrace();
+                Log.e(TAG, "onConfigured: "+e.getMessage());
             }
         }
 
@@ -519,14 +538,26 @@ public class CameraControls {
     }
 
     public void stopRecording(){
+        cameraHandler.post(() -> mediaScan(videoFile,"video"));
         mMediaRecorder.stop();
         mMediaRecorder.reset();
         mMediaRecorder.release();
-//        performMediaScan(videoFile.getAbsolutePath(),"video"); //TODO : Handle Efficiently
-        createVideoPreview(); //without persistentSurface
+        cameraHandler.post(this::createVideoPreview); //without persistentSurface
         sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
-        thumbPreview.setImageBitmap(ThumbnailUtils.createVideoThumbnail(String.valueOf(videoFile), MediaStore.Images.Thumbnails.MINI_KIND));
-        setUri(Uri.fromFile(videoFile));
+
+//        cameraHandler.post(() -> {
+//            try(MediaMetadataRetriever r = new MediaMetadataRetriever()){
+//                r.setDataSource(activity,getUri().get());
+//                thumbPreview.post(() -> thumbPreview.setImageBitmap(r.getScaledFrameAtTime( 1000, MediaMetadataRetriever.OPTION_NEXT_SYNC, 128, 128)));
+//            } catch (IOException e) {
+//                throw new RuntimeException(e);
+//            }
+//        });
+
+//        thumbPreview.post(() -> thumbPreview.setImageBitmap(ThumbnailUtils.createVideoThumbnail(getUri().get().getPath()
+//                , MediaStore.Images.Thumbnails.MINI_KIND ))); //FIXME: GENERATE INSTANTLY
+
+//        activity.runOnUiThread(() -> thumbPreview.setImageBitmap(getThumbnail(getUri().get().getPath())));
     }
 
     //TODO : Set separate imageReader
@@ -539,8 +570,43 @@ public class CameraControls {
 
             cameraCaptureSession.capture(captureRequestBuilder.build(), null, bHandler);
         } catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e(TAG, "captureVideoSnapshot: "+e.getMessage());
         }
+    }
+
+    @WorkerThread
+    private void mediaScan(File file,String type){
+        String mimeType = null;
+        if(type.equals("image")) mimeType = "image/jpeg";
+        else if(type.equals("video")) mimeType = "video/mp4";
+        MediaScannerConnection.scanFile(activity
+                ,new String[] {file.getAbsolutePath() }
+                ,new String[] { mimeType }
+                ,(path, uri) -> {
+                    Log.e("TAG", "Scanned " + path + ":");
+                    Log.e("TAG", "-> uri=" + uri);
+                    setUri(uri);
+//                    try(MediaMetadataRetriever retriever = new MediaMetadataRetriever()){
+//                        retriever.setDataSource(path);
+//                        Bitmap bitmap = retriever.getFrameAtTime();
+//                        activity.runOnUiThread(() -> thumbPreview.setImageBitmap(bitmap));
+//                    } catch (IOException e) {
+//                        throw new RuntimeException(e);
+//                    }
+                    Bitmap thumbnail;
+                    try {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                            thumbnail = ThumbnailUtils.createVideoThumbnail(videoFile, new Size(96, 96), new CancellationSignal());
+                            activity.runOnUiThread(() -> thumbPreview.setImageBitmap(thumbnail));
+                        }
+                        else {
+                            thumbnail = ThumbnailUtils.createVideoThumbnail(path, MediaStore.Images.Thumbnails.MINI_KIND);
+                            activity.runOnUiThread(() -> thumbPreview.setImageBitmap(thumbnail));
+                        }
+                    } catch (IOException e) {
+                        Log.e(TAG, "mediaScan: "+e.getMessage());
+                    }
+                });
     }
 
     @WorkerThread
@@ -563,9 +629,7 @@ public class CameraControls {
 
                         File file = new File(path);
 
-                        /**
-                         * MediaStore.Images.ImageColumns.F_NUMBER
-                         */
+                        // MediaStore.Images.ImageColumns.F_NUMBER
 
                         ContentValues values = new ContentValues();
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) values.put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM/Camera/");
@@ -578,9 +642,7 @@ public class CameraControls {
                         setUri(u);
                         saveByteBuffer(jpegByteArray, file, u);
 
-                        activity.runOnUiThread(() -> {
-                            thumbPreview.setImageBitmap(getThumbnail(path));
-                        });
+                        activity.runOnUiThread(() -> thumbPreview.setImageBitmap(getThumbnail(path)));
                     });
                 }
             }
@@ -648,7 +710,6 @@ public class CameraControls {
             return thumbnail;
         }
 
-
     }
 
 
@@ -692,4 +753,9 @@ public class CameraControls {
         }
     }
 
+    public void shutDown(){
+        if(sound != null){
+            sound.release();
+        }
+    }
 }
