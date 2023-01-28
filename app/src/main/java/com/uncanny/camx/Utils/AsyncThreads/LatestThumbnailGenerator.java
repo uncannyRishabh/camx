@@ -1,6 +1,6 @@
 package com.uncanny.camx.Utils.AsyncThreads;
 
-import android.content.Context;
+import android.app.Activity;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -15,6 +15,8 @@ import android.util.Size;
 import androidx.annotation.WorkerThread;
 import androidx.exifinterface.media.ExifInterface;
 
+import com.google.android.material.imageview.ShapeableImageView;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -24,10 +26,11 @@ import java.util.List;
 public class LatestThumbnailGenerator implements Runnable{
     private static final String TAG = "LatestThumbnailGenerator";
     private static final List<String> IMAGE_FILES_EXTENSIONS = Arrays.asList("JPG", "JPEG", "DNG");
-    private final Context context;
+    private final Activity activity;
     private Bitmap bitmap;
+    private ShapeableImageView thumbPreview;
 
-    public Bitmap getBitmap(){
+    private Bitmap getBitmap(){
         if(bitmap==null)
             return Bitmap.createBitmap(96,96, Bitmap.Config.ARGB_8888);
         return bitmap;
@@ -39,8 +42,9 @@ public class LatestThumbnailGenerator implements Runnable{
         return latestUri;
     }
 
-    public LatestThumbnailGenerator(Context context){
-        this.context = context;
+    public LatestThumbnailGenerator(Activity activity, ShapeableImageView thumbPreview){
+        this.activity = activity;
+        this.thumbPreview = thumbPreview;
     }
 
     @Override
@@ -52,7 +56,7 @@ public class LatestThumbnailGenerator implements Runnable{
                 + MediaStore.Files.FileColumns.MEDIA_TYPE + "="
                 + MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
 
-        final Cursor cursor = context.getContentResolver().query(MediaStore.Files.getContentUri("external")
+        final Cursor cursor = activity.getContentResolver().query(MediaStore.Files.getContentUri("external")
                 , projection
                 , selection, null
                 , MediaStore.Images.ImageColumns.DATE_TAKEN + " DESC");
@@ -67,7 +71,6 @@ public class LatestThumbnailGenerator implements Runnable{
                     Log.e(TAG, "run: URI : "+latestUri);
                     if (latestMedia.exists()) {
                         if(fileIsImage(String.valueOf(latestMedia))){
-//                            bitmap = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(String.valueOf(latestMedia)),100,100);
                             bitmap = applyExifRotation(latestMedia.getAbsolutePath());
                         }
                         else {
@@ -79,8 +82,10 @@ public class LatestThumbnailGenerator implements Runnable{
                             } catch (IOException e) {
                                 Log.e(TAG, "mediaScan: "+e.getMessage());
                             }
+                            finally {
+                                activity.runOnUiThread(() -> thumbPreview.setImageBitmap(getBitmap()));
+                            }
                         }
-
                         Log.e(TAG, "Latest media: "+latestMedia);
                     }
                     break;
@@ -93,7 +98,7 @@ public class LatestThumbnailGenerator implements Runnable{
     public static Bitmap applyExifRotation(String filePath) {
         ExifInterface exif;
 //        Bitmap bitmap = BitmapFactory.decodeFile(filePath);
-        Bitmap bitmap = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(filePath), 100, 100);
+        Bitmap bitmap = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(filePath), 96, 96);
         try {
             exif = new ExifInterface(filePath);
             int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);

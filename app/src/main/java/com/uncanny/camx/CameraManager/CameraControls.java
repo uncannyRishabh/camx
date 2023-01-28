@@ -162,7 +162,7 @@ public class CameraControls {
         return cameraCharacteristics.get(CameraCharacteristics.LENS_FACING);
     }
 
-    private CameraCharacteristics getCameraCharacteristics(String id){
+    private void getCameraCharacteristics(String id){
         cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
         try {
             cameraCharacteristics = cameraManager.getCameraCharacteristics(id);
@@ -170,7 +170,6 @@ public class CameraControls {
             Log.e(TAG, "getCameraCharacteristics: "+e.getMessage());
             throw new RuntimeException(e);
         }
-        return cameraCharacteristics;
     }
 
     /**
@@ -396,7 +395,6 @@ public class CameraControls {
                     mMediaRecorder = null;
                 }
                 createVideoPreview();
-//                setPreviewSize();
             }
         }
 
@@ -541,10 +539,12 @@ public class CameraControls {
         mMediaRecorder.start();
     }
 
+    File t;
     public void stopRecording(){
-        bHandler.post(() -> mediaScan(videoFile,"video"));
+        t = videoFile;
+        bHandler.post(() -> mediaScan(t,"video"));
 //        mediaScan(videoFile,"video");
-        mMediaRecorder.stop();
+        mMediaRecorder.stop(); //FIXME: HANDLE IMMEDIATE STOP AFTER START
         mMediaRecorder.reset();
         mMediaRecorder.release();
         cameraHandler.postAtFrontOfQueue(this::createVideoPreview); //without persistentSurface
@@ -599,21 +599,19 @@ public class CameraControls {
 //                        throw new RuntimeException(e);
 //                    }
 
-//                    Bitmap thumbnail;
-//                    try {
-//                        //FIXME : address memory leaks during 2nd,3rd consecutive recording
-//                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-////                            thumbnail = ThumbnailUtils.createVideoThumbnail(videoFile, new Size(96, 96), new CancellationSignal());
-//                            thumbnail = activity.getContentResolver().loadThumbnail(uri,new Size(96, 96), new CancellationSignal());
-//                            activity.runOnUiThread(() -> thumbPreview.setImageBitmap(thumbnail));
-//                        }
-//                        else {
-//                            thumbnail = ThumbnailUtils.createVideoThumbnail(path, MediaStore.Images.Thumbnails.MINI_KIND);
-//                            activity.runOnUiThread(() -> thumbPreview.setImageBitmap(thumbnail));
-//                        }
-//                    } catch (IOException e) {
-//                        Log.e(TAG, "mediaScan: "+e.getMessage());
-//                    }
+                    try {
+                        Bitmap thumbnail;
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                            thumbnail = activity.getContentResolver().loadThumbnail(uri,new Size(96, 96), new CancellationSignal());
+                            activity.runOnUiThread(() -> thumbPreview.setImageBitmap(thumbnail));
+                        }
+                        else {
+                            thumbnail = ThumbnailUtils.createVideoThumbnail(path, MediaStore.Images.Thumbnails.MINI_KIND);
+                            activity.runOnUiThread(() -> thumbPreview.setImageBitmap(thumbnail));
+                        }
+                    } catch (IOException e) {
+                        Log.e(TAG, "mediaScan: "+e.getMessage());
+                    }
                 });
     }
 

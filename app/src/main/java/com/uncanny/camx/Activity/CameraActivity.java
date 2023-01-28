@@ -38,9 +38,8 @@ import com.uncanny.camx.UI.Views.ViewFinder.AutoFitPreviewView;
 import com.uncanny.camx.UI.Views.ViewFinder.VideoModePicker;
 import com.uncanny.camx.Utils.AsyncThreads.LatestThumbnailGenerator;
 
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
-import io.reactivex.rxjava3.core.Completable;
-import io.reactivex.rxjava3.schedulers.Schedulers;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 @SuppressLint("ClickableViewAccessibility")
 @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
@@ -74,6 +73,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private boolean viewfinderGesture;
 
     private Handler backgroundHandler;
+    private Executor bgExecutor = Executors.newCachedThreadPool();
 
     public CamState getState() {
         return state.getState();
@@ -515,12 +515,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     }
 
     private void displayLatestImage(){
-        Completable.fromRunnable(ltg = new LatestThumbnailGenerator(this))
-                .subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
-                .andThen(Completable.fromRunnable(() -> {
-                    thumbPreview.setImageBitmap(ltg.getBitmap());
-                    Log.e(TAG, "displayLatestMediaThumbnailFromGallery: Updated Thumbnail");
-                })).subscribe();
+        bgExecutor.execute(new LatestThumbnailGenerator(this,thumbPreview));
     }
 
     @Override
