@@ -197,13 +197,16 @@ public class CameraControls {
         }
     }
 
+
     public void setPreviewSize(){
+//        if(previewSurface!=null) previewSurface.release();
         Log.e(TAG, "setPreviewSize: "+CamState.getInstance().getState());
         if(CamState.getInstance().getState() == CamState.VIDEO)
             previewSurfaceTexture.setDefaultBufferSize(1920, 1080);
         else
             previewSurfaceTexture.setDefaultBufferSize(1440, 1080);
-        surfaceList.add(new Surface(previewSurfaceTexture));
+        previewSurface = new Surface(previewSurfaceTexture);
+        surfaceList.add(previewSurface);
     }
 
     public void setImageSize(){
@@ -371,6 +374,7 @@ public class CameraControls {
             cameraDevice.close();
             cameraDevice = null;
         }
+        previewSurface.release();
         if (imageReader != null) {
             imageReader.close();
             imageReader = null;
@@ -392,7 +396,7 @@ public class CameraControls {
                     mMediaRecorder = null;
                 }
                 createVideoPreview();
-                setPreviewSize();
+//                setPreviewSize();
             }
         }
 
@@ -538,11 +542,12 @@ public class CameraControls {
     }
 
     public void stopRecording(){
-        cameraHandler.post(() -> mediaScan(videoFile,"video"));
+        bHandler.post(() -> mediaScan(videoFile,"video"));
+//        mediaScan(videoFile,"video");
         mMediaRecorder.stop();
         mMediaRecorder.reset();
         mMediaRecorder.release();
-        cameraHandler.post(this::createVideoPreview); //without persistentSurface
+        cameraHandler.postAtFrontOfQueue(this::createVideoPreview); //without persistentSurface
         sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
 
 //        cameraHandler.post(() -> {
@@ -593,19 +598,22 @@ public class CameraControls {
 //                    } catch (IOException e) {
 //                        throw new RuntimeException(e);
 //                    }
-                    Bitmap thumbnail;
-                    try {
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                            thumbnail = ThumbnailUtils.createVideoThumbnail(videoFile, new Size(96, 96), new CancellationSignal());
-                            activity.runOnUiThread(() -> thumbPreview.setImageBitmap(thumbnail));
-                        }
-                        else {
-                            thumbnail = ThumbnailUtils.createVideoThumbnail(path, MediaStore.Images.Thumbnails.MINI_KIND);
-                            activity.runOnUiThread(() -> thumbPreview.setImageBitmap(thumbnail));
-                        }
-                    } catch (IOException e) {
-                        Log.e(TAG, "mediaScan: "+e.getMessage());
-                    }
+
+//                    Bitmap thumbnail;
+//                    try {
+//                        //FIXME : address memory leaks during 2nd,3rd consecutive recording
+//                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+////                            thumbnail = ThumbnailUtils.createVideoThumbnail(videoFile, new Size(96, 96), new CancellationSignal());
+//                            thumbnail = activity.getContentResolver().loadThumbnail(uri,new Size(96, 96), new CancellationSignal());
+//                            activity.runOnUiThread(() -> thumbPreview.setImageBitmap(thumbnail));
+//                        }
+//                        else {
+//                            thumbnail = ThumbnailUtils.createVideoThumbnail(path, MediaStore.Images.Thumbnails.MINI_KIND);
+//                            activity.runOnUiThread(() -> thumbPreview.setImageBitmap(thumbnail));
+//                        }
+//                    } catch (IOException e) {
+//                        Log.e(TAG, "mediaScan: "+e.getMessage());
+//                    }
                 });
     }
 
@@ -757,5 +765,9 @@ public class CameraControls {
         if(sound != null){
             sound.release();
         }
+        previewSurface.release();
+        recordSurface.release();
+        mMediaRecorder.release();
+        previewSurfaceTexture.release();
     }
 }

@@ -23,7 +23,7 @@ public class VideoModePicker extends ModePicker{
     public interface OnCLickListener {
         /**
          * @param view ModePicker View
-         * @param position position of the element, starting from 0.
+         * @param modeName name of the mode.
          */
         void onClick(VideoModePicker view, String modeName);
     }
@@ -74,6 +74,10 @@ abstract class ModePicker extends View {
     private ArrayList<String> modes = new ArrayList<>();
     private final float density = getResources().getDisplayMetrics().density;
 
+    public static String MODE_VIDEO = "Video";
+    public static String MODE_SLOW_MOTION = "Slow Motion";
+    public static String MODE_TIME_LAPSE = "Time Lapse";
+
     public void setModes(ArrayList<String> modes) {
         this.modes = modes;
         postInvalidate();
@@ -82,7 +86,7 @@ abstract class ModePicker extends View {
     public void addMode(int index, String modeName){
         if(!modes.contains(modeName)){
             modes.add(index,modeName);
-            setIndex("Video");
+            setIndex(MODE_VIDEO);
         }
         divisionSize = (getWidth()/ modes.size());
         postInvalidate();
@@ -90,7 +94,7 @@ abstract class ModePicker extends View {
 
     public void removeMode(String modeName){
         boolean ds = modes.remove(modeName);
-        if(ds) setIndex("Video");
+        if(ds) setIndex(MODE_VIDEO);
         divisionSize = (getWidth()/ modes.size());
         postInvalidate();
     }
@@ -154,9 +158,9 @@ abstract class ModePicker extends View {
         tPaint.setColor(Color.WHITE);
         tPaint.setTextSize(tSize);
 
-        modes.add("Slow Motion");
-        modes.add("Video");
-        modes.add("Time Lapse");
+        modes.add(MODE_SLOW_MOTION);
+        modes.add(MODE_VIDEO);
+        modes.add(MODE_TIME_LAPSE);
     }
 
     @Override

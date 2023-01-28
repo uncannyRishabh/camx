@@ -9,6 +9,7 @@ import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraCharacteristics;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
@@ -26,6 +27,7 @@ import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.core.app.ActivityCompat;
 
 import com.google.android.material.imageview.ShapeableImageView;
+import com.uncanny.camx.BuildConfig;
 import com.uncanny.camx.CameraManager.CameraControls;
 import com.uncanny.camx.Data.CamState;
 import com.uncanny.camx.Data.LensData;
@@ -33,6 +35,7 @@ import com.uncanny.camx.R;
 import com.uncanny.camx.UI.Views.CaptureButton;
 import com.uncanny.camx.UI.Views.HorizontalPicker;
 import com.uncanny.camx.UI.Views.ViewFinder.AutoFitPreviewView;
+import com.uncanny.camx.UI.Views.ViewFinder.VideoModePicker;
 import com.uncanny.camx.Utils.AsyncThreads.LatestThumbnailGenerator;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
@@ -55,8 +58,9 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private CaptureButton shutter;
     private ShapeableImageView thumbPreview;
     private AppCompatImageButton front_switch;
-    private HorizontalPicker modePicker;
+    private HorizontalPicker cameraModePicker;
     private RelativeLayout tvPreviewParent;
+    private VideoModePicker videoModePicker;
 
     private LensData lensData;
     private CameraControls cameraControls;
@@ -93,13 +97,20 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         setContentView(R.layout.activity_main);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        if(BuildConfig.DEBUG){
+            StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder(StrictMode.getVmPolicy())
+                    .detectLeakedClosableObjects()
+                    .build());
+        }
+
 //        initializeViews()
         previewView = findViewById(R.id.preview);
         thumbPreview = findViewById(R.id.thumbPreview);
         shutter = findViewById(R.id.shutter);
         front_switch = findViewById(R.id.front_back_switch);
-        modePicker = findViewById(R.id.mode_picker_view);
+        cameraModePicker = findViewById(R.id.mode_picker_view);
         tvPreviewParent = findViewById(R.id.previewParent);
+        videoModePicker = findViewById(R.id.video_mode_picker);
 
         tvPreviewParent.setClipToOutline(true);
 
@@ -117,11 +128,43 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         front_switch.setOnClickListener(this);
         thumbPreview.setOnClickListener(this);
 
-        modePicker.setValues(new String[] {"Night", "Portrait", "Camera", "Video", "Pro"});
-        modePicker.setSelectedItem(2,null);
-        modePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        modePicker.setOnItemSelectedListener(itemSelectedListener);
+        cameraModePicker.setValues(new String[] {"Night", "Portrait", "Camera", "Video", "Pro"});
+        cameraModePicker.setSelectedItem(2,null);
+        cameraModePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        cameraModePicker.setOnItemSelectedListener(itemSelectedListener);
         previewView.setOnTouchListener(viewfinderGestureListener);
+
+        videoModePicker.setOnClickListener((view, modeName) -> {
+//            auxDock.post(hideAuxDock);
+            performFileCleanup();
+            switch (modeName){
+                case "Slow Motion":{
+                    if(getState() != CamState.SLOMO) {
+                        setState(CamState.SLOMO);
+                        videoModePicker.setIndex(VideoModePicker.MODE_SLOW_MOTION);
+//                        modeSloMo();
+                    }
+                    break;
+                }
+                case "Video":{
+                    if(getState() != CamState.VIDEO){
+                        setState(CamState.VIDEO);
+                        cameraControls.openCamera(getCameraId());
+                        videoModePicker.setIndex(VideoModePicker.MODE_VIDEO);
+//                        modeVideo();
+                    }
+                    break;
+                }
+                case "Time Lapse":{
+                    if(getState() != CamState.TIMELAPSE) {
+                        setState(CamState.TIMELAPSE);
+                        videoModePicker.setIndex(VideoModePicker.MODE_TIME_LAPSE);
+//                        modeTimeLapse();
+                    }
+                    break;
+                }
+            }
+        });
 
         if(lensData.supportBurstCapture(getCameraId())){
             shutter.setOnLongClickListener(shutterLongPressListener);
@@ -211,6 +254,9 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     break;
                 }
             }
+            videoModePicker.setVisibility(getState() == CamState.VIDEO
+                    || getState() == CamState.SLOMO
+                    || getState() == CamState.TIMELAPSE ? View.VISIBLE : View.GONE);
         }
         else if (id == R.id.thumbPreview) {
             Intent i;
@@ -246,6 +292,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     front_switch.animate().rotation(-180f).setDuration(300);
                 }
             }
+            previewView.setOnTouchListener(viewfinderGestureListener);
 //            applyModeChange(getState());
 //            front_switch.post(hideAuxDock);
         }
@@ -316,16 +363,16 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     if (vfPointerX - event.getX() > getScreenWidth() / 4f) {
                         Log.e("TAG", "onTouchEvent: FLING RIGHT");
                         vfPointerX = event.getX();
-                        if (modePicker.getSelectedItem() >= 0 && modePicker.getSelectedItem() < modePicker.getItems() - 1) {
-                            modePicker.setSelectedItem(modePicker.getSelectedItem() + 1, 1);
+                        if (cameraModePicker.getSelectedItem() >= 0 && cameraModePicker.getSelectedItem() < cameraModePicker.getItems() - 1) {
+                            cameraModePicker.setSelectedItem(cameraModePicker.getSelectedItem() + 1, 1);
 //                                switchMode(mModePicker.getSelectedItem());
                             return true;
                         }
                     } else if (vfPointerX - event.getX() < -getScreenWidth() / 4f) {
                         Log.e("TAG", "onTouchEvent: FLING LEFT");
                         vfPointerX = event.getX();
-                        if (modePicker.getSelectedItem() > 0 && modePicker.getSelectedItem() < modePicker.getItems()) {
-                            modePicker.setSelectedItem(modePicker.getSelectedItem() - 1, -1);
+                        if (cameraModePicker.getSelectedItem() > 0 && cameraModePicker.getSelectedItem() < cameraModePicker.getItems()) {
+                            cameraModePicker.setSelectedItem(cameraModePicker.getSelectedItem() - 1, -1);
 //                                switchMode(mModePicker.getSelectedItem());
                         }
                         return true;
@@ -392,8 +439,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     };
 
     private HorizontalPicker.OnItemSelected itemSelectedListener = index -> {
-        Log.e(TAG, "onItemSelected: " + modePicker.getValues()[index]);
-        modePicker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
+        Log.e(TAG, "onItemSelected: " + cameraModePicker.getValues()[index]);
+        cameraModePicker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
 //        exposureControl.post(hideExposureControl);
         previewView.setOnTouchListener(null);
         shutter.setOnLongClickListener(getState() == CamState.CAMERA ? shutterLongPressListener : null);
@@ -428,6 +475,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                         || getState() == CamState.TIMELAPSE_PROGRESSED) break;
                 runOnUiThread(() -> previewView.setAspectRatio(1080,1920));
                 setState(CamState.VIDEO);
+                videoModePicker.setIndex(VideoModePicker.MODE_VIDEO);
                 cameraControls.openCamera(getCameraId());
                 break;
             }
@@ -440,6 +488,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             }
         }
 
+        videoModePicker.setVisibility(getState() == CamState.VIDEO ? View.VISIBLE : View.GONE);
         previewView.setOnTouchListener(viewfinderGestureListener); //TODO : Put inside a camera opened callback
     };
 
