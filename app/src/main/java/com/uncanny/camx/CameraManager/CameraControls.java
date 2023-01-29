@@ -389,7 +389,9 @@ public class CameraControls {
             if(CamState.getInstance().getState() == CamState.CAMERA){
                 createSession();
             }
-            else if(CamState.getInstance().getState() == CamState.VIDEO){
+            else if(CamState.getInstance().getState() == CamState.VIDEO ||
+                    CamState.getInstance().getState() == CamState.TIMELAPSE ||
+                    CamState.getInstance().getState() == CamState.SLOMO){
                 if(resumed) {
 //                persistentSurface = MediaCodec.createPersistentInputSurface();
                     mMediaRecorder = null;
@@ -429,28 +431,42 @@ public class CameraControls {
 
     @WorkerThread
     private void prepareMediaRecorder(){
-        String mVideoLocation = "//storage//emulated//0//DCIM//Camera//";
-        String mVideoSuffix = "Camera2_Video_" + System.currentTimeMillis() + ".mp4";
-
-        if(recordSurface != null) recordSurface.release();
-//        if(previewSurface != null) previewSurface.release();
         if(resumed)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(activity);
             else mMediaRecorder = new MediaRecorder();
-        mMediaRecorder.setOrientationHint(getJpegOrientation());
-        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
-        mMediaRecorder.setAudioSamplingRate(camcorderProfile.audioSampleRate);
-        mMediaRecorder.setAudioEncodingBitRate(camcorderProfile.audioBitRate);
-        mMediaRecorder.setAudioChannels(camcorderProfile.audioChannels);
-        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+        String mVideoLocation= "", mVideoSuffix="";
+        if(recordSurface != null) recordSurface.release();
+
+        if(CamState.getInstance().getState() == CamState.VIDEO){
+            mVideoLocation = "//storage//emulated//0//DCIM//Camera//";
+            mVideoSuffix = "CamX_" + System.currentTimeMillis() + ".mp4";
+            camcorderProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P);
+            mMediaRecorder.setOrientationHint(getJpegOrientation());
+            mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
+            mMediaRecorder.setAudioSamplingRate(camcorderProfile.audioSampleRate);
+            mMediaRecorder.setAudioEncodingBitRate(camcorderProfile.audioBitRate);
+            mMediaRecorder.setAudioChannels(camcorderProfile.audioChannels);
+            mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
 //        mMediaRecorder.setInputSurface(persistentSurface);
 
-        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        mMediaRecorder.setVideoFrameRate(30);
-        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
-        mMediaRecorder.setVideoEncodingBitRate(camcorderProfile.videoBitRate);
-        mMediaRecorder.setVideoSize(1920,1080);
+            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            mMediaRecorder.setVideoFrameRate(30);
+            mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
+            mMediaRecorder.setVideoEncodingBitRate(camcorderProfile.videoBitRate);
+            mMediaRecorder.setVideoSize(1920,1080);
+
+        }
+        else if(CamState.getInstance().getState() == CamState.TIMELAPSE){
+            mVideoLocation = "//storage//emulated//0//DCIM//Camera//";
+            mVideoSuffix = "CamX_" + System.currentTimeMillis() + "_TIMELAPSE.mp4";
+            camcorderProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_TIME_LAPSE_1080P);
+            mMediaRecorder.setOrientationHint(getJpegOrientation());
+            mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+            mMediaRecorder.setProfile(camcorderProfile);
+            mMediaRecorder.setCaptureRate(10f);  //12 10 2
+
+        }
 
         shouldDeleteEmptyFile = true;
         videoFile = new File(mVideoLocation+mVideoSuffix);
@@ -465,6 +481,7 @@ public class CameraControls {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
 
     private void createVideoPreview()  {

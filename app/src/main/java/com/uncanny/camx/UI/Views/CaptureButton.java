@@ -82,7 +82,7 @@ public class CaptureButton extends View {
 
         screenWidth = getScreenWidth();
         icRadius = screenWidth/(4.5f * density);
-        mState = CamState.CAMERA;
+        mState = CamState.getInstance().getState();
     }
 
     private void setState(CamState state){
@@ -122,10 +122,9 @@ public class CaptureButton extends View {
 
     /**
      * Call this method to animate {@link CaptureButton#icRadius}.
-     * @param state current camera state {@link CamState}
      */
-    public void animateShutterButton(CamState state){
-        setState(state);
+    public void animateShutterButton(){
+        setState(mState.getState());
         sizeInnerCircle(.5f);
         invalidate();
     }
@@ -139,7 +138,7 @@ public class CaptureButton extends View {
             invalidate();
             icRadius = (float) animation.getAnimatedValue("radius");
         });
-        valueAnimator.setDuration(600);
+        valueAnimator.setDuration(400);
         valueAnimator.start();
         invalidate();
     }

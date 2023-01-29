@@ -63,7 +63,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
     private LensData lensData;
     private CameraControls cameraControls;
-    private LatestThumbnailGenerator ltg;
     private CamState state;
 
     private int screenWidth, screenHeight;
@@ -72,7 +71,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private boolean isLongPressed;
     private boolean viewfinderGesture;
 
-    private Handler backgroundHandler;
+    private Handler mainHandler;
     private Executor bgExecutor = Executors.newCachedThreadPool();
 
     public CamState getState() {
@@ -114,13 +113,12 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
         tvPreviewParent.setClipToOutline(true);
 
-
         if (ActivityCompat.checkSelfPermission(CameraActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
             previewView.setSurfaceTextureListener(surfaceTextureListener);
         else requestPermissions();
 
         lensData = new LensData(this);
-        backgroundHandler = new Handler(getMainLooper());
+        mainHandler = new Handler(getMainLooper());
         cameraControls = new CameraControls(this);
         cameraControls.setThumbView(thumbPreview);
 
@@ -141,6 +139,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 case "Slow Motion":{
                     if(getState() != CamState.SLOMO) {
                         setState(CamState.SLOMO);
+                        mainHandler.post(() -> shutter.animateShutterButton());
                         videoModePicker.setIndex(VideoModePicker.MODE_SLOW_MOTION);
 //                        modeSloMo();
                     }
@@ -149,6 +148,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 case "Video":{
                     if(getState() != CamState.VIDEO){
                         setState(CamState.VIDEO);
+                        mainHandler.post(() -> shutter.animateShutterButton());
                         cameraControls.openCamera(getCameraId());
                         videoModePicker.setIndex(VideoModePicker.MODE_VIDEO);
 //                        modeVideo();
@@ -158,6 +158,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 case "Time Lapse":{
                     if(getState() != CamState.TIMELAPSE) {
                         setState(CamState.TIMELAPSE);
+                        mainHandler.post(() -> shutter.animateShutterButton());
+                        cameraControls.openCamera(getCameraId());
                         videoModePicker.setIndex(VideoModePicker.MODE_TIME_LAPSE);
 //                        modeTimeLapse();
                     }
@@ -173,7 +175,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 if(event.getActionMasked() == MotionEvent.ACTION_UP && isLongPressed){
                     //Stop Repeating Burst
                     isLongPressed = false;
-                    backgroundHandler.post(() -> cameraControls.stopBurstCapture());
+                    mainHandler.post(() -> cameraControls.stopBurstCapture());
 //                    cameraControls.createPreview();
 //                cameraHandler.post(this::displayLatestImage);
                     Log.e(TAG, "onLongPressedUp: Stop Repeating Burst");
@@ -222,8 +224,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 case NIGHT:
                 case PORTRAIT:
                 case HIRES:
-                case PRO:
-                {
+                case PRO: {
                     cameraControls.captureImage();
                     break;
                 }
@@ -233,8 +234,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     break;
                 }
                 case VIDEO_PROGRESSED:{
-                    cameraControls.stopRecording();
                     setState(CamState.VIDEO);
+                    cameraControls.stopRecording();
                     break;
                 }
                 case SLOMO:{
@@ -246,14 +247,17 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     break;
                 }
                 case TIMELAPSE:{
+                    cameraControls.startRecording();
                     setState(CamState.TIMELAPSE_PROGRESSED);
                     break;
                 }
                 case TIMELAPSE_PROGRESSED:{
                     setState(CamState.TIMELAPSE);
+                    cameraControls.stopRecording();
                     break;
                 }
             }
+            mainHandler.post(() -> shutter.animateShutterButton());
             videoModePicker.setVisibility(getState() == CamState.VIDEO
                     || getState() == CamState.SLOMO
                     || getState() == CamState.TIMELAPSE ? View.VISIBLE : View.GONE);
@@ -432,7 +436,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private View.OnLongClickListener shutterLongPressListener = v -> {
         //Start Repeating Burst
         isLongPressed = true;
-        backgroundHandler.post(() -> cameraControls.captureBurstImage());
+        mainHandler.post(() -> cameraControls.captureBurstImage());
 //                cameraControls.captureBurstImage();
         Log.e(TAG, "onCreate: Start Repeating Burst");
         return false;
@@ -445,11 +449,11 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         previewView.setOnTouchListener(null);
         shutter.setOnLongClickListener(getState() == CamState.CAMERA ? shutterLongPressListener : null);
 //        exposureControl.post(this::setExposureRange);
-
         switch (index){
             case 0:{
                 if(getState() == CamState.NIGHT) break;
                 setState(CamState.NIGHT);
+                mainHandler.post(() -> shutter.animateShutterButton());
 //                tvPreview.setOnTouchListener(touchListener);
 //                modeNight();
                 break;
@@ -457,14 +461,18 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             case 1:{
                 if(getState() == CamState.PORTRAIT) break;
                 setState( CamState.PORTRAIT);
+                mainHandler.post(() -> shutter.animateShutterButton());
 //                modePortrait();
                 break;
             }
-            case 2:{
+            case 2: {
                 if(getState() == CamState.CAMERA) break;
                 setState(CamState.CAMERA);
                 cameraControls.openCamera(getCameraId());
-                runOnUiThread(() -> previewView.setAspectRatio(1080,1440));
+                runOnUiThread(() -> {
+                    previewView.setAspectRatio(1080, 1440);
+                    shutter.animateShutterButton();
+                });
 //                modeCamera();
                 break;
             }
@@ -473,15 +481,17 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                         getState() == CamState.TIMELAPSE || getState() == CamState.VIDEO_PROGRESSED
                         || getState() == CamState.HSVIDEO_PROGRESSED
                         || getState() == CamState.TIMELAPSE_PROGRESSED) break;
-                runOnUiThread(() -> previewView.setAspectRatio(1080,1920));
+                runOnUiThread(() -> previewView.setAspectRatio(1080, 1920));
                 setState(CamState.VIDEO);
-                videoModePicker.setIndex(VideoModePicker.MODE_VIDEO);
+                mainHandler.post(() -> shutter.animateShutterButton());
                 cameraControls.openCamera(getCameraId());
+                videoModePicker.setIndex(VideoModePicker.MODE_VIDEO);
                 break;
             }
             case 4: {
                 if(CamState.getInstance().getState() == CamState.PRO) break;
                 setState(CamState.PRO);
+                mainHandler.post(() -> shutter.animateShutterButton());
 //                tvPreview.setOnTouchListener(touchListener);
 //                modePro();
                 break;
@@ -522,6 +532,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     protected void onResume() {
         super.onResume();
         state = CamState.getInstance();
+        shutter.animateShutterButton();
         cameraControls.setResumed(true);
         cameraControls.startBackgroundThread();
         cameraControls.openCamera(cameraId == null ? BACK_CAMERA_ID : getCameraId());

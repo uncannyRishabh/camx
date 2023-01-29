@@ -6,7 +6,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.media.ThumbnailUtils;
-import android.net.Uri;
 import android.os.CancellationSignal;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -36,12 +35,6 @@ public class LatestThumbnailGenerator implements Runnable{
         return bitmap;
     }
 
-    public static Uri latestUri;
-
-    public Uri getUri(){
-        return latestUri;
-    }
-
     public LatestThumbnailGenerator(Activity activity, ShapeableImageView thumbPreview){
         this.activity = activity;
         this.thumbPreview = thumbPreview;
@@ -66,25 +59,21 @@ public class LatestThumbnailGenerator implements Runnable{
                 if(cursor.getString(0).contains("DCIM/Camera")){
                     String imageLocation = cursor.getString(0);
                     File latestMedia = new File(imageLocation);
-                    latestUri = Uri.fromFile(latestMedia);
 
-                    Log.e(TAG, "run: URI : "+latestUri);
                     if (latestMedia.exists()) {
-                        if(fileIsImage(String.valueOf(latestMedia))){
-                            bitmap = applyExifRotation(latestMedia.getAbsolutePath());
-                        }
-                        else {
-                            try {
+                        try {
+                            if(fileIsImage(String.valueOf(latestMedia)))
+                                bitmap = applyExifRotation(latestMedia.getAbsolutePath());
+                            else
                                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q)
                                     bitmap = ThumbnailUtils.createVideoThumbnail(latestMedia, new Size(96, 96), new CancellationSignal());
                                 else
                                     bitmap = ThumbnailUtils.createVideoThumbnail(latestMedia.getAbsolutePath(), MediaStore.Images.Thumbnails.MINI_KIND);
-                            } catch (IOException e) {
-                                Log.e(TAG, "mediaScan: "+e.getMessage());
-                            }
-                            finally {
-                                activity.runOnUiThread(() -> thumbPreview.setImageBitmap(getBitmap()));
-                            }
+                        } catch (IOException e) {
+                            Log.e(TAG, "mediaScan: "+e.getMessage());
+                        }
+                        finally {
+                            activity.runOnUiThread(() -> thumbPreview.setImageBitmap(getBitmap()));
                         }
                         Log.e(TAG, "Latest media: "+latestMedia);
                     }
