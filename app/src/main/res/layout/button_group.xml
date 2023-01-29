@@ -52,9 +52,11 @@
             android:layout_height="30dp"
             android:layout_weight="1"
             android:background="#00000000"
-            android:padding="7dp"
+            android:padding="1dp"
             android:scaleType="fitCenter"
-            android:src="@drawable/ic_settings_menu" />
+            android:layout_gravity="center_vertical"
+            android:src="@drawable/ic_settings" />
+
     </LinearLayout>
 
     <LinearLayout
@@ -131,9 +133,8 @@
             android:layout_height="30dp"
             android:layout_weight="1"
             android:background="#00000000"
-            android:padding="1dp"
+            android:padding="7dp"
             android:scaleType="fitCenter"
-            android:layout_gravity="center_vertical"
-            android:src="@drawable/ic_settings" />
+            android:src="@drawable/ic_settings_menu" />
     </LinearLayout>
 </merge>

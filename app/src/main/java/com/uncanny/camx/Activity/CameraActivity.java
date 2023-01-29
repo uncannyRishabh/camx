@@ -468,6 +468,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             case 2: {
                 if(getState() == CamState.CAMERA) break;
                 setState(CamState.CAMERA);
+                cameraControls.closeCamera();
                 cameraControls.openCamera(getCameraId());
                 runOnUiThread(() -> {
                     previewView.setAspectRatio(1080, 1440);
@@ -484,6 +485,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 runOnUiThread(() -> previewView.setAspectRatio(1080, 1920));
                 setState(CamState.VIDEO);
                 mainHandler.post(() -> shutter.animateShutterButton());
+                cameraControls.closeCamera();
                 cameraControls.openCamera(getCameraId());
                 videoModePicker.setIndex(VideoModePicker.MODE_VIDEO);
                 break;

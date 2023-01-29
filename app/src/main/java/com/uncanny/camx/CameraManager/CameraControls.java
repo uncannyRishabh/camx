@@ -23,7 +23,6 @@ import android.media.CamcorderProfile;
 import android.media.Image;
 import android.media.ImageReader;
 import android.media.MediaActionSound;
-import android.media.MediaMetadataRetriever;
 import android.media.MediaRecorder;
 import android.media.MediaScannerConnection;
 import android.media.ThumbnailUtils;
@@ -59,7 +58,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -186,7 +184,10 @@ public class CameraControls {
         setImageSize();
 
         try {
-            if(cameraDevice!=null && cameraCaptureSession!=null) cameraCaptureSession.stopRepeating();
+            if(cameraDevice!=null && cameraCaptureSession!=null) {
+                cameraCaptureSession.stopRepeating();
+                Log.e(TAG, "openCamera: STOPPING REPEATING");
+            }
             if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 activity.requestPermissions(new String[]{ Manifest.permission.CAMERA}, CODE_CAMERA_PERMISSION);
             }
@@ -200,7 +201,8 @@ public class CameraControls {
     public void setPreviewSize(){
 //        if(previewSurface!=null) previewSurface.release();
         Log.e(TAG, "setPreviewSize: "+CamState.getInstance().getState());
-        if(CamState.getInstance().getState() == CamState.VIDEO)
+        if(CamState.getInstance().getState() == CamState.VIDEO ||
+           CamState.getInstance().getState() == CamState.TIMELAPSE)
             previewSurfaceTexture.setDefaultBufferSize(1920, 1080);
         else
             previewSurfaceTexture.setDefaultBufferSize(1440, 1080);
@@ -209,7 +211,8 @@ public class CameraControls {
     }
 
     public void setImageSize(){
-        if(CamState.getInstance().getState() == CamState.VIDEO)
+        if(CamState.getInstance().getState() == CamState.VIDEO ||
+                CamState.getInstance().getState() == CamState.TIMELAPSE)
             imageReader = ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 3);
         else
             imageReader = ImageReader.newInstance(4000, 3000, ImageFormat.JPEG, 3); // BURST LAG IS OK
@@ -434,6 +437,7 @@ public class CameraControls {
         if(resumed)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(activity);
             else mMediaRecorder = new MediaRecorder();
+
         String mVideoLocation= "", mVideoSuffix="";
         if(recordSurface != null) recordSurface.release();
 
@@ -567,19 +571,6 @@ public class CameraControls {
         cameraHandler.postAtFrontOfQueue(this::createVideoPreview); //without persistentSurface
         sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
 
-//        cameraHandler.post(() -> {
-//            try(MediaMetadataRetriever r = new MediaMetadataRetriever()){
-//                r.setDataSource(activity,getUri().get());
-//                thumbPreview.post(() -> thumbPreview.setImageBitmap(r.getScaledFrameAtTime( 1000, MediaMetadataRetriever.OPTION_NEXT_SYNC, 128, 128)));
-//            } catch (IOException e) {
-//                throw new RuntimeException(e);
-//            }
-//        });
-
-//        thumbPreview.post(() -> thumbPreview.setImageBitmap(ThumbnailUtils.createVideoThumbnail(getUri().get().getPath()
-//                , MediaStore.Images.Thumbnails.MINI_KIND ))); //FIXME: GENERATE INSTANTLY
-
-//        activity.runOnUiThread(() -> thumbPreview.setImageBitmap(getThumbnail(getUri().get().getPath())));
     }
 
     //TODO : Set separate imageReader
