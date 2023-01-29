@@ -748,12 +748,12 @@ public class CameraControls {
 
     public void startBackgroundThread() {
         mBackgroundThread = new HandlerThread("Camera Main");
-//        bBackgroundThread = new HandlerThread("Camera Background");
+        bBackgroundThread = new HandlerThread("Camera Background");
         mBackgroundThread.start();
-//        bBackgroundThread.start();
+        bBackgroundThread.start();
         cameraHandler = new Handler(mBackgroundThread.getLooper());
-        bHandler = new Handler(activity.getMainLooper());
-//        bHandler = new Handler(bBackgroundThread.getLooper());
+//        bHandler = new Handler(activity.getMainLooper());
+        bHandler = new Handler(bBackgroundThread.getLooper());
     }
 
     public void stopBackgroundThread() {

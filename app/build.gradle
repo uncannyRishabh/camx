@@ -60,7 +60,7 @@ android {
             versionProps.store(versionPropsFile.newWriter(), null)
 
             //MAJOR.MINOR.PATCH.BUILD
-            mVersionName = "0.3.${versionProps['VERSION_PATCH']}.${versionProps['VERSION_BUILD']}"
+            mVersionName = "1.0.${versionProps['VERSION_PATCH']}.${versionProps['VERSION_BUILD']}"
 
         }
 

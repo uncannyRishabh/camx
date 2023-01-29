@@ -190,7 +190,8 @@ public class CaptureButton extends View {
                 break;
             case VIDEO_PROGRESSED:
             case HSVIDEO_PROGRESSED:
-                canvas.drawRoundRect(rectF,12,12,mPaint);
+            case TIMELAPSE_PROGRESSED:
+                canvas.drawRoundRect(rectF,14,14,mPaint);
                 break;
             case SLOMO:
                 canvas.drawCircle(cx-icRadius/2,cy,icRadius,paint);
