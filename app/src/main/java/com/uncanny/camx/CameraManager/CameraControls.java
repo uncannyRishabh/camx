@@ -87,10 +87,6 @@ public class CameraControls {
     private CamcorderProfile camcorderProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P);
     private MediaActionSound sound = new MediaActionSound();
 
-    private OutputConfiguration previewConfiguration;
-    private OutputConfiguration recordConfiguration;
-    private OutputConfiguration snapshotConfiguration;
-
     private Handler cameraHandler;
     private Handler bHandler;
     private HandlerThread mBackgroundThread;
@@ -106,7 +102,7 @@ public class CameraControls {
     private boolean resumed;
     private boolean shouldDeleteEmptyFile;
     private Uri uri;
-    private File videoFile;
+    private File scan,videoFile;
     private List<CaptureRequest> captureRequest = new ArrayList<>();
 
     private ShapeableImageView thumbPreview;
@@ -376,11 +372,11 @@ public class CameraControls {
             cameraDevice.close();
             cameraDevice = null;
         }
-        previewSurface.release();
         if (imageReader != null) {
             imageReader.close();
             imageReader = null;
         }
+        previewSurface.release();
     }
 
     private CameraDevice.StateCallback openCameraCallback = new CameraDevice.StateCallback() {
@@ -439,7 +435,7 @@ public class CameraControls {
             else mMediaRecorder = new MediaRecorder();
 
         String mVideoLocation= "", mVideoSuffix="";
-        if(recordSurface != null) recordSurface.release();
+//        if(recordSurface != null) recordSurface.release();
 
         if(CamState.getInstance().getState() == CamState.VIDEO){
             mVideoLocation = "//storage//emulated//0//DCIM//Camera//";
@@ -482,6 +478,7 @@ public class CameraControls {
 
         try {
             mMediaRecorder.prepare();
+            Log.e(TAG, "prepareMediaRecorder: P R E P A R E D");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -498,7 +495,7 @@ public class CameraControls {
 
 //            recordSurface = persistentSurface; // FIXME: PersistentSurface not recording video in some devices
             previewSurface = surfaceList.get(0);
-            recordSurface = mMediaRecorder.getSurface();
+            recordSurface = mMediaRecorder.getSurface(); //TODO: Address resource close
 
             previewRequestBuilder.addTarget(recordSurface);
 
@@ -508,14 +505,15 @@ public class CameraControls {
                     ,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON);
 
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                previewConfiguration  = new OutputConfiguration(previewSurface);
-                recordConfiguration   = new OutputConfiguration(recordSurface);
-                snapshotConfiguration = new OutputConfiguration(imageReader.getSurface());
+                List<OutputConfiguration> outputs = new ArrayList<>();
+                outputs.add(new OutputConfiguration(previewSurface));
+                outputs.add(new OutputConfiguration(recordSurface));
+                outputs.add(new OutputConfiguration(imageReader.getSurface()));
 
 //                previewConfiguration.enableSurfaceSharing();
 
                 SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR
-                        , Arrays.asList(previewConfiguration,recordConfiguration,snapshotConfiguration)
+                        , outputs
                         , bgExecutor
                         , videoCaptureSessionCallback);
 
@@ -560,21 +558,33 @@ public class CameraControls {
         mMediaRecorder.start();
     }
 
-    File t;
-    public void stopRecording(){
-        t = videoFile;
-        bHandler.post(() -> mediaScan(t,"video"));
-//        mediaScan(videoFile,"video");
-        mMediaRecorder.stop(); //FIXME: HANDLE IMMEDIATE STOP AFTER START
-        mMediaRecorder.reset();
-        mMediaRecorder.release();
-        cameraHandler.postAtFrontOfQueue(this::createVideoPreview); //without persistentSurface
-        sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
+    private boolean paused = false;
+    public void pauseResume(){
+        if(paused) mMediaRecorder.resume();
+        else mMediaRecorder.pause();
+        paused = !paused;
+    }
 
+    public void stopRecording(){
+        scan = videoFile;
+        paused = false;
+        mMediaRecorder.stop(); //FIXME: HANDLE IMMEDIATE STOP AFTER START
+//        mMediaRecorder.reset();
+//        mMediaRecorder.release();
+//        if(recordSurface.isValid()) recordSurface.release();
+        if (recordSurface.isValid()) {
+            recordSurface.release();
+            mMediaRecorder.release();
+            Log.e(TAG, "stopRecording: R E L E A S I N G  RECORDER SURFACE");
+        }
+
+        bHandler.post(() -> mediaScan(scan,"video"));
+        cameraHandler.post(this::createVideoPreview); //without persistentSurface
+        sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
     }
 
     //TODO : Set separate imageReader
-    private void captureVideoSnapshot() {
+    public void captureVideoSnapshot() {
         try {
             captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_VIDEO_SNAPSHOT);
             captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY,(byte) 100);
@@ -656,7 +666,9 @@ public class CameraControls {
                         setUri(u);
                         saveByteBuffer(jpegByteArray, file, u);
 
-                        activity.runOnUiThread(() -> thumbPreview.setImageBitmap(getThumbnail(path)));
+                        if(CamState.getInstance().getState() != CamState.VIDEO_PROGRESSED &&
+                           CamState.getInstance().getState() != CamState.TIMELAPSE_PROGRESSED)
+                            activity.runOnUiThread(() -> thumbPreview.setImageBitmap(getThumbnail(path)));
                     });
                 }
             }

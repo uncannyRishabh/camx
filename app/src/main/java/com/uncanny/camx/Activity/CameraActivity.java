@@ -25,6 +25,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.material.imageview.ShapeableImageView;
 import com.uncanny.camx.BuildConfig;
@@ -149,6 +150,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     if(getState() != CamState.VIDEO){
                         setState(CamState.VIDEO);
                         mainHandler.post(() -> shutter.animateShutterButton());
+                        cameraControls.closeCamera();
                         cameraControls.openCamera(getCameraId());
                         videoModePicker.setIndex(VideoModePicker.MODE_VIDEO);
 //                        modeVideo();
@@ -159,6 +161,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     if(getState() != CamState.TIMELAPSE) {
                         setState(CamState.TIMELAPSE);
                         mainHandler.post(() -> shutter.animateShutterButton());
+                        cameraControls.closeCamera();
                         cameraControls.openCamera(getCameraId());
                         videoModePicker.setIndex(VideoModePicker.MODE_TIME_LAPSE);
 //                        modeTimeLapse();
@@ -218,7 +221,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     public void onClick(View v) {
         int id = v.getId();
         if(id == R.id.shutter){
-            Log.e(TAG, "onClick: "+getState());
             switch (getState()){
                 case CAMERA:
                 case NIGHT:
@@ -229,8 +231,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     break;
                 }
                 case VIDEO:{
-                    cameraControls.startRecording();
                     setState(CamState.VIDEO_PROGRESSED);
+                    cameraControls.startRecording();
                     break;
                 }
                 case VIDEO_PROGRESSED:{
@@ -247,8 +249,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     break;
                 }
                 case TIMELAPSE:{
-                    cameraControls.startRecording();
                     setState(CamState.TIMELAPSE_PROGRESSED);
+                    cameraControls.startRecording();
                     break;
                 }
                 case TIMELAPSE_PROGRESSED:{
@@ -257,51 +259,87 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     break;
                 }
             }
+            Log.e(TAG, "onClick: "+getState());
             mainHandler.post(() -> shutter.animateShutterButton());
+            mainHandler.post(modifyVideoUI);
             videoModePicker.setVisibility(getState() == CamState.VIDEO
                     || getState() == CamState.SLOMO
                     || getState() == CamState.TIMELAPSE ? View.VISIBLE : View.GONE);
         }
         else if (id == R.id.thumbPreview) {
-            Intent i;
-            if(cameraControls.getUri().isPresent()){
-//                Log.e(TAG, "onClick: uri : "+cameraControls.getUri().get());
-                final String GALLERY_REVIEW = "com.android.camera.action.REVIEW";
-                i = new Intent(GALLERY_REVIEW);
-                i.setData(cameraControls.getUri().get());
+            if(getState() == CamState.VIDEO_PROGRESSED || getState() == CamState.TIMELAPSE_PROGRESSED){
+                cameraControls.captureVideoSnapshot();
             }
-            else{
-                i = new Intent(Intent.ACTION_VIEW);
-                i.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/jpeg");
+            else {
+                Intent i;
+                if(cameraControls.getUri().isPresent()){
+    //                Log.e(TAG, "onClick: uri : "+cameraControls.getUri().get());
+                    final String GALLERY_REVIEW = "com.android.camera.action.REVIEW";
+                    i = new Intent(GALLERY_REVIEW);
+                    i.setData(cameraControls.getUri().get());
+                }
+                else{
+                    i = new Intent(Intent.ACTION_VIEW);
+                    i.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/jpeg");
+                }
+                startActivity(i);
             }
-            startActivity(i);
         }
         else if (id == R.id.front_back_switch) {
-            performFileCleanup();
-            previewView.setOnTouchListener(null);
+            if(getState() == CamState.VIDEO_PROGRESSED || getState() == CamState.TIMELAPSE_PROGRESSED
+                    || getState() == CamState.HSVIDEO_PROGRESSED){
+                cameraControls.pauseResume();
+            }
+            else {
+                performFileCleanup();
+                previewView.setOnTouchListener(null);
 //            zoomText.post(hideZoomText);
 //            exposureControl.post(() -> setExposureRange());
-            cameraControls.closeCamera();
-            if (cameraControls.getLensFacing()== CameraCharacteristics.LENS_FACING_BACK) {
-                setCameraId(FRONT_CAMERA_ID);
-                synchronized (new Object()){
-                    if(CamState.getInstance().getState() != CamState.PORTRAIT) cameraControls.openCamera(FRONT_CAMERA_ID);
-                    front_switch.animate().rotation(180f).setDuration(300);
+                cameraControls.closeCamera();
+                if (cameraControls.getLensFacing()== CameraCharacteristics.LENS_FACING_BACK) {
+                    setCameraId(FRONT_CAMERA_ID);
+                    synchronized (new Object()){
+                        cameraControls.openCamera(FRONT_CAMERA_ID);
+                        front_switch.animate().rotation(180f).setDuration(300);
+                    }
+                } else {
+    //                auxDock.setIndex(1);
+                    setCameraId(BACK_CAMERA_ID);
+                    synchronized (new Object()) {
+                        cameraControls.openCamera(BACK_CAMERA_ID);
+                        front_switch.animate().rotation(-180f).setDuration(300);
+                    }
                 }
-            } else {
-//                auxDock.setIndex(1);
-                setCameraId(BACK_CAMERA_ID);
-                synchronized (new Object()) {
-                    if (CamState.getInstance().getState() != CamState.PORTRAIT) cameraControls.openCamera(BACK_CAMERA_ID);
-                    front_switch.animate().rotation(-180f).setDuration(300);
-                }
-            }
-            previewView.setOnTouchListener(viewfinderGestureListener);
+                previewView.setOnTouchListener(viewfinderGestureListener);
 //            applyModeChange(getState());
 //            front_switch.post(hideAuxDock);
+
+            }
         }
 
     }
+
+    private Runnable modifyVideoUI = () -> {
+        switch(getState()){
+            case VIDEO:
+            case TIMELAPSE:
+            case SLOMO:{
+                thumbPreview.setImageDrawable(null);
+                front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_round_flip_camera_android_24));
+
+                break;
+            }
+            case VIDEO_PROGRESSED:
+            case TIMELAPSE_PROGRESSED:{
+                thumbPreview.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_snapshot));
+                front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_pause));
+
+                break;
+            }
+        }
+
+    };
+
 
     private TextureView.SurfaceTextureListener surfaceTextureListener = new TextureView.SurfaceTextureListener() {
         @Override
@@ -533,6 +571,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     @Override
     protected void onResume() {
         super.onResume();
+        Log.e(TAG, "onResume: ON RESUME");
         state = CamState.getInstance();
         shutter.animateShutterButton();
         cameraControls.setResumed(true);
@@ -545,6 +584,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     @Override
     protected void onPause() {
         super.onPause();
+        Log.e(TAG, "onPause: ON PAUSE");
         cameraControls.setResumed(false);
         performFileCleanup();
     }

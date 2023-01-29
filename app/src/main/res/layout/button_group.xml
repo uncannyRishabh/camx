@@ -55,7 +55,7 @@
             android:padding="1dp"
             android:scaleType="fitCenter"
             android:layout_gravity="center_vertical"
-            android:src="@drawable/ic_settings" />
+            android:src="@drawable/ic_setting" />
 
     </LinearLayout>
 
