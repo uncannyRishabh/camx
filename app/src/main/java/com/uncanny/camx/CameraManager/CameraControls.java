@@ -13,6 +13,7 @@ import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraConstrainedHighSpeedCaptureSession;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
@@ -34,6 +35,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.util.Range;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.OrientationEventListener;
@@ -79,6 +81,7 @@ public class CameraControls {
     private CameraDevice cameraDevice;
     private CameraManager cameraManager;
     private CameraCaptureSession cameraCaptureSession;
+    private CameraConstrainedHighSpeedCaptureSession highSpeedCaptureSession;
     private CameraCharacteristics cameraCharacteristics;
     private CaptureRequest.Builder captureRequestBuilder;
     private CaptureRequest.Builder previewRequestBuilder;
@@ -186,6 +189,7 @@ public class CameraControls {
 
         try {
             if(cameraDevice!=null && cameraCaptureSession!=null) {
+                //causes IllegalState Exception: CameraDevice was already closed, onResume
                 cameraCaptureSession.stopRepeating();
                 Log.e(TAG, "openCamera: STOPPING REPEATING");
             }
@@ -197,7 +201,6 @@ public class CameraControls {
             Log.e(TAG, "openCamera: open failed: " + e.getMessage());
         }
     }
-
 
     public void setPreviewSize(){
 //        if(previewSurface!=null) previewSurface.release();
@@ -472,6 +475,23 @@ public class CameraControls {
             mMediaRecorder.setCaptureRate(10f);  //12 10 2
 
         }
+        else if(CamState.getInstance().getState() == CamState.SLOMO){
+            mVideoLocation = "//storage//emulated//0//DCIM//Camera//";
+            mVideoSuffix = "Camera2_Video_" + System.currentTimeMillis()+ "_HSR_120" + ".mp4";
+
+            mMediaRecorder.setOrientationHint(getJpegOrientation());
+            mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
+            mMediaRecorder.setAudioSamplingRate(48000);
+            mMediaRecorder.setAudioEncodingBitRate(96000);
+            mMediaRecorder.setAudioChannels(1);
+            mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            mMediaRecorder.setVideoFrameRate(120); // for maximizing support (will add checks later)
+            mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.HEVC);
+            mMediaRecorder.setVideoEncodingBitRate(7372800); // calculation -> 720*1280*120/15
+            mMediaRecorder.setVideoSize(1280,720); // for maximizing support (will add checks later)
+        }
 
         shouldDeleteEmptyFile = true;
         videoFile = new File(mVideoLocation+mVideoSuffix);
@@ -490,13 +510,17 @@ public class CameraControls {
 
     }
 
-    private void createVideoPreview()  {
+    private void createVideoPreview() {
         if(!activityResumed || previewSurfaceTexture == null) return;
+        if (CamState.getInstance().getState() == CamState.SLOMO) {
+            createSlowMotionPreview();
+            return;
+        }
 
         try {
             prepareMediaRecorder();
             previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-            previewSurfaceTexture.setDefaultBufferSize(1920, 1080);
+            previewSurfaceTexture.setDefaultBufferSize(1920, 1080); //TODO: Redundant ?? see setPreviewSize()
 
 //            recordSurface = persistentSurface; // FIXME: PersistentSurface not recording video in some devices
             previewSurface = surfaceList.get(0);
@@ -539,15 +563,26 @@ public class CameraControls {
     private CameraCaptureSession.StateCallback videoCaptureSessionCallback = new CameraCaptureSession.StateCallback() {
         @Override
         public void onConfigured(@NonNull CameraCaptureSession session) {
-            cameraCaptureSession = session;
-            try {
+            if(CamState.getInstance().getState() == CamState.SLOMO){
+                highSpeedCaptureSession = (CameraConstrainedHighSpeedCaptureSession) session;
+                try {
+                    highSpeedCaptureSession.setRepeatingBurst(
+                            highSpeedCaptureSession.createHighSpeedRequestList(previewRequestBuilder.build()),null,bHandler);
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+            else {
+                cameraCaptureSession = session;
+                try {
 //                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) cameraCaptureSession.finalizeOutputConfigurations(Arrays.asList(previewConfiguration, recordConfiguration, snapshotConfiguration));
-                cameraCaptureSession.setRepeatingRequest(previewRequestBuilder.build(), null,bHandler);
+                    cameraCaptureSession.setRepeatingRequest(previewRequestBuilder.build(), null,bHandler);
 //                if(isVRecording){
 //                    Log.e(TAG, "onConfigured: Preparing media Recorder");
 //                }
-            } catch (CameraAccessException e) {
-                Log.e(TAG, "onConfigured: "+e.getMessage());
+                } catch (CameraAccessException e) {
+                    Log.e(TAG, "onConfigured: "+e.getMessage());
+                }
             }
         }
 
@@ -562,7 +597,6 @@ public class CameraControls {
         shouldDeleteEmptyFile = false;
         mMediaRecorder.start();
     }
-
 
     public void pauseResume(){
         if(videoPaused) mMediaRecorder.resume();
@@ -588,7 +622,6 @@ public class CameraControls {
         sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
     }
 
-    //TODO : Set separate imageReader
     public void captureVideoSnapshot() {
         try {
             captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_VIDEO_SNAPSHOT);
@@ -601,6 +634,57 @@ public class CameraControls {
             Log.e(TAG, "captureVideoSnapshot: "+e.getMessage());
         }
     }
+
+    /**
+     * Slow Motion
+     */
+
+    private void createSlowMotionPreview() {
+        if(!activityResumed || previewSurfaceTexture == null) return;
+
+        try {
+            prepareMediaRecorder();
+            previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+            previewSurfaceTexture.setDefaultBufferSize(1280, 720);
+
+//            recordSurface = persistentSurface; // TODO: PersistentSurface not recording video in some devices
+            previewSurface = surfaceList.get(0);
+            recordSurface = mMediaRecorder.getSurface();
+
+            previewRequestBuilder.addTarget(recordSurface);
+
+            previewRequestBuilder.addTarget(previewSurface);
+
+            previewRequestBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, new Range<>(120,120));
+
+            previewRequestBuilder.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE
+                    ,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON);
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                List<OutputConfiguration> outputs = new ArrayList<>();
+                outputs.add(new OutputConfiguration(previewSurface));
+                outputs.add(new OutputConfiguration(recordSurface));
+//                previewConfiguration.enableSurfaceSharing();
+
+                SessionConfiguration sessionConfiguration = new SessionConfiguration(SessionConfiguration.SESSION_HIGH_SPEED
+                        , outputs
+                        , bgExecutor
+                        , videoCaptureSessionCallback);
+
+                cameraDevice.createCaptureSession(sessionConfiguration);
+            }
+            else{
+                cameraDevice.createConstrainedHighSpeedCaptureSession(Arrays.asList(previewSurface, recordSurface)
+                        ,videoCaptureSessionCallback,null);
+            }
+
+        }
+        catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+
+    }
+
 
     @WorkerThread
     private void mediaScan(File file,String type){

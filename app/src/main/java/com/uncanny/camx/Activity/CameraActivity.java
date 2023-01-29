@@ -143,6 +143,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     if(getState() != CamState.SLOMO) {
                         setState(CamState.SLOMO);
                         mainHandler.post(() -> shutter.animateShutterButton());
+                        cameraControls.closeCamera();
+                        cameraControls.openCamera(getCameraId());
                         videoModePicker.setIndex(VideoModePicker.MODE_SLOW_MOTION);
 //                        modeSloMo();
                     }
@@ -244,10 +246,12 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 }
                 case SLOMO:{
                     setState(CamState.HSVIDEO_PROGRESSED);
+                    cameraControls.startRecording();
                     break;
                 }
                 case HSVIDEO_PROGRESSED:{
                     setState(CamState.SLOMO);
+                    cameraControls.stopRecording();
                     break;
                 }
                 case TIMELAPSE:{
@@ -327,9 +331,11 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
     private Runnable modifyVideoUI = () -> {
         switch(getState()){
-            case VIDEO:
-            case TIMELAPSE:
             case SLOMO:{
+                thumbPreview.setVisibility(View.VISIBLE);
+            }
+            case VIDEO:
+            case TIMELAPSE: {
                 thumbPreview.setStrokeWidth(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2.5f, getResources().getDisplayMetrics()));
                 thumbPreview.setImageDrawable(null);
                 front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_round_flip_camera_android_24));
@@ -342,6 +348,11 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 thumbPreview.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_snapshot));
                 front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_pause));
 
+                break;
+            }
+            case HSVIDEO_PROGRESSED:{
+                thumbPreview.setVisibility(View.INVISIBLE);
+                front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_pause));
                 break;
             }
         }
