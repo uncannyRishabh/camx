@@ -12,6 +12,7 @@ import android.os.Handler;
 import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -26,6 +27,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 
 import com.google.android.material.imageview.ShapeableImageView;
 import com.uncanny.camx.BuildConfig;
@@ -289,6 +291,10 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             if(getState() == CamState.VIDEO_PROGRESSED || getState() == CamState.TIMELAPSE_PROGRESSED
                     || getState() == CamState.HSVIDEO_PROGRESSED){
                 cameraControls.pauseResume();
+                if(cameraControls.isVideoPaused())
+                    front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_resume));
+                else
+                    front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_pause));
             }
             else {
                 performFileCleanup();
@@ -324,6 +330,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             case VIDEO:
             case TIMELAPSE:
             case SLOMO:{
+                thumbPreview.setStrokeWidth(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2.5f, getResources().getDisplayMetrics()));
                 thumbPreview.setImageDrawable(null);
                 front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_round_flip_camera_android_24));
 
@@ -331,6 +338,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             }
             case VIDEO_PROGRESSED:
             case TIMELAPSE_PROGRESSED:{
+                thumbPreview.setStrokeWidth(0);
                 thumbPreview.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_snapshot));
                 front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_pause));
 
@@ -574,7 +582,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         Log.e(TAG, "onResume: ON RESUME");
         state = CamState.getInstance();
         shutter.animateShutterButton();
-        cameraControls.setResumed(true);
+        cameraControls.setActivityResumed(true);
         cameraControls.startBackgroundThread();
         cameraControls.openCamera(cameraId == null ? BACK_CAMERA_ID : getCameraId());
 
@@ -585,7 +593,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     protected void onPause() {
         super.onPause();
         Log.e(TAG, "onPause: ON PAUSE");
-        cameraControls.setResumed(false);
+        cameraControls.setActivityResumed(false);
         performFileCleanup();
     }
 

@@ -199,7 +199,7 @@
             android:layout_marginEnd="50dp"
             android:background="#00020202"
             android:padding="4dp"
-            android:scaleType="fitXY"
+            android:scaleType="centerCrop"
             android:src="@drawable/ic_round_flip_camera_android_24" />
     </RelativeLayout>
 

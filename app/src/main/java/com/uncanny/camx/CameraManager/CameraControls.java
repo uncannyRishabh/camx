@@ -99,7 +99,8 @@ public class CameraControls {
 
 
     public int counter =0;
-    private boolean resumed;
+    private boolean activityResumed;
+    private boolean videoPaused = false;
     private boolean shouldDeleteEmptyFile;
     private Uri uri;
     private File scan,videoFile;
@@ -119,8 +120,12 @@ public class CameraControls {
         surfaceList = new ArrayList<>();
     }
 
-    public void setResumed(boolean resumed){
-        this.resumed = resumed;
+    public void setActivityResumed(boolean activityResumed){
+        this.activityResumed = activityResumed;
+    }
+
+    public boolean isVideoPaused(){
+        return videoPaused;
     }
 
     public boolean isShouldDeleteEmptyFile() {
@@ -171,7 +176,7 @@ public class CameraControls {
      */
 
     public void openCamera(String cameraId) {
-        if(!resumed || previewSurfaceTexture == null) return;
+        if(!activityResumed || previewSurfaceTexture == null) return;
         if(sound == null) sound = new MediaActionSound();
         getCameraCharacteristics(cameraId);
 
@@ -391,7 +396,7 @@ public class CameraControls {
             else if(CamState.getInstance().getState() == CamState.VIDEO ||
                     CamState.getInstance().getState() == CamState.TIMELAPSE ||
                     CamState.getInstance().getState() == CamState.SLOMO){
-                if(resumed) {
+                if(activityResumed) {
 //                persistentSurface = MediaCodec.createPersistentInputSurface();
                     mMediaRecorder = null;
                 }
@@ -430,7 +435,7 @@ public class CameraControls {
 
     @WorkerThread
     private void prepareMediaRecorder(){
-        if(resumed)
+        if(activityResumed)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) mMediaRecorder = new MediaRecorder(activity);
             else mMediaRecorder = new MediaRecorder();
 
@@ -486,7 +491,7 @@ public class CameraControls {
     }
 
     private void createVideoPreview()  {
-        if(!resumed || previewSurfaceTexture == null) return;
+        if(!activityResumed || previewSurfaceTexture == null) return;
 
         try {
             prepareMediaRecorder();
@@ -558,16 +563,16 @@ public class CameraControls {
         mMediaRecorder.start();
     }
 
-    private boolean paused = false;
+
     public void pauseResume(){
-        if(paused) mMediaRecorder.resume();
+        if(videoPaused) mMediaRecorder.resume();
         else mMediaRecorder.pause();
-        paused = !paused;
+        videoPaused = !videoPaused;
     }
 
     public void stopRecording(){
         scan = videoFile;
-        paused = false;
+        videoPaused = false;
         mMediaRecorder.stop(); //FIXME: HANDLE IMMEDIATE STOP AFTER START
 //        mMediaRecorder.reset();
 //        mMediaRecorder.release();
