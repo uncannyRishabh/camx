@@ -10,6 +10,7 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.StrictMode;
+import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.util.TypedValue;
@@ -37,6 +38,7 @@ import com.uncanny.camx.Data.LensData;
 import com.uncanny.camx.R;
 import com.uncanny.camx.UI.Views.CaptureButton;
 import com.uncanny.camx.UI.Views.HorizontalPicker;
+import com.uncanny.camx.UI.Views.UncannyChronometer;
 import com.uncanny.camx.UI.Views.ViewFinder.AutoFitPreviewView;
 import com.uncanny.camx.UI.Views.ViewFinder.VideoModePicker;
 import com.uncanny.camx.Utils.AsyncThreads.LatestThumbnailGenerator;
@@ -333,6 +335,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         switch(getState()){
             case SLOMO:{
                 thumbPreview.setVisibility(View.VISIBLE);
+                cameraModePicker.setVisibility(View.VISIBLE);
             }
             case VIDEO:
             case TIMELAPSE: {
@@ -340,6 +343,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 thumbPreview.setImageDrawable(null);
                 front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_round_flip_camera_android_24));
 
+                cameraModePicker.setVisibility(View.VISIBLE);
                 break;
             }
             case VIDEO_PROGRESSED:
@@ -348,11 +352,14 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 thumbPreview.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_snapshot));
                 front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_pause));
 
+                cameraModePicker.setVisibility(View.INVISIBLE);
                 break;
             }
             case HSVIDEO_PROGRESSED:{
                 thumbPreview.setVisibility(View.INVISIBLE);
                 front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_pause));
+
+                cameraModePicker.setVisibility(View.INVISIBLE);
                 break;
             }
         }

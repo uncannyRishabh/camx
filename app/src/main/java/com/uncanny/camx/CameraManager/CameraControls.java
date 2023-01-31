@@ -33,6 +33,7 @@ import android.os.CancellationSignal;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.util.Range;
@@ -40,6 +41,7 @@ import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.OrientationEventListener;
 import android.view.Surface;
+import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
@@ -48,6 +50,8 @@ import androidx.exifinterface.media.ExifInterface;
 
 import com.google.android.material.imageview.ShapeableImageView;
 import com.uncanny.camx.Data.CamState;
+import com.uncanny.camx.R;
+import com.uncanny.camx.UI.Views.UncannyChronometer;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -101,8 +105,10 @@ public class CameraControls {
     private List<Surface> surfaceList;
 
 
-    public int counter =0;
+    private int counter =0;
+    private long pauseDuration;
     private boolean activityResumed;
+    private boolean cameraDeviceClosed;
     private boolean videoPaused = false;
     private boolean shouldDeleteEmptyFile;
     private Uri uri;
@@ -110,6 +116,7 @@ public class CameraControls {
     private List<CaptureRequest> captureRequest = new ArrayList<>();
 
     private ShapeableImageView thumbPreview;
+    private UncannyChronometer chronometer;
 
 //    private CamState state = CamState.CAMERA;
 
@@ -188,7 +195,7 @@ public class CameraControls {
         setImageSize();
 
         try {
-            if(cameraDevice!=null && cameraCaptureSession!=null) {
+            if(cameraDevice!=null && cameraCaptureSession!=null && !cameraDeviceClosed) {
                 //causes IllegalState Exception: CameraDevice was already closed, onResume
                 cameraCaptureSession.stopRepeating();
                 Log.e(TAG, "openCamera: STOPPING REPEATING");
@@ -422,8 +429,26 @@ public class CameraControls {
     private CameraCaptureSession.StateCallback cameraCaptureSessionCallback = new CameraCaptureSession.StateCallback() {
         @Override
         public void onConfigured(@NonNull CameraCaptureSession session) {
+            cameraDeviceClosed = false;
             cameraCaptureSession = session;
             createPreview();
+        }
+
+        @Override
+        public void onReady(@NonNull CameraCaptureSession session) {
+            super.onReady(session);
+        }
+
+        @Override
+        public void onCaptureQueueEmpty(@NonNull CameraCaptureSession session) {
+            super.onCaptureQueueEmpty(session);
+            // TODO: Minimize latency of burst requests here
+        }
+
+        @Override
+        public void onClosed(@NonNull CameraCaptureSession session) {
+            cameraDeviceClosed = true;
+            super.onClosed(session);
         }
 
         @Override
@@ -563,6 +588,7 @@ public class CameraControls {
     private CameraCaptureSession.StateCallback videoCaptureSessionCallback = new CameraCaptureSession.StateCallback() {
         @Override
         public void onConfigured(@NonNull CameraCaptureSession session) {
+            cameraDeviceClosed = false;
             if(CamState.getInstance().getState() == CamState.SLOMO){
                 highSpeedCaptureSession = (CameraConstrainedHighSpeedCaptureSession) session;
                 try {
@@ -587,26 +613,53 @@ public class CameraControls {
         }
 
         @Override
+        public void onCaptureQueueEmpty(@NonNull CameraCaptureSession session) {
+            super.onCaptureQueueEmpty(session);
+        }
+
+        @Override
+        public void onClosed(@NonNull CameraCaptureSession session) {
+            super.onClosed(session);
+            Log.e(TAG, "onClosed: Camera Device Closed");
+            cameraDeviceClosed = true;
+        }
+
+        @Override
         public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-            Log.e(TAG, "onConfigureFailed: createVideoPreview()");
+            cameraDeviceClosed = true;
+            Log.e(TAG, "onConfigureFailed: ");
         }
     };
 
     public void startRecording(){
         sound.play(MediaActionSound.START_VIDEO_RECORDING);
         shouldDeleteEmptyFile = false;
+//        activity.runOnUiThread(() -> {
+            if(chronometer==null) chronometer = activity.findViewById(R.id.chronometer);
+            chronometer.setVisibility(View.VISIBLE);
+        chronometer.setBase(SystemClock.elapsedRealtime());
+        chronometer.start();
+//        });
         mMediaRecorder.start();
     }
 
-    public void pauseResume(){
-        if(videoPaused) mMediaRecorder.resume();
-        else mMediaRecorder.pause();
+    public synchronized void pauseResume(){
+        if(videoPaused) {
+            mMediaRecorder.resume();
+            chronometer.resume();
+        }
+        else {
+            mMediaRecorder.pause();
+            chronometer.pause();
+        }
         videoPaused = !videoPaused;
     }
 
     public void stopRecording(){
         scan = videoFile;
         videoPaused = false;
+        chronometer.stop();
+        chronometer.setVisibility(View.GONE);
         mMediaRecorder.stop(); //FIXME: HANDLE IMMEDIATE STOP AFTER START
 //        mMediaRecorder.reset();
 //        mMediaRecorder.release();
