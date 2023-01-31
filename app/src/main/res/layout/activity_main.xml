@@ -9,7 +9,7 @@
     tools:context=".Activity.CameraActivity">
 
     <RelativeLayout
-        android:id="@+id/appbar"
+        android:id="@+id/menuBar"
         android:layout_width="match_parent"
         android:layout_height="44dp"
         android:layout_alignParentTop="true"
@@ -27,7 +27,7 @@
         android:layout_width="match_parent"
         android:layout_height="24dp"
         android:paddingBottom="8dp"
-        android:layout_below="@id/appbar"
+        android:layout_below="@id/menuBar"
         android:elevation="4dp" />
 
     <RelativeLayout

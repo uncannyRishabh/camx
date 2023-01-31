@@ -63,6 +63,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private ShapeableImageView thumbPreview;
     private AppCompatImageButton front_switch;
     private HorizontalPicker cameraModePicker;
+    private RelativeLayout menuBar;
     private RelativeLayout tvPreviewParent;
     private VideoModePicker videoModePicker;
 
@@ -113,6 +114,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         shutter = findViewById(R.id.shutter);
         front_switch = findViewById(R.id.front_back_switch);
         cameraModePicker = findViewById(R.id.mode_picker_view);
+        menuBar = findViewById(R.id.menuBar);
         tvPreviewParent = findViewById(R.id.previewParent);
         videoModePicker = findViewById(R.id.video_mode_picker);
 
@@ -177,23 +179,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             }
         });
 
-        if(lensData.supportBurstCapture(getCameraId())){
-            shutter.setOnLongClickListener(shutterLongPressListener);
-
-            shutter.setOnTouchListener((v, event) -> {
-                if(event.getActionMasked() == MotionEvent.ACTION_UP && isLongPressed){
-                    //Stop Repeating Burst
-                    isLongPressed = false;
-                    mainHandler.post(() -> cameraControls.stopBurstCapture());
-//                    cameraControls.createPreview();
-//                cameraHandler.post(this::displayLatestImage);
-                    Log.e(TAG, "onLongPressedUp: Stop Repeating Burst");
-
-                    return true;
-                }
-                return false;
-            });
-        }
+        if(lensData.supportBurstCapture(getCameraId())) addLongPressListener();
 
         requestPermissions();
     }
@@ -335,6 +321,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         switch(getState()){
             case SLOMO:{
                 thumbPreview.setVisibility(View.VISIBLE);
+                menuBar.setVisibility(View.VISIBLE);
                 cameraModePicker.setVisibility(View.VISIBLE);
             }
             case VIDEO:
@@ -343,6 +330,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 thumbPreview.setImageDrawable(null);
                 front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_round_flip_camera_android_24));
 
+                menuBar.setVisibility(View.VISIBLE);
                 cameraModePicker.setVisibility(View.VISIBLE);
                 break;
             }
@@ -352,6 +340,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 thumbPreview.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_snapshot));
                 front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_pause));
 
+                menuBar.setVisibility(View.INVISIBLE);
                 cameraModePicker.setVisibility(View.INVISIBLE);
                 break;
             }
@@ -359,12 +348,31 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 thumbPreview.setVisibility(View.INVISIBLE);
                 front_switch.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.ic_video_pause));
 
+                menuBar.setVisibility(View.INVISIBLE);
                 cameraModePicker.setVisibility(View.INVISIBLE);
                 break;
             }
         }
 
     };
+
+    private void addLongPressListener(){
+        shutter.setOnLongClickListener(shutterLongPressListener);
+
+        shutter.setOnTouchListener((v, event) -> {
+            if(event.getActionMasked() == MotionEvent.ACTION_UP && isLongPressed){
+                //Stop Repeating Burst
+                isLongPressed = false;
+                mainHandler.post(() -> cameraControls.stopBurstCapture());
+//                    cameraControls.createPreview();
+//                cameraHandler.post(this::displayLatestImage);
+                Log.e(TAG, "onLongPressedUp: Stop Repeating Burst");
+
+                return true;
+            }
+            return false;
+        });
+    }
 
 
     private TextureView.SurfaceTextureListener surfaceTextureListener = new TextureView.SurfaceTextureListener() {
@@ -507,11 +515,10 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     };
 
     private HorizontalPicker.OnItemSelected itemSelectedListener = index -> {
-        Log.e(TAG, "onItemSelected: " + cameraModePicker.getValues()[index]);
+        Log.e(TAG, "onItemSelected: " + cameraModePicker.getValues()[index] + " state : "+getState());
         cameraModePicker.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP,HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
-//        exposureControl.post(hideExposureControl);
         previewView.setOnTouchListener(null);
-        shutter.setOnLongClickListener(getState() == CamState.CAMERA ? shutterLongPressListener : null);
+//        exposureControl.post(hideExposureControl);
 //        exposureControl.post(this::setExposureRange);
         switch (index){
             case 0:{
@@ -539,6 +546,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                     shutter.animateShutterButton();
                 });
 //                modeCamera();
+                if(lensData.supportBurstCapture(getCameraId())) addLongPressListener();
+
                 break;
             }
             case 3:{
@@ -564,6 +573,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             }
         }
 
+        shutter.setOnLongClickListener(getState() == CamState.CAMERA ? shutterLongPressListener : null);
         videoModePicker.setVisibility(getState() == CamState.VIDEO ? View.VISIBLE : View.GONE);
         previewView.setOnTouchListener(viewfinderGestureListener); //TODO : Put inside a camera opened callback
     };
@@ -623,20 +633,27 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         performFileCleanup();
     }
 
+    private boolean volumeBtnPressed = false;
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         int action = event.getAction();
         int keyCode = event.getKeyCode();
+        //TODO : Detect Single Press and Long Press
         switch (keyCode) {
             case KeyEvent.KEYCODE_VOLUME_UP:
-            case KeyEvent.KEYCODE_VOLUME_DOWN:
-                if (action == KeyEvent.ACTION_DOWN) {
+            case KeyEvent.KEYCODE_VOLUME_DOWN: {
+                if (action == KeyEvent.ACTION_DOWN && !volumeBtnPressed) {
+                    volumeBtnPressed = true;
                     View view = findViewById(R.id.shutter);
                     if (view.isClickable()) {
                         view.performClick();
                     }
                 }
+                if(action == KeyEvent.ACTION_UP) {
+                    volumeBtnPressed = false;
+                }
                 return true;
+            }
             default:
                 return super.dispatchKeyEvent(event);
         }

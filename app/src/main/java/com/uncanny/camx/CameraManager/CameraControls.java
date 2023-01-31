@@ -643,7 +643,7 @@ public class CameraControls {
         mMediaRecorder.start();
     }
 
-    public synchronized void pauseResume(){
+    public void pauseResume(){
         if(videoPaused) {
             mMediaRecorder.resume();
             chronometer.resume();
