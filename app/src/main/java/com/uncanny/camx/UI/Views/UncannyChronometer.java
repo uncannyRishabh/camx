@@ -99,6 +99,7 @@ public class UncannyChronometer extends View {
 
     public void setBase(long millis){
         inputTimeInMillis = millis;
+        updateDrawText();
     }
 
     public void start(){
