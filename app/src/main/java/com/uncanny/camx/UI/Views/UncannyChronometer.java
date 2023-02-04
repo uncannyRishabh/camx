@@ -10,9 +10,13 @@ import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
+import android.widget.Chronometer;
 
 import androidx.annotation.Nullable;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -81,21 +85,42 @@ public class UncannyChronometer extends View {
 
     private synchronized void updateDrawText(){
         long currentTime = SystemClock.elapsedRealtime();
-        actualTime =  currentTime -  inputTimeInMillis;
+        actualTime =  currentTime - inputTimeInMillis;
+//
+//        seconds = (int) TimeUnit.MILLISECONDS.toSeconds(actualTime);
+//        minutes = (int) TimeUnit.MILLISECONDS.toMinutes(actualTime);
+//        hours   = (int) TimeUnit.MILLISECONDS.toHours(actualTime);
 
-        seconds = (int) TimeUnit.MILLISECONDS.toSeconds(actualTime);
-        minutes = (int) TimeUnit.MILLISECONDS.toMinutes(actualTime);
-        hours   = (int) TimeUnit.MILLISECONDS.toHours(actualTime);
+        // n > 60 -> % 60
+        // n < 10 -> prepend 0 : % 60
+        // n == 60 -> 0
+        // not applicable for hours
 
-        mSeconds = (seconds>60 ? (seconds%60<10 ? "0"+seconds%60:seconds%60+"" ) : (seconds<10 ? "0"+seconds:seconds+""));
-        mMinutes = (minutes>60 ? (minutes%60<10 ? "0"+minutes%60:minutes%60+"" ) : (minutes<10 ? "0"+minutes:minutes+""));
-        mHours   = (hours>60   ? (hours%60<10   ? "0"+hours%60  :hours%60+"" )   : (hours<10   ? "0"+hours  :hours+""));
+//        mSeconds = (seconds>60 ? (seconds%60<10 ? "0"+seconds%60:seconds%60+"" ) : (seconds<10 ? "0"+seconds:seconds+""));
+//        mMinutes = (minutes>60 ? (minutes%60<10 ? "0"+minutes%60:minutes%60+"" ) : (minutes<10 ? "0"+minutes:minutes+""));
+//        mHours   = (hours>60   ? (hours%60<10   ? "0"+hours%60  :hours%60+"" )   : (hours<10   ? "0"+hours  :hours+""));
 
-        drawTime = (hours>0 ? mHours+":" : "" )+mMinutes+":"+mSeconds;
+//        drawTime = (hours>0 ? mHours+":" : "" )+mMinutes+":"+mSeconds;
+
+        drawTime = getDrawTime(actualTime);
 
         Log.e("TAG", "updateDrawText: actual : "+actualTime + " drawTime : "+drawTime);
         this.postInvalidate();
     }
+
+    private static String getDrawTime(long time) {
+//        SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+//        return dateFormat.format(new Date(time));
+
+        int hours = (int) (time / (1000 * 60 * 60));
+        int minutes = (int) (time % (1000 * 60 * 60)) / (1000 * 60);
+        int seconds = (int) ((time % (1000 * 60 * 60)) % (1000 * 60) / 1000);
+
+        return String.format(Locale.getDefault(),"%02d:%02d:%02d", hours, minutes, seconds);
+
+    }
+
+
 
     public void setBase(long millis){
         inputTimeInMillis = millis;

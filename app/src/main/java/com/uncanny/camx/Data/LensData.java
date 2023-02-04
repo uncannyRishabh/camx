@@ -237,7 +237,7 @@ public class LensData {
     public boolean supportBurstCapture(String id){
         StreamConfigurationMap map = getStreamConfigMap(id);
         Size [] sizes = map.getHighResolutionOutputSizes(ImageFormat.JPEG);
-        return sizes.length > 0;
+        return sizes != null && sizes.length > 0;
     }
 
     /**

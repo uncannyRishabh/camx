@@ -91,7 +91,7 @@ public class CameraControls {
     private CaptureRequest.Builder previewRequestBuilder;
     private ImageReader imageReader;
     private MediaRecorder mMediaRecorder;
-    private CamcorderProfile camcorderProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P);
+    private CamcorderProfile camcorderProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH_SPEED_1080P); //TODO: DYNAMIC
     private MediaActionSound sound = new MediaActionSound();
 
     private Handler cameraHandler;
@@ -391,7 +391,7 @@ public class CameraControls {
             imageReader.close();
             imageReader = null;
         }
-        previewSurface.release();
+        if(previewSurface != null) previewSurface.release();
     }
 
     private CameraDevice.StateCallback openCameraCallback = new CameraDevice.StateCallback() {

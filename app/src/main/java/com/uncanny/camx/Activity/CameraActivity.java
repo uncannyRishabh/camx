@@ -199,7 +199,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 if(grantResults[i] != PackageManager.PERMISSION_GRANTED) {
                     Log.e(TAG, "onRequestPermissionsResult: "+permissions[i]);
                     Toast.makeText(this, "Grant Permission to continue", Toast.LENGTH_SHORT).show();
-                    finishAffinity();
+//                    finishAffinity();
                 }
             }
         }
