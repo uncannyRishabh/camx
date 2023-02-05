@@ -91,7 +91,7 @@ public class CameraControls {
     private CaptureRequest.Builder previewRequestBuilder;
     private ImageReader imageReader;
     private MediaRecorder mMediaRecorder;
-    private CamcorderProfile camcorderProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH_SPEED_1080P); //TODO: DYNAMIC
+    private CamcorderProfile camcorderProfile;
     private MediaActionSound sound = new MediaActionSound();
 
     private Handler cameraHandler;
@@ -473,7 +473,7 @@ public class CameraControls {
         if(CamState.getInstance().getState() == CamState.VIDEO){
             mVideoLocation = "//storage//emulated//0//DCIM//Camera//";
             mVideoSuffix = "CamX_" + System.currentTimeMillis() + ".mp4";
-            camcorderProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P);
+            camcorderProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P); //TODO: DYNAMIC
             mMediaRecorder.setOrientationHint(getJpegOrientation());
             mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
             mMediaRecorder.setAudioSamplingRate(camcorderProfile.audioSampleRate);

@@ -10,14 +10,10 @@ import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
-import android.widget.Chronometer;
 
 import androidx.annotation.Nullable;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author uncannyRishabh (30/05/2021)
@@ -33,8 +29,6 @@ public class UncannyChronometer extends View {
     private long pauseDuration;
     private boolean isRunning = false;
     private int cx,cy;
-    private int seconds,minutes,hours;
-    private String mSeconds,mMinutes,mHours;
     private Typeface Poppins;
     private final float density = getResources().getDisplayMetrics().density;
 
@@ -86,21 +80,6 @@ public class UncannyChronometer extends View {
     private synchronized void updateDrawText(){
         long currentTime = SystemClock.elapsedRealtime();
         actualTime =  currentTime - inputTimeInMillis;
-//
-//        seconds = (int) TimeUnit.MILLISECONDS.toSeconds(actualTime);
-//        minutes = (int) TimeUnit.MILLISECONDS.toMinutes(actualTime);
-//        hours   = (int) TimeUnit.MILLISECONDS.toHours(actualTime);
-
-        // n > 60 -> % 60
-        // n < 10 -> prepend 0 : % 60
-        // n == 60 -> 0
-        // not applicable for hours
-
-//        mSeconds = (seconds>60 ? (seconds%60<10 ? "0"+seconds%60:seconds%60+"" ) : (seconds<10 ? "0"+seconds:seconds+""));
-//        mMinutes = (minutes>60 ? (minutes%60<10 ? "0"+minutes%60:minutes%60+"" ) : (minutes<10 ? "0"+minutes:minutes+""));
-//        mHours   = (hours>60   ? (hours%60<10   ? "0"+hours%60  :hours%60+"" )   : (hours<10   ? "0"+hours  :hours+""));
-
-//        drawTime = (hours>0 ? mHours+":" : "" )+mMinutes+":"+mSeconds;
 
         drawTime = getDrawTime(actualTime);
 
@@ -109,18 +88,13 @@ public class UncannyChronometer extends View {
     }
 
     private static String getDrawTime(long time) {
-//        SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
-//        return dateFormat.format(new Date(time));
-
         int hours = (int) (time / (1000 * 60 * 60));
         int minutes = (int) (time % (1000 * 60 * 60)) / (1000 * 60);
         int seconds = (int) ((time % (1000 * 60 * 60)) % (1000 * 60) / 1000);
 
-        return String.format(Locale.getDefault(),"%02d:%02d:%02d", hours, minutes, seconds);
-
+        if(hours > 0) return String.format(Locale.getDefault(),"%02d:%02d:%02d", hours, minutes, seconds);
+        else return String.format(Locale.getDefault(),"%02d:%02d", minutes, seconds);
     }
-
-
 
     public void setBase(long millis){
         inputTimeInMillis = millis;
@@ -134,16 +108,14 @@ public class UncannyChronometer extends View {
 
     public void pause(){
         isRunning = false;
-        pauseDuration = SystemClock.elapsedRealtime() - actualTime;
         removeCallbacks(startTick);
-        Log.e("TAG", "pause: pauseDuration : "+pauseDuration);
     }
 
     public void resume(){
         isRunning = true;
-        setBase(SystemClock.elapsedRealtime() - pauseDuration);
+        setBase(SystemClock.elapsedRealtime() - actualTime);
         post(startTick);
-        Log.e("TAG", "pause: inputTimeInMillis : "+inputTimeInMillis);
+//        Log.e("TAG", "pause: inputTimeInMillis : "+inputTimeInMillis);
     }
 
     public void stop(){
