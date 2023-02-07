@@ -9,7 +9,7 @@
     tools:context=".Activity.CameraActivity">
 
     <RelativeLayout
-        android:id="@+id/appbar"
+        android:id="@+id/menuBar"
         android:layout_width="match_parent"
         android:layout_height="44dp"
         android:layout_alignParentTop="true"
@@ -27,7 +27,7 @@
         android:layout_width="match_parent"
         android:layout_height="24dp"
         android:paddingBottom="8dp"
-        android:layout_below="@id/appbar"
+        android:layout_below="@id/menuBar"
         android:elevation="4dp" />
 
     <RelativeLayout
@@ -166,7 +166,7 @@
         android:paddingTop="20dp">
 
         <com.google.android.material.imageview.ShapeableImageView
-            android:id="@+id/img_gal"
+            android:id="@+id/thumbPreview"
             android:layout_width="60dp"
             android:layout_height="60dp"
             android:layout_centerVertical="true"
@@ -182,7 +182,7 @@
             app:strokeWidth="2.5dp" />
 
         <com.uncanny.camx.UI.Views.CaptureButton
-            android:id="@+id/capture"
+            android:id="@+id/shutter"
             android:layout_width="84dp"
             android:layout_height="82dp"
             android:layout_centerInParent="true"
@@ -199,7 +199,7 @@
             android:layout_marginEnd="50dp"
             android:background="#00020202"
             android:padding="4dp"
-            android:scaleType="fitXY"
+            android:scaleType="centerCrop"
             android:src="@drawable/ic_round_flip_camera_android_24" />
     </RelativeLayout>
 

@@ -1,4 +1,4 @@
-package com.uncanny.camx.Control;
+package com.uncanny.camx.CameraManager;
 
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;

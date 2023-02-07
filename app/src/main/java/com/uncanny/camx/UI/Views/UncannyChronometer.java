@@ -24,6 +24,7 @@ public class UncannyChronometer extends View {
     private RectF rectF;
     private Paint paint,tPaint;
     private String drawTime="00:00";
+    private long actualTime;
     private long inputTimeInMillis;
     private long pauseDuration;
     private boolean isRunning = false;
@@ -39,17 +40,6 @@ public class UncannyChronometer extends View {
             if(isRunning){
                 updateDrawText();
                 postDelayed(startTick,1000);
-            }
-        }
-    };
-
-
-    private Runnable countPauseDuration = new Runnable() {
-        @Override
-        public void run() {
-            if(isRunning){
-                pauseDuration += 1000;
-                postDelayed(countPauseDuration,1000);
             }
         }
     };
@@ -89,20 +79,22 @@ public class UncannyChronometer extends View {
         tPaint.setTypeface(Poppins);
     }
 
-    private void updateDrawText(){
+    private synchronized void updateDrawText(){
         long currentTime = SystemClock.elapsedRealtime();
-        long timeDiff =  currentTime -  inputTimeInMillis - pauseDuration;
-        seconds = (int) TimeUnit.MILLISECONDS.toSeconds(timeDiff);
-        minutes = (int) TimeUnit.MILLISECONDS.toMinutes(timeDiff);
-        hours   = (int) TimeUnit.MILLISECONDS.toHours(timeDiff);
+        actualTime =  currentTime -  inputTimeInMillis;
 
-        mSeconds = (seconds>60 ? (seconds%60<10 ? "0"+seconds%60:seconds%60+"" ) : (seconds<10 ? "0"+seconds: seconds+""));
-        mMinutes = (minutes>60 ? (minutes%60<10 ? "0"+minutes%60:minutes%60+"" ) : (minutes<10 ? "0"+minutes: minutes+""));
-        mHours   = (hours>60   ? (hours%60<10 ? "0"+hours%60:hours%60+"" )       : (hours<10   ? "0"+hours: hours+""));
+        seconds = (int) TimeUnit.MILLISECONDS.toSeconds(actualTime);
+        minutes = (int) TimeUnit.MILLISECONDS.toMinutes(actualTime);
+        hours   = (int) TimeUnit.MILLISECONDS.toHours(actualTime);
+
+        mSeconds = (seconds>60 ? (seconds%60<10 ? "0"+seconds%60:seconds%60+"" ) : (seconds<10 ? "0"+seconds:seconds+""));
+        mMinutes = (minutes>60 ? (minutes%60<10 ? "0"+minutes%60:minutes%60+"" ) : (minutes<10 ? "0"+minutes:minutes+""));
+        mHours   = (hours>60   ? (hours%60<10   ? "0"+hours%60  :hours%60+"" )   : (hours<10   ? "0"+hours  :hours+""));
 
         drawTime = (hours>0 ? mHours+":" : "" )+mMinutes+":"+mSeconds;
-        Log.e("TAG", "updateDrawText: "+drawTime);
-        this.invalidate();
+
+        Log.e("TAG", "updateDrawText: actual : "+actualTime + " drawTime : "+drawTime);
+        this.postInvalidate();
     }
 
     public void setBase(long millis){
@@ -114,22 +106,26 @@ public class UncannyChronometer extends View {
         post(startTick);
     }
 
-    public void stop(){
-        isRunning = false;
-        removeCallbacks(startTick);
-        removeCallbacks(countPauseDuration);
-        pauseDuration = 0;
-        drawTime = "00:00";
-    }
-
     public void pause(){
+        isRunning = false;
+        pauseDuration = SystemClock.elapsedRealtime() - actualTime;
         removeCallbacks(startTick);
-        post(countPauseDuration);
+        Log.e("TAG", "pause: pauseDuration : "+pauseDuration);
     }
 
     public void resume(){
+        isRunning = true;
+        setBase(SystemClock.elapsedRealtime() - pauseDuration);
         post(startTick);
-        removeCallbacks(countPauseDuration);
+        Log.e("TAG", "pause: inputTimeInMillis : "+inputTimeInMillis);
+    }
+
+    public void stop(){
+        isRunning = false;
+        removeCallbacks(startTick);
+        drawTime = "00:00";
+        actualTime = 0;
+        pauseDuration = 0;
     }
 
     @Override

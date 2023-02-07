@@ -16,7 +16,7 @@ import android.view.View;
 import androidx.annotation.Nullable;
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
 
-import com.uncanny.camx.Activity.CameraActivity.CamState;
+import com.uncanny.camx.Data.CamState;
 
 
 /**
@@ -82,7 +82,7 @@ public class CaptureButton extends View {
 
         screenWidth = getScreenWidth();
         icRadius = screenWidth/(4.5f * density);
-        mState = CamState.CAMERA;
+        mState = CamState.getInstance().getState();
     }
 
     private void setState(CamState state){
@@ -122,10 +122,9 @@ public class CaptureButton extends View {
 
     /**
      * Call this method to animate {@link CaptureButton#icRadius}.
-     * @param state current camera state {@link CamState}
      */
-    public void animateShutterButton(CamState state){
-        setState(state);
+    public void animateShutterButton(){
+        setState(mState.getState());
         sizeInnerCircle(.5f);
         invalidate();
     }
@@ -139,7 +138,7 @@ public class CaptureButton extends View {
             invalidate();
             icRadius = (float) animation.getAnimatedValue("radius");
         });
-        valueAnimator.setDuration(600);
+        valueAnimator.setDuration(400);
         valueAnimator.start();
         invalidate();
     }
@@ -191,7 +190,8 @@ public class CaptureButton extends View {
                 break;
             case VIDEO_PROGRESSED:
             case HSVIDEO_PROGRESSED:
-                canvas.drawRoundRect(rectF,12,12,mPaint);
+            case TIMELAPSE_PROGRESSED:
+                canvas.drawRoundRect(rectF,14,14,mPaint);
                 break;
             case SLOMO:
                 canvas.drawCircle(cx-icRadius/2,cy,icRadius,paint);
