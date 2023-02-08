@@ -33,7 +33,7 @@ public class LensData {
     private static final String CAMERA_MAIN_BACK = "0";
     private static final String CAMERA_MAIN_FRONT = "1";
     private int LOGICAL_ID;
-    private int FOCAL_LENGTH_FRONT, FOCAL_LENGTH_BACK;
+    private final int FOCAL_LENGTH_FRONT, FOCAL_LENGTH_BACK;
 
     Context context;
     CameraCharacteristics characteristics;
@@ -57,6 +57,10 @@ public class LensData {
     public LensData(Context context){
         this.context = context;
         getAuxCameras();
+        FOCAL_LENGTH_BACK = getComputeViewAngle(CAMERA_MAIN_BACK);
+        FOCAL_LENGTH_FRONT = getComputeViewAngle(CAMERA_MAIN_FRONT);
+
+        Log.e(TAG, "LensData: Camera Aliases : "+ getCameraAliasBack());
     }
 
     /**
@@ -86,6 +90,11 @@ public class LensData {
         return auxiliaryCameras;
     }
 
+    /**
+     * Return an alias for the auxiliary camera lenses
+     * e.g. Ultra Wide -> FOV : 108 -> .6
+     * @return
+     */
     public ArrayList<ArrayList<String>> getCameraAliasBack(){
         Log.e(TAG, "getCameraAliasBack: physicalCamera : "+physicalCameras);
         ArrayList<String> camIdList = new ArrayList<>();
@@ -136,9 +145,11 @@ public class LensData {
         List<Integer> tList = new ArrayList<>(physicalCameras);
         tList.remove((Object)0);
         tList.remove((Object)1);
+        //TODO: Add front and back check
         for (int i : tList){
-            float zf = getFocalLength(i+"")/getMainBackFocalLength();
-            if(zf < 0.7){
+//            float zf = getFocalLength(i+"")/getMainBackFocalLength();
+            float zf = (float) getComputeViewAngle(i+"") / FOCAL_LENGTH_BACK;
+            if(zf < 0.8){   //Arbitrary number I came up with during testing
                 return i;
             }
             Log.e(TAG, "ultraWideCheck: "+i+" : "+zf);
@@ -150,8 +161,10 @@ public class LensData {
         List<Integer> tList = new ArrayList<>(physicalCameras);
         tList.remove((Object)0);
         tList.remove((Object)1);
+        //TODO: Add Front and back check
         for (int i : tList){
-            float zf = getFocalLength(i+"")/getMainBackFocalLength();
+//            float zf = getFocalLength(i+"")/getMainBackFocalLength();
+            float zf = (float) getComputeViewAngle(i+"") / FOCAL_LENGTH_BACK;
             if(zf > 1.3){ //TODO: CHECK WITH K20 PRO 2x TELEPHOTO
                 return i;
             }
@@ -327,27 +340,27 @@ public class LensData {
         Log.e(TAG, "getCamcorderSMProfile: "+size);
         if(size.getWidth() == 480){
             Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_480P));
-            return CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_480P);
+            return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_480P);
         }
         if(size.getWidth() == 720){
             Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_720P));
-            return CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_720P);
+            return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_720P);
         }
         if(size.getWidth() == 1080){
             Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_1080P));
-            return CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_1080P);
+            return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_1080P);
         }
-        if(CamcorderProfile.hasProfile(0,CamcorderProfile.QUALITY_HIGH_SPEED_2160P)){
+        if(CamcorderProfile.hasProfile(id,CamcorderProfile.QUALITY_HIGH_SPEED_2160P)){
             Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_2160P));
-            return CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_2160P);
+            return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_2160P);
         }
-        if(CamcorderProfile.hasProfile(0,CamcorderProfile.QUALITY_HIGH_SPEED_HIGH)){
+        if(CamcorderProfile.hasProfile(id,CamcorderProfile.QUALITY_HIGH_SPEED_HIGH)){
             Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_HIGH));
-            return CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_HIGH);
+            return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_HIGH);
         }
-        if(CamcorderProfile.hasProfile(0,CamcorderProfile.QUALITY_HIGH_SPEED_LOW)){
+        if(CamcorderProfile.hasProfile(id,CamcorderProfile.QUALITY_HIGH_SPEED_LOW)){
             Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_LOW));
-            return CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_LOW);
+            return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_LOW);
         }
         return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH);
     }
@@ -501,7 +514,6 @@ public class LensData {
      * Init
      */
     private void getAuxCameras(){
-//        CameraHelper ch = new CameraHelper();
         cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
         for(int i = 0; i<=31 ; i++){       // FIXME: 8/11/2021 fix extra aux lens problem @_@
             try {
@@ -514,13 +526,13 @@ public class LensData {
                             LOGICAL_ID = i;
                         }
                     }
-                    if(LOGICAL_ID != 0 && i >= LOGICAL_ID){
+                    if (LOGICAL_ID != 0 && i >= LOGICAL_ID){
                         logicalCameras.add(i);
                     }
-                    else  {
+                    else {
                         physicalCameras.add(i);
 //                        ch.getCameraFov(context,i+"");
-//                        ch.computeViewAngles(context,i+"");
+//                        getComputeViewAngle(i+"");
                     }
                 }
             }
@@ -531,6 +543,16 @@ public class LensData {
         Log.e(TAG, "getAuxCameras: "+logicalCameras);
         Log.e(TAG, "getAuxCameras: "+physicalCameras);
 
+    }
+
+    private int getComputeViewAngle(String id){
+        try {
+            return ch.computeViewAngles(context,id);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+
+        return 0;
     }
 
     private void performBayerCheck(String id) {

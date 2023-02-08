@@ -26,7 +26,6 @@ public class UncannyChronometer extends View {
     private String drawTime="00:00";
     private long actualTime;
     private long inputTimeInMillis;
-    private long pauseDuration;
     private boolean isRunning = false;
     private int cx,cy;
     private Typeface Poppins;
@@ -123,7 +122,6 @@ public class UncannyChronometer extends View {
         removeCallbacks(startTick);
         drawTime = "00:00";
         actualTime = 0;
-        pauseDuration = 0;
     }
 
     @Override
