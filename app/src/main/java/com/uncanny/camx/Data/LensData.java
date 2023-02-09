@@ -339,27 +339,27 @@ public class LensData {
     public CamcorderProfile getCamcorderSMProfile(int id, Size size){
         Log.e(TAG, "getCamcorderSMProfile: "+size);
         if(size.getWidth() == 480){
-            Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_480P));
+            Log.e(TAG, "getCamcorderSMProfile: "+id+" : "+CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_480P));
             return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_480P);
         }
         if(size.getWidth() == 720){
-            Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_720P));
+            Log.e(TAG, "getCamcorderSMProfile: "+id+" : "+CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_720P));
             return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_720P);
         }
         if(size.getWidth() == 1080){
-            Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_1080P));
+            Log.e(TAG, "getCamcorderSMProfile: "+id+" : "+CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_1080P));
             return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_1080P);
         }
         if(CamcorderProfile.hasProfile(id,CamcorderProfile.QUALITY_HIGH_SPEED_2160P)){
-            Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_2160P));
+            Log.e(TAG, "getCamcorderSMProfile: "+id+" : "+CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_2160P));
             return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_2160P);
         }
         if(CamcorderProfile.hasProfile(id,CamcorderProfile.QUALITY_HIGH_SPEED_HIGH)){
-            Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_HIGH));
+            Log.e(TAG, "getCamcorderSMProfile: "+id+" : "+CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_HIGH));
             return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_HIGH);
         }
         if(CamcorderProfile.hasProfile(id,CamcorderProfile.QUALITY_HIGH_SPEED_LOW)){
-            Log.e(TAG, "getCamcorderSMProfile: 1 : "+CamcorderProfile.get(0,CamcorderProfile.QUALITY_HIGH_SPEED_LOW));
+            Log.e(TAG, "getCamcorderSMProfile: "+id+" : "+CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_LOW));
             return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH_SPEED_LOW);
         }
         return CamcorderProfile.get(id,CamcorderProfile.QUALITY_HIGH);
