@@ -60,7 +60,8 @@ public class LensData {
         FOCAL_LENGTH_BACK = getComputeViewAngle(CAMERA_MAIN_BACK);
         FOCAL_LENGTH_FRONT = getComputeViewAngle(CAMERA_MAIN_FRONT);
 
-        Log.e(TAG, "LensData: Camera Aliases : "+ getCameraAliasBack());
+        Log.e(TAG, "LensData: Camera Aliases : "+ getCameraAliasBack().get(0)+"\n"+"");
+        Log.e(TAG, "LensData: Camera Aliases : "+ getCameraAliasBack().get(1)+"\n"+"");
     }
 
     /**
@@ -141,6 +142,7 @@ public class LensData {
 
     CameraHelper ch = new CameraHelper();
 
+    // TODO: Single Function to classify ultrawide and telephoto
     public int ultraWideCheck(){
         List<Integer> tList = new ArrayList<>(physicalCameras);
         tList.remove((Object)0);
@@ -149,6 +151,7 @@ public class LensData {
         for (int i : tList){
 //            float zf = getFocalLength(i+"")/getMainBackFocalLength();
             float zf = (float) getComputeViewAngle(i+"") / FOCAL_LENGTH_BACK;
+            Log.e(TAG, "ultraWideCheck: ViewAngles : "+zf);
             if(zf < 0.8){   //Arbitrary number I came up with during testing
                 return i;
             }
@@ -165,6 +168,7 @@ public class LensData {
         for (int i : tList){
 //            float zf = getFocalLength(i+"")/getMainBackFocalLength();
             float zf = (float) getComputeViewAngle(i+"") / FOCAL_LENGTH_BACK;
+            Log.e(TAG, "telephotoCheck: ViewAngles : "+zf);
             if(zf > 1.3){ //TODO: CHECK WITH K20 PRO 2x TELEPHOTO
                 return i;
             }
@@ -503,7 +507,8 @@ public class LensData {
     }
 
     private float getZoomFactor(String id){
-        return getFocalLength(id)/getMainBackFocalLength();
+//        return getFocalLength(id)/getMainBackFocalLength();
+        return (float) FOCAL_LENGTH_BACK / getComputeViewAngle(id+"");
     }
 
     private String getAuxButtonName(String id) {
