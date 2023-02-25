@@ -60,8 +60,9 @@ public class LensData {
         FOCAL_LENGTH_BACK = getComputeViewAngle(CAMERA_MAIN_BACK);
         FOCAL_LENGTH_FRONT = getComputeViewAngle(CAMERA_MAIN_FRONT);
 
-        Log.e(TAG, "LensData: Camera Aliases : "+ getCameraAliasBack().get(0)+"\n"+"");
-        Log.e(TAG, "LensData: Camera Aliases : "+ getCameraAliasBack().get(1)+"\n"+"");
+        getCameraAliasBack();
+//        Log.e(TAG, "LensData: Camera Aliases : "+ getCameraAliasBack().get(0)+"\n"+"");
+//        Log.e(TAG, "LensData: Camera Aliases : "+ getCameraAliasBack().get(1)+"\n"+"");
     }
 
     /**
@@ -106,25 +107,31 @@ public class LensData {
         tList.remove((Object)0);
         tList.remove((Object)1);
 
-        int uw = ultraWideCheck();
-        int tele = telephotoCheck();
-
-        if(getZoomFactor(uw+"") < 0.7) {
-            tList.remove((Object)uw);
-            camIdList.add(uw+"");
-            aliasList.add(0, getAuxButtonName(uw + ""));
+        for(int i: physicalCameras) {
+            float zf = getZoomFactor(i+"");
+            //Ultrawide
+            if(zf < 0.8){
+                Log.e(TAG, "getCameraAliasBack: Ultrawide "+i);
+                tList.remove((Object)i);
+                camIdList.add(0,i+"");
+                aliasList.add(0,getAuxButtonName(zf));
+            }
+            //Telephoto
+            else if (zf > 1.3) {
+                Log.e(TAG, "getCameraAliasBack: Tele "+i);
+                tList.remove((Object)i);
+                camIdList.add(i+"");
+                aliasList.add(getAuxButtonName(zf));
+            }
         }
 
-        if(getZoomFactor(tele+"") > 1.3) {
-            tList.remove((Object)tele);
-            camIdList.add(tele+"");
-            aliasList.add(getAuxButtonName(tele + ""));
-        }
+        //Add rest IDs
         for(int id : tList){
             camIdList.add(id+"");
-            aliasList.add(getAuxButtonName(id + ""));
+            aliasList.add(getAuxButtonName(getZoomFactor(id+"")));
         }
 
+        //Add main back
         if(!camIdList.isEmpty()){
             camIdList.add(1,CAMERA_MAIN_BACK);
             aliasList.add(1,"1×");
@@ -137,45 +144,48 @@ public class LensData {
         camAliasList.add(0,camIdList);
         camAliasList.add(1,aliasList);
 
+        Log.e(TAG, "getCameraAliasBack: "+camIdList);
+        Log.e(TAG, "getCameraAliasBack: "+aliasList);
+
         return camAliasList;
     }
 
     CameraHelper ch = new CameraHelper();
 
     // TODO: Single Function to classify ultrawide and telephoto
-    public int ultraWideCheck(){
-        List<Integer> tList = new ArrayList<>(physicalCameras);
-        tList.remove((Object)0);
-        tList.remove((Object)1);
-        //TODO: Add front and back check
-        for (int i : tList){
-//            float zf = getFocalLength(i+"")/getMainBackFocalLength();
-            float zf = (float) getComputeViewAngle(i+"") / FOCAL_LENGTH_BACK;
-            Log.e(TAG, "ultraWideCheck: ViewAngles : "+zf);
-            if(zf < 0.8){   //Arbitrary number I came up with during testing
-                return i;
-            }
-            Log.e(TAG, "ultraWideCheck: "+i+" : "+zf);
-        }
-        return 0;
-    }
-
-    public int telephotoCheck(){
-        List<Integer> tList = new ArrayList<>(physicalCameras);
-        tList.remove((Object)0);
-        tList.remove((Object)1);
-        //TODO: Add Front and back check
-        for (int i : tList){
-//            float zf = getFocalLength(i+"")/getMainBackFocalLength();
-            float zf = (float) getComputeViewAngle(i+"") / FOCAL_LENGTH_BACK;
-            Log.e(TAG, "telephotoCheck: ViewAngles : "+zf);
-            if(zf > 1.3){ //TODO: CHECK WITH K20 PRO 2x TELEPHOTO
-                return i;
-            }
-            Log.e(TAG, "telephotoCheck: "+i+" : "+zf);
-        }
-        return 0;
-    }
+//    public int ultraWideCheck(){
+//        List<Integer> tList = new ArrayList<>(physicalCameras);
+//        tList.remove((Object)0);
+//        tList.remove((Object)1);
+//        //TODO: Add front and back check
+//        for (int i : tList){
+////            float zf = getFocalLength(i+"")/getMainBackFocalLength();
+//            float zf = getZoomFactor(i+"");
+//            Log.e(TAG, "ultraWideCheck: ViewAngles : "+zf);
+//            if(zf < 0.8){   //Arbitrary number I came up with during testing
+//                return i;
+//            }
+//            Log.e(TAG, "ultraWideCheck: "+i+" : "+zf);
+//        }
+//        return -1;
+//    }
+//
+//    public int telephotoCheck(){
+//        List<Integer> tList = new ArrayList<>(physicalCameras);
+//        tList.remove((Object)0);
+//        tList.remove((Object)1);
+//        //TODO: Add Front and back check
+//        for (int i : tList){
+////            float zf = getFocalLength(i+"")/getMainBackFocalLength();
+//            float zf = getZoomFactor(i+"");
+//            Log.e(TAG, "telephotoCheck: ViewAngles : "+zf);
+//            if(zf > 1.3){ //TODO: CHECK WITH K20 PRO 2x TELEPHOTO
+//                return i;
+//            }
+//            Log.e(TAG, "telephotoCheck: "+i+" : "+zf);
+//        }
+//        return -1;
+//    }
 
     /**
      * Returns total number of Camera Sensors including cameraId (0,1).
@@ -466,34 +476,6 @@ public class LensData {
         return imageSize169;
     }
 
-    public float getMainBackFocalLength(){
-        if(FOCAL_LENGTH_BACK == 0){
-            try{
-                CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(CAMERA_MAIN_BACK);
-                return (36.0f / characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE).getWidth()
-                        * characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)[0]);
-            }
-        catch (CameraAccessException e){
-                e.printStackTrace();
-            }
-        }
-        return 0;
-    }
-
-    public float getMainFrontFocalLength(){
-        if(FOCAL_LENGTH_FRONT == 0){
-            try{
-                CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(CAMERA_MAIN_FRONT);
-                return (36.0f / characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE).getWidth()
-                        * characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)[0]);
-            }
-            catch (CameraAccessException e){
-                e.printStackTrace();
-            }
-        }
-        return 0;
-    }
-
     public float getFocalLength(String cameraId){
         try{
             CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
@@ -511,8 +493,8 @@ public class LensData {
         return (float) FOCAL_LENGTH_BACK / getComputeViewAngle(id+"");
     }
 
-    private String getAuxButtonName(String id) {
-        return String.format(Locale.US, "%.1f", getZoomFactor(id)).replace(".0", "");
+    private String getAuxButtonName(float zoomFactor) {
+        return String.format(Locale.US, "%.1f", zoomFactor).replace(".0", "");
     }
 
     /**
