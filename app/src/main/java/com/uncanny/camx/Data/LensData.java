@@ -60,10 +60,9 @@ public class LensData {
         FOCAL_LENGTH_BACK = getComputeViewAngle(CAMERA_MAIN_BACK);
         FOCAL_LENGTH_FRONT = getComputeViewAngle(CAMERA_MAIN_FRONT);
 
+        //Store in a ref
         getCameraAliasBack();
-//        Log.e(TAG, "LensData: Camera Aliases : "+ getCameraAliasBack().get(0)+"\n"+"");
-//        Log.e(TAG, "LensData: Camera Aliases : "+ getCameraAliasBack().get(1)+"\n"+"");
-    }
+}
 
     /**
      * Returns boolean for Auxiliary Camera availability.
@@ -107,18 +106,19 @@ public class LensData {
         tList.remove((Object)0);
         tList.remove((Object)1);
 
+        //TODO: Add front and back check
         for(int i: physicalCameras) {
             float zf = getZoomFactor(i+"");
             //Ultrawide
             if(zf < 0.8){
-                Log.e(TAG, "getCameraAliasBack: Ultrawide "+i);
+//                Log.e(TAG, "getCameraAliasBack: Ultrawide "+i);
                 tList.remove((Object)i);
                 camIdList.add(0,i+"");
                 aliasList.add(0,getAuxButtonName(zf));
             }
             //Telephoto
-            else if (zf > 1.3) {
-                Log.e(TAG, "getCameraAliasBack: Tele "+i);
+            else if (zf > 1.3) { //TODO: CHECK WITH K20 PRO 2x TELEPHOTO
+//                Log.e(TAG, "getCameraAliasBack: Tele "+i);
                 tList.remove((Object)i);
                 camIdList.add(i+"");
                 aliasList.add(getAuxButtonName(zf));
@@ -151,41 +151,6 @@ public class LensData {
     }
 
     CameraHelper ch = new CameraHelper();
-
-    // TODO: Single Function to classify ultrawide and telephoto
-//    public int ultraWideCheck(){
-//        List<Integer> tList = new ArrayList<>(physicalCameras);
-//        tList.remove((Object)0);
-//        tList.remove((Object)1);
-//        //TODO: Add front and back check
-//        for (int i : tList){
-////            float zf = getFocalLength(i+"")/getMainBackFocalLength();
-//            float zf = getZoomFactor(i+"");
-//            Log.e(TAG, "ultraWideCheck: ViewAngles : "+zf);
-//            if(zf < 0.8){   //Arbitrary number I came up with during testing
-//                return i;
-//            }
-//            Log.e(TAG, "ultraWideCheck: "+i+" : "+zf);
-//        }
-//        return -1;
-//    }
-//
-//    public int telephotoCheck(){
-//        List<Integer> tList = new ArrayList<>(physicalCameras);
-//        tList.remove((Object)0);
-//        tList.remove((Object)1);
-//        //TODO: Add Front and back check
-//        for (int i : tList){
-////            float zf = getFocalLength(i+"")/getMainBackFocalLength();
-//            float zf = getZoomFactor(i+"");
-//            Log.e(TAG, "telephotoCheck: ViewAngles : "+zf);
-//            if(zf > 1.3){ //TODO: CHECK WITH K20 PRO 2x TELEPHOTO
-//                return i;
-//            }
-//            Log.e(TAG, "telephotoCheck: "+i+" : "+zf);
-//        }
-//        return -1;
-//    }
 
     /**
      * Returns total number of Camera Sensors including cameraId (0,1).
@@ -278,6 +243,7 @@ public class LensData {
     /**
      * Use preference key to save modes.
      */
+    @Deprecated
     public String[] getAvailableModes(String id){
         List<String> cameraModes = new ArrayList<>();
         capabilities = getCameraCharacteristics(id).get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
@@ -527,8 +493,8 @@ public class LensData {
             }
         }
 
-        Log.e(TAG, "getAuxCameras: "+logicalCameras);
-        Log.e(TAG, "getAuxCameras: "+physicalCameras);
+        Log.e(TAG, "getAuxCameras: "+logicalCameras); //Not Implemented in most devices, Official way
+        Log.e(TAG, "getAuxCameras: "+physicalCameras); //Unofficial way
 
     }
 

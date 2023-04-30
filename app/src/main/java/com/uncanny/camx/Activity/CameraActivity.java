@@ -37,6 +37,7 @@ import com.uncanny.camx.R;
 import com.uncanny.camx.UI.Views.CaptureButton;
 import com.uncanny.camx.UI.Views.HorizontalPicker;
 import com.uncanny.camx.UI.Views.ViewFinder.AutoFitPreviewView;
+import com.uncanny.camx.UI.Views.ViewFinder.AuxiliaryCameraPicker;
 import com.uncanny.camx.UI.Views.ViewFinder.VideoModePicker;
 import com.uncanny.camx.Utils.AsyncThreads.LatestThumbnailGenerator;
 
@@ -62,6 +63,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private HorizontalPicker cameraModePicker;
     private RelativeLayout menuBar;
     private RelativeLayout tvPreviewParent;
+    private AuxiliaryCameraPicker auxiliaryCameraPicker;
     private VideoModePicker videoModePicker;
 
     private LensData lensData;
@@ -113,6 +115,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         cameraModePicker = findViewById(R.id.mode_picker_view);
         menuBar = findViewById(R.id.menuBar);
         tvPreviewParent = findViewById(R.id.previewParent);
+        auxiliaryCameraPicker = findViewById(R.id.auxiliary_cam_picker);
         videoModePicker = findViewById(R.id.video_mode_picker);
 
         tvPreviewParent.setClipToOutline(true);
@@ -136,6 +139,14 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         cameraModePicker.setOnItemSelectedListener(itemSelectedListener);
         previewView.setOnTouchListener(viewfinderGestureListener);
 
+
+        if(lensData.totalAuxCameras()>0){
+            auxiliaryCameraPicker.setVisibility(View.VISIBLE);
+            auxiliaryCameraPicker.setCamAliasList(lensData.getCameraAliasBack());
+            auxiliaryCameraPicker.setOnClickListener((view) -> {
+
+            });
+        }
         videoModePicker.setOnClickListener((view, modeName) -> {
 //            auxDock.post(hideAuxDock);
             performFileCleanup();
@@ -180,7 +191,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
         requestPermissions();
     }
-
 
     private void requestPermissions() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
