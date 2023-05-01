@@ -8,6 +8,7 @@
     android:background="@color/black"
     tools:context=".Activity.CameraActivity">
 
+<!--    Top MenuBar     -->
     <RelativeLayout
         android:id="@+id/menuBar"
         android:layout_width="match_parent"
@@ -30,6 +31,7 @@
         android:layout_below="@id/menuBar"
         android:elevation="4dp" />
 
+<!--    Viewfinder Stuff    -->
     <RelativeLayout
         android:id="@+id/previewParent"
         android:layout_width="match_parent"
@@ -128,6 +130,7 @@
         app:trackColorInactive="@color/md3_neutral2_800"
         app:trackHeight="4dp" />
 
+<!--    Aux cam switcher/ VideoMode picker -->
     <LinearLayout
         android:id="@+id/aux_videoMode_holder"
         android:layout_width="wrap_content"

@@ -95,19 +95,63 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         CameraActivity.cameraId = cameraId;
     }
 
+    private Runnable hideAuxDock = () -> {
+        if(cameraControls.getLensFacing()==CameraCharacteristics.LENS_FACING_BACK){
+            if(getState() == CamState.HIRES || getState() == CamState.VIDEO_PROGRESSED
+                    || getState() == CamState.HSVIDEO_PROGRESSED){
+                auxiliaryCameraPicker.setVisibility(View.GONE);
+            }
+            else if(getState() == CamState.SLOMO){
+                auxiliaryCameraPicker.setVisibility(View.INVISIBLE);
+            }
+            else if(getState() == CamState.VIDEO){
+                if(!lensData.hasSloMoCapabilities(getCameraId())){
+                    videoModePicker.setVisibility(View.GONE);
+                }
+                else {
+                    videoModePicker.setVisibility(View.VISIBLE);
+                }
+                auxiliaryCameraPicker.setVisibility(View.VISIBLE);
+            }
+            else{
+                auxiliaryCameraPicker.setVisibility(View.VISIBLE);
+            }
+
+            if(!lensData.isAuxCameraAvailable()){
+                auxiliaryCameraPicker.setVisibility(View.GONE);
+            }
+        }
+        else{                                       //FIXME: HANDLE FOR MULTIPLE FRONT CAMERA
+            if(getState() == CamState.HIRES || getState() == CamState.VIDEO_PROGRESSED
+                    || getState() == CamState.HSVIDEO_PROGRESSED) {
+                videoModePicker.setVisibility(View.GONE);
+            }
+            else if(getState() == CamState.VIDEO) {
+                if (!lensData.hasSloMoCapabilities(getCameraId())) {
+                    videoModePicker.setVisibility(View.GONE);
+                } else {
+                    videoModePicker.setVisibility(View.VISIBLE);
+                }
+            }
+            auxiliaryCameraPicker.setVisibility(View.GONE);
+
+        }
+    };
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        //Find Memory leaks
         if(BuildConfig.DEBUG){
             StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder(StrictMode.getVmPolicy())
                     .detectLeakedClosableObjects()
                     .build());
         }
 
-//        initializeViews()
+        //initializeViews()
         previewView = findViewById(R.id.preview);
         thumbPreview = findViewById(R.id.thumbPreview);
         shutter = findViewById(R.id.shutter);
@@ -139,11 +183,27 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         cameraModePicker.setOnItemSelectedListener(itemSelectedListener);
         previewView.setOnTouchListener(viewfinderGestureListener);
 
-
-        if(lensData.totalAuxCameras()>0){
+        if(lensData.isAuxCameraAvailable()){
             auxiliaryCameraPicker.setVisibility(View.VISIBLE);
             auxiliaryCameraPicker.setCamAliasList(lensData.getCameraAliasBack());
-            auxiliaryCameraPicker.setOnClickListener((view) -> {
+            auxiliaryCameraPicker.setOnClickListener((view, id) -> {
+//                zoomText.post(hideZoomText);
+//                if (getState() == CamState.VIDEO) {
+//                    addCapableVideoResolutions();
+//                    vfHandler.post(hideAuxDock);
+//                }
+//                else if (getState() == CamState.SLOMO) addCapableSloMoResolutions();
+//                exposureControl.post(this::setExposureRange);
+//                resetAuxDock();
+//            zoomText.post(hideZoomText);
+//            exposureControl.post(() -> setExposureRange());
+                performFileCleanup();
+                previewView.setOnTouchListener(null);
+                cameraControls.closeCamera();
+                setCameraId(id);
+                cameraControls.openCamera(id);
+                previewView.setOnTouchListener(viewfinderGestureListener);
+//            applyModeChange(getState());
 
             });
         }
@@ -301,14 +361,14 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 //            zoomText.post(hideZoomText);
 //            exposureControl.post(() -> setExposureRange());
                 cameraControls.closeCamera();
-                if (cameraControls.getLensFacing()== CameraCharacteristics.LENS_FACING_BACK) {
+                if (cameraControls.getLensFacing() == CameraCharacteristics.LENS_FACING_BACK) {
                     setCameraId(FRONT_CAMERA_ID);
                     synchronized (new Object()){
                         cameraControls.openCamera(FRONT_CAMERA_ID);
                         front_switch.animate().rotation(180f).setDuration(300);
                     }
                 } else {
-    //                auxDock.setIndex(1);
+                    auxiliaryCameraPicker.setIndex(1);
                     setCameraId(BACK_CAMERA_ID);
                     synchronized (new Object()) {
                         cameraControls.openCamera(BACK_CAMERA_ID);
@@ -317,7 +377,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 }
                 previewView.setOnTouchListener(viewfinderGestureListener);
 //            applyModeChange(getState());
-//            front_switch.post(hideAuxDock);
+            front_switch.post(hideAuxDock);
 
             }
         }
@@ -452,8 +512,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                             return true;
                         }
                     } else if (vfPointerX - event.getX() < -getScreenWidth() / 4f) {
-                        Log.e("TAG", "onTouchEvent: FLING LEFT");
                         vfPointerX = event.getX();
+                        Log.e("TAG", "onTouchEvent: FLING LEFT");
                         if (cameraModePicker.getSelectedItem() > 0 && cameraModePicker.getSelectedItem() < cameraModePicker.getItems()) {
                             cameraModePicker.setSelectedItem(cameraModePicker.getSelectedItem() - 1, -1);
 //                                switchMode(mModePicker.getSelectedItem());
@@ -532,6 +592,11 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 if(getState() == CamState.NIGHT) break;
                 setState(CamState.NIGHT);
                 mainHandler.post(() -> shutter.animateShutterButton());
+
+                if(lensData.isAuxCameraAvailable() && cameraControls.getLensFacing()==CameraCharacteristics.LENS_FACING_BACK) {
+                    setCameraId(BACK_CAMERA_ID);
+                    auxiliaryCameraPicker.setIndex(1);
+                }
 //                tvPreview.setOnTouchListener(touchListener);
 //                modeNight();
                 break;
@@ -585,7 +650,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         previewView.setOnTouchListener(viewfinderGestureListener); //TODO : Put inside a camera opened callback
     };
 
-
     private int getScreenWidth() {
         if(screenWidth < 1) screenWidth = getResources().getDisplayMetrics().widthPixels;
         return screenWidth;
@@ -597,6 +661,9 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         return screenHeight;
     }
 
+    /**
+     * Cleanup empty file if required
+     */
     private void performFileCleanup() {
         Log.e(TAG, "performFileCleanup: shouldDeleteEmptyFile : "+cameraControls.isShouldDeleteEmptyFile());
         boolean ds = false;
@@ -614,7 +681,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     @Override
     protected void onResume() {
         super.onResume();
-        Log.e(TAG, "onResume: ON RESUME");
         state = CamState.getInstance();
         shutter.animateShutterButton();
         cameraControls.setActivityResumed(true);
@@ -627,7 +693,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     @Override
     protected void onPause() {
         super.onPause();
-        Log.e(TAG, "onPause: ON PAUSE");
         cameraControls.setActivityResumed(false);
         performFileCleanup();
     }

@@ -61,7 +61,7 @@ public class CameraHelper {
         float view_angle_x = (float)Math.toDegrees(2.0 * Math.atan2(physical_size.getWidth() * frac_x, (2.0 * focal_lengths[0])));
 //        float view_angle_y = (float)Math.toDegrees(2.0 * Math.atan2(physical_size.getHeight() * frac_y, (2.0 * focal_lengths[0])));
 
-        Log.e(TAG, "computeViewAngles: HfovDegrees : "+String.format(Locale.US, "%.1f", (view_angle_x))+" id : "+id);
+//        Log.e(TAG, "computeViewAngles: HfovDegrees : "+String.format(Locale.US, "%.1f", (view_angle_x))+" id : "+id);
 //        return new SizeF(view_angle_x, view_angle_y);
         return (int) view_angle_x;
     }

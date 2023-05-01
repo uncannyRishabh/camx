@@ -32,24 +32,26 @@ public class LensData {
     private static final String TAG = "LensData";
     private static final String CAMERA_MAIN_BACK = "0";
     private static final String CAMERA_MAIN_FRONT = "1";
+    private String camera2level;
     private int LOGICAL_ID;
     private final int FOCAL_LENGTH_FRONT, FOCAL_LENGTH_BACK;
 
-    Context context;
-    CameraCharacteristics characteristics;
-
-    int[] capabilities;
-    Size imageSize,imageSize169;
-    CameraManager cameraManager;
-    List<Integer> physicalCameras = new ArrayList<>();
-    List<Integer> logicalCameras  = new ArrayList<>();
-    List<Integer> auxiliaryCameras  = new ArrayList<>();
-    ArrayList<Pair<Size, Range<Integer>>> fpsResolutionPair = new ArrayList<>();
-    ArrayList<Pair<Size, Range<Integer>>> fpsResolutionPair_video = new ArrayList<>();
-    String camera2level;
-
+    private int[] capabilities;
     private boolean isBayer;
     private Size bayerPhotoSize;
+
+    private Context context;
+    private CameraManager cameraManager;
+    private CameraCharacteristics characteristics;
+
+    private Size imageSize,imageSize169;
+    private CameraHelper ch = new CameraHelper();
+    private List<Integer> physicalCameras = new ArrayList<>();
+    private List<Integer> logicalCameras  = new ArrayList<>();
+    private List<Integer> auxiliaryCameras  = new ArrayList<>();
+    private ArrayList<Pair<Size, Range<Integer>>> fpsResolutionPair = new ArrayList<>();
+    private ArrayList<Pair<Size, Range<Integer>>> fpsResolutionPair_video = new ArrayList<>();
+
 
     /**
      * Constructor for this class.
@@ -57,12 +59,10 @@ public class LensData {
     public LensData(Context context){
         this.context = context;
         getAuxCameras();
+        getAuxiliaryCameras();
         FOCAL_LENGTH_BACK = getComputeViewAngle(CAMERA_MAIN_BACK);
         FOCAL_LENGTH_FRONT = getComputeViewAngle(CAMERA_MAIN_FRONT);
-
-        //Store in a ref
-        getCameraAliasBack();
-}
+    }
 
     /**
      * Returns boolean for Auxiliary Camera availability.
@@ -97,7 +97,6 @@ public class LensData {
      * @return
      */
     public ArrayList<ArrayList<String>> getCameraAliasBack(){
-        Log.e(TAG, "getCameraAliasBack: physicalCamera : "+physicalCameras);
         ArrayList<String> camIdList = new ArrayList<>();
         ArrayList<String> aliasList = new ArrayList<>();
         ArrayList<ArrayList<String>> camAliasList = new ArrayList<>();
@@ -150,7 +149,6 @@ public class LensData {
         return camAliasList;
     }
 
-    CameraHelper ch = new CameraHelper();
 
     /**
      * Returns total number of Camera Sensors including cameraId (0,1).
@@ -493,8 +491,8 @@ public class LensData {
             }
         }
 
-        Log.e(TAG, "getAuxCameras: "+logicalCameras); //Not Implemented in most devices, Official way
-        Log.e(TAG, "getAuxCameras: "+physicalCameras); //Unofficial way
+        Log.e(TAG, "getAuxCameras: Logical  : "+logicalCameras); //Not Implemented in most devices, Official way
+        Log.e(TAG, "getAuxCameras: Physical : "+physicalCameras); //Unofficial way
 
     }
 
