@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraCharacteristics;
 import android.os.Bundle;
@@ -31,6 +32,7 @@ import androidx.core.content.ContextCompat;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.uncanny.camx.BuildConfig;
 import com.uncanny.camx.CameraManager.CameraControls;
+import com.uncanny.camx.CameraManager.ResolutionManager;
 import com.uncanny.camx.Data.CamState;
 import com.uncanny.camx.Data.LensData;
 import com.uncanny.camx.R;
@@ -40,6 +42,7 @@ import com.uncanny.camx.UI.Views.ViewFinder.AutoFitPreviewView;
 import com.uncanny.camx.UI.Views.ViewFinder.AuxiliaryCameraPicker;
 import com.uncanny.camx.UI.Views.ViewFinder.VideoModePicker;
 import com.uncanny.camx.Utils.AsyncThreads.LatestThumbnailGenerator;
+import com.uncanny.camx.Utils.CameraConstants;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -66,11 +69,12 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private AuxiliaryCameraPicker auxiliaryCameraPicker;
     private VideoModePicker videoModePicker;
 
+    private CamState state;
     private LensData lensData;
     private CameraControls cameraControls;
-    private CamState state;
+    private DisplayPropertyManager displayPropertyManager;
+    private ResolutionManager resolutionManager;
 
-    private int screenWidth, screenHeight;
     private float vfPointerX, vfPointerY;
     private long lastClickTime;
     private boolean isLongPressed;
@@ -121,7 +125,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 auxiliaryCameraPicker.setVisibility(View.GONE);
             }
         }
-        else{                                       //FIXME: HANDLE FOR MULTIPLE FRONT CAMERA
+        else{ //FIXME: HANDLE FOR MULTIPLE FRONT CAMERA
             if(getState() == CamState.HIRES || getState() == CamState.VIDEO_PROGRESSED
                     || getState() == CamState.HSVIDEO_PROGRESSED) {
                 videoModePicker.setVisibility(View.GONE);
@@ -171,17 +175,22 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         lensData = new LensData(this);
         mainHandler = new Handler(getMainLooper());
         cameraControls = new CameraControls(this);
-        cameraControls.setThumbView(thumbPreview);
+        displayPropertyManager = new DisplayPropertyManager();
+        resolutionManager = new ResolutionManager(lensData, displayPropertyManager.screenWidth == 720
+                ? CameraConstants.DisplayConstants.DISPLAY_RES_720 : CameraConstants.DisplayConstants.DISPLAY_RES_1080);
 
         shutter.setOnClickListener(this);
         front_switch.setOnClickListener(this);
         thumbPreview.setOnClickListener(this);
 
-        cameraModePicker.setValues(new String[] {"Night", "Portrait", "Camera", "Video", "Pro"});
+        cameraControls.setThumbView(thumbPreview);
+        cameraModePicker.setValues(new String[] {"Night", "Portrait", "Camera", "Video", "Pro"});   //Constants
         cameraModePicker.setSelectedItem(2,null);
         cameraModePicker.setOverScrollMode(View.OVER_SCROLL_NEVER);
         cameraModePicker.setOnItemSelectedListener(itemSelectedListener);
         previewView.setOnTouchListener(viewfinderGestureListener);
+
+        if(lensData.supportBurstCapture(getCameraId())) addLongPressListener();
 
         if(lensData.isAuxCameraAvailable()){
             auxiliaryCameraPicker.setVisibility(View.VISIBLE);
@@ -203,10 +212,12 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 setCameraId(id);
                 cameraControls.openCamera(id);
                 previewView.setOnTouchListener(viewfinderGestureListener);
+                if(lensData.supportBurstCapture(getCameraId())) addLongPressListener();
 //            applyModeChange(getState());
 
             });
         }
+
         videoModePicker.setOnClickListener((view, modeName) -> {
 //            auxDock.post(hideAuxDock);
             performFileCleanup();
@@ -246,8 +257,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 }
             }
         });
-
-        if(lensData.supportBurstCapture(getCameraId())) addLongPressListener();
 
         requestPermissions();
     }
@@ -503,7 +512,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                             || CamState.getInstance().getState() == CamState.HSVIDEO_PROGRESSED
                             || CamState.getInstance().getState() == CamState.TIMELAPSE_PROGRESSED) return true;
 //                    if (getVfStates() == VFStates.IDLE) {
-                    if (vfPointerX - event.getX() > getScreenWidth() / 4f) {
+                    if (vfPointerX - event.getX() > displayPropertyManager.getScreenWidth() / 4f) {
                         Log.e("TAG", "onTouchEvent: FLING RIGHT");
                         vfPointerX = event.getX();
                         if (cameraModePicker.getSelectedItem() >= 0 && cameraModePicker.getSelectedItem() < cameraModePicker.getItems() - 1) {
@@ -511,7 +520,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 //                                switchMode(mModePicker.getSelectedItem());
                             return true;
                         }
-                    } else if (vfPointerX - event.getX() < -getScreenWidth() / 4f) {
+                    } else if (vfPointerX - event.getX() < - displayPropertyManager.getScreenWidth() / 4f) {
                         vfPointerX = event.getX();
                         Log.e("TAG", "onTouchEvent: FLING LEFT");
                         if (cameraModePicker.getSelectedItem() > 0 && cameraModePicker.getSelectedItem() < cameraModePicker.getItems()) {
@@ -650,17 +659,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         previewView.setOnTouchListener(viewfinderGestureListener); //TODO : Put inside a camera opened callback
     };
 
-    private int getScreenWidth() {
-        if(screenWidth < 1) screenWidth = getResources().getDisplayMetrics().widthPixels;
-        return screenWidth;
-    }
-
-    private int getScreenHeight() {
-        Log.e(TAG, "getScreenHeight: "+getResources().getDisplayMetrics().heightPixels);
-        if(screenHeight < 1) screenHeight = getResources().getDisplayMetrics().heightPixels;
-        return screenHeight;
-    }
-
     /**
      * Cleanup empty file if required
      */
@@ -728,6 +726,28 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             }
             default:
                 return super.dispatchKeyEvent(event);
+        }
+    }
+
+    public class DisplayPropertyManager {
+        private final String TAG = "DisplayPropertyManager";
+
+        private Resources resources;
+        private int screenWidth, screenHeight;
+
+        public DisplayPropertyManager() {
+            this.resources = getResources();
+        }
+
+        private int getScreenWidth() {
+            if(screenWidth < 1) screenWidth = resources.getDisplayMetrics().widthPixels;
+            return screenWidth;
+        }
+
+        private int getScreenHeight() {
+            Log.e(TAG, "getScreenHeight: "+resources.getDisplayMetrics().heightPixels);
+            if(screenHeight < 1) screenHeight = resources.getDisplayMetrics().heightPixels;
+            return screenHeight;
         }
     }
 

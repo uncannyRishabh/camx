@@ -15,8 +15,6 @@ import android.util.Pair;
 import android.util.Range;
 import android.util.Size;
 
-import androidx.annotation.WorkerThread;
-
 import com.uncanny.camx.Utils.CameraHelper;
 import com.uncanny.camx.Utils.CompareSizeByArea;
 
@@ -149,6 +147,24 @@ public class LensData {
         return camAliasList;
     }
 
+    private float getZoomFactor(String id){
+//        return getFocalLength(id)/getMainBackFocalLength();
+        return (float) FOCAL_LENGTH_BACK / getComputeViewAngle(id+"");
+    }
+
+    private int getComputeViewAngle(String id){
+        try {
+            return ch.computeViewAngles(context,id);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+
+        return 0;
+    }
+
+    private String getAuxButtonName(float zoomFactor) {
+        return String.format(Locale.US, "%.1f", zoomFactor).replace(".0", "");
+    }
 
     /**
      * Returns total number of Camera Sensors including cameraId (0,1).
@@ -238,34 +254,11 @@ public class LensData {
         return findHSVCapability(capabilities);
     }
 
-    /**
-     * Use preference key to save modes.
-     */
-    @Deprecated
-    public String[] getAvailableModes(String id){
-        List<String> cameraModes = new ArrayList<>();
-        capabilities = getCameraCharacteristics(id).get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
-        cameraModes.add("Camera");
-        cameraModes.add("Video");
-
-        if(capabilities!=null && findHSVCapability(capabilities)){
-            cameraModes.add("Slo Moe");
-            cameraModes.add("TimeWarp");
+    private static boolean findHSVCapability(int[] capabilities) {
+        for(int caps : capabilities){
+            if(caps == CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_CONSTRAINED_HIGH_SPEED_VIDEO) return true;
         }
-
-        if(isBayerAvailable(id)){
-            cameraModes.add("HighRes");
-        }
-
-        if(id.equals("0") || id.equals("1"))
-            cameraModes.add("Portrait");
-
-        cameraModes.add("Night");
-        if(hasCamera2api()){
-            cameraModes.add("Pro");
-        }
-        //ADD CHECK FOR MULTI MODE (if there's one)
-        return cameraModes.toArray(new String[0]);
+        return false;
     }
 
     /**
@@ -298,7 +291,7 @@ public class LensData {
     }
 
     /**
-     * DEBUGGING purposes
+     * Debugging
      */
     public void getCameraLensCharacteristics(String id){
         StreamConfigurationMap map = getStreamConfigMap(id);
@@ -306,7 +299,7 @@ public class LensData {
         cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
 //        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoFpsRanges()));
 //        Log.e(TAG, "getCameraLensCharacteristics: SLO MO : FPS RANGE : "+ Arrays.toString(map.getHighSpeedVideoSizes()));
-//        Log.e(TAG, "getCameraLensCharacteristics: CAMID : "+id+" resolutions : "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
+//        Log.e(TAG, "getCameraLensCharacteristics: CAMID  : "+id+" resolutions : "+ Arrays.toString(map.getOutputSizes(MediaRecorder.class)));
 
     }
 
@@ -356,6 +349,27 @@ public class LensData {
             }
         }
         return false;
+//        return Arrays.stream(sizes)
+//                .anyMatch(s -> s.getWidth() == 1920 && s.getHeight() == 1080);
+
+    }
+
+    /**
+     * checks if 1440p recording is possible
+     * @param id Camera id
+     * @return boolean
+     */
+    public boolean is1440pCapable(String id){
+        Size [] sizes = getStreamConfigMap(id).getOutputSizes(MediaRecorder.class);
+        for(Size s : sizes){
+            if(s.getWidth()==2560 && s.getHeight()==1440){
+                return true;
+            }
+        }
+        return false;
+//        return Arrays.stream(sizes)
+//                .anyMatch(s -> s.getWidth() == 2560 && s.getHeight() == 1440);
+
     }
 
     /**
@@ -396,118 +410,8 @@ public class LensData {
         return isBayer;
     }
 
-    /**
-     * Returns the highest resolution a camera lens can capture image at.
-     * [NOTE : first check if Bayer is available by calling {@link LensData#isBayerAvailable(String)}]
-     */
-    public Size getBayerLensSize(){
-        return bayerPhotoSize;
-    }
-
-    public Size getHighestResolution(String id){
-        ArrayList<Size> sizeArrayList = new ArrayList<>();
-        ArrayList<Integer> image_formats = new ArrayList<>();
-        image_formats.add(ImageFormat.JPEG);
-        image_formats.add(ImageFormat.RAW_SENSOR);
-        for(Integer i:image_formats){
-            if(!Objects.equals(getStreamConfigMap(id).getOutputSizes(i),null)){
-                sizeArrayList.addAll(Arrays.asList(getStreamConfigMap(id).getOutputSizes(i)));
-            }
-            if(!Objects.equals(getStreamConfigMap(id).getHighResolutionOutputSizes(i),null)){
-                sizeArrayList.addAll(Arrays.asList(getStreamConfigMap(id).getHighResolutionOutputSizes(i)));
-            }
-        }
-        if(isBayerAvailable(id)) sizeArrayList.remove(bayerPhotoSize);
-
-        imageSize = Collections.max(sizeArrayList, new CompareSizeByArea());
-        return imageSize;
-    }
-
-    public Size getHighestResolution169(String id){
-        ArrayList<Size> sizeArrayList = new ArrayList<>();
-        ArrayList<Integer> image_formats = new ArrayList<>();
-        image_formats.add(ImageFormat.JPEG);
-        image_formats.add(ImageFormat.RAW_SENSOR);
-        for(Integer i:image_formats){
-            for(Size size : getStreamConfigMap(id).getOutputSizes(i)){
-                float ar = (float) size.getWidth()/ size.getHeight();
-                if(ar > 1.6f && ar < 1.8f){
-                    sizeArrayList.add(size);
-                }
-            }
-        }
-        imageSize169 = Collections.max(sizeArrayList, new CompareSizeByArea());
-        return imageSize169;
-    }
-
-    public float getFocalLength(String cameraId){
-        try{
-            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
-            return (36.0f / characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE).getWidth()
-                    * characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)[0]);
-        }
-        catch (CameraAccessException e){
-            e.printStackTrace();
-        }
-        return 0;
-    }
-
-    private float getZoomFactor(String id){
-//        return getFocalLength(id)/getMainBackFocalLength();
-        return (float) FOCAL_LENGTH_BACK / getComputeViewAngle(id+"");
-    }
-
-    private String getAuxButtonName(float zoomFactor) {
-        return String.format(Locale.US, "%.1f", zoomFactor).replace(".0", "");
-    }
-
-    /**
-     * Init
-     */
-    private void getAuxCameras(){
-        cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
-        for(int i = 0; i<=31 ; i++){       // FIXME: 8/11/2021 fix extra aux lens problem @_@
-            try {
-//                characteristics = cameraManager.getCameraCharacteristics(String.valueOf(i));
-                characteristics = getCameraCharacteristics(String.valueOf(i));
-                if (characteristics!=null ) {
-                    Log.e(TAG, "check_aux: value of array at " + i + " : " + i);
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        if(characteristics.getPhysicalCameraIds().size() > 0){
-                            LOGICAL_ID = i;
-                        }
-                    }
-                    if (LOGICAL_ID != 0 && i >= LOGICAL_ID){
-                        logicalCameras.add(i);
-                    }
-                    else {
-                        physicalCameras.add(i);
-//                        ch.getCameraFov(context,i+"");
-//                        getComputeViewAngle(i+"");
-                    }
-                }
-            }
-            catch (IllegalArgumentException ignored){
-            }
-        }
-
-        Log.e(TAG, "getAuxCameras: Logical  : "+logicalCameras); //Not Implemented in most devices, Official way
-        Log.e(TAG, "getAuxCameras: Physical : "+physicalCameras); //Unofficial way
-
-    }
-
-    private int getComputeViewAngle(String id){
-        try {
-            return ch.computeViewAngles(context,id);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-
-        return 0;
-    }
-
     private void performBayerCheck(String id) {
-        //TODO : improve logic
+        //TODO : improve logic | add logic to add pixel binning checks
         StreamConfigurationMap map = getCameraCharacteristics(id)
                 .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         Size[] sizes;
@@ -555,11 +459,88 @@ public class LensData {
         }
     }
 
-    private static boolean findHSVCapability(int[] capabilities) {
-        for(int caps : capabilities){
-            if(caps == CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_CONSTRAINED_HIGH_SPEED_VIDEO) return true;
+    /**
+     * Returns the highest resolution a camera lens can capture image at.
+     * [NOTE : first check if Bayer is available by calling {@link LensData#isBayerAvailable(String)}]
+     */
+    public Size getBayerLensSize(){
+        return bayerPhotoSize;
+    }
+
+    public Size getCaptureResolution4by3(String id){
+        ArrayList<Size> sizeArrayList = new ArrayList<>();
+        ArrayList<Integer> image_formats = new ArrayList<>();
+        image_formats.add(ImageFormat.JPEG);
+        image_formats.add(ImageFormat.RAW_SENSOR);
+        for(Integer i:image_formats){
+            if(!Objects.equals(getStreamConfigMap(id).getOutputSizes(i),null)){
+                sizeArrayList.addAll(Arrays.asList(getStreamConfigMap(id).getOutputSizes(i)));
+            }
+            if(!Objects.equals(getStreamConfigMap(id).getHighResolutionOutputSizes(i),null)){
+                sizeArrayList.addAll(Arrays.asList(getStreamConfigMap(id).getHighResolutionOutputSizes(i)));
+            }
         }
-        return false;
+        if(isBayerAvailable(id)) sizeArrayList.remove(bayerPhotoSize);
+
+        imageSize = Collections.max(sizeArrayList, new CompareSizeByArea());
+        return imageSize;
+    }
+
+    public Size getCaptureResolution16by9(String id){
+        ArrayList<Size> sizeArrayList = new ArrayList<>();
+        ArrayList<Integer> image_formats = new ArrayList<>();
+        image_formats.add(ImageFormat.JPEG);
+        image_formats.add(ImageFormat.RAW_SENSOR);
+        for(Integer i:image_formats){
+            for(Size size : getStreamConfigMap(id).getOutputSizes(i)){
+                float ar = (float) size.getWidth()/ size.getHeight();
+                if(ar > 1.6f && ar < 1.8f){
+                    sizeArrayList.add(size);
+                }
+            }
+        }
+        imageSize169 = Collections.max(sizeArrayList, new CompareSizeByArea());
+        return imageSize169;
+    }
+
+    public Size getCaptureResolutionFull(String id){
+        //Logic for retrieving full resolution
+        return new Size(1080,1920);
+    }
+
+    /**
+     * Init
+     */
+    private void getAuxCameras(){
+        cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+        for(int i = 0; i<=31 ; i++){       // FIXME: 8/11/2021 fix extra aux lens problem @_@
+            try {
+//                characteristics = cameraManager.getCameraCharacteristics(String.valueOf(i));
+                characteristics = getCameraCharacteristics(String.valueOf(i));
+                if (characteristics!=null ) {
+                    Log.e(TAG, "check_aux: value of array at " + i + " : " + i);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        if(characteristics.getPhysicalCameraIds().size() > 0){
+                            LOGICAL_ID = i;
+                        }
+                    }
+                    if (LOGICAL_ID != 0 && i >= LOGICAL_ID){
+                        logicalCameras.add(i);
+                    }
+                    else {
+                        physicalCameras.add(i);
+//                        ch.getCameraFov(context,i+"");
+//                        getComputeViewAngle(i+"");
+                    }
+                }
+            }
+            catch (IllegalArgumentException ignored){
+            }
+        }
+
+        Log.e(TAG, "getAuxCameras: Logical  : "+logicalCameras); //Not Implemented in most devices, Official way
+        Log.e(TAG, "getAuxCameras: Physical : "+physicalCameras); //Unofficial way
+
     }
 
     private CameraCharacteristics getCameraCharacteristics(String camId) {
